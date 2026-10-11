@@ -1,0 +1,18 @@
+# Blueprint Render — plan free (SQLite sql.js, seed auto si base vide).
+# Postgres free n’existe plus sur Render : pas de DATABASE_URL = fichier urgad.db.
+services:
+  - type: web
+    name: urgad-api
+    runtime: node
+    plan: free
+    region: frankfurt
+    buildCommand: npm ci
+    startCommand: npx tsx src/index.ts
+    healthCheckPath: /api/health
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: JWT_SECRET
+        generateValue: true
+      - key: PREVIEW_DIR
+        value: /opt/render/project/src/public

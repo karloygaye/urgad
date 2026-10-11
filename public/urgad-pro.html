@@ -1,0 +1,2245 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>URGAD — Le soin au bon endroit, au bon moment</title>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/fontsource/fonts/inter@latest/latin-400-normal.css">
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/fontsource/fonts/inter@latest/latin-500-normal.css">
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/fontsource/fonts/inter@latest/latin-600-normal.css">
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/fontsource/fonts/inter@latest/latin-700-normal.css">
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/fontsource/fonts/inter@latest/latin-800-normal.css">
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/fontsource/fonts/playfair-display@latest/latin-700-normal.css">
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<link rel="stylesheet" href="https://unpkg.com/maplibre-gl@5.6.2/dist/maplibre-gl.css"/>
+<script src="https://unpkg.com/maplibre-gl@5.6.2/dist/maplibre-gl.js"></script>
+<script src="https://unpkg.com/@maplibre/maplibre-gl-leaflet@0.1.3/leaflet-maplibre-gl.js"></script>
+<style>
+*{margin:0;padding:0;box-sizing:border-box;font-family:'Inter',sans-serif;-webkit-font-smoothing:antialiased}
+:root{
+--bg:#0A0E1A;--bg-soft:#111827;--bg-card:#161B2E;--bg-elevated:#1C2339;
+--surface:rgba(255,255,255,0.03);--surface-hover:rgba(255,255,255,0.06);
+--border:rgba(255,255,255,0.08);--border-strong:rgba(255,255,255,0.14);
+--gold:#D4AF37;--gold-soft:#E8C866;--emerald:#10B981;--emerald-soft:#34D399;
+--blue:#3B82F6;--red:#EF4444;--amber:#F59E0B;--purple:#8B5CF6;
+--text:#F8FAFC;--text-muted:#94A3B8;--text-dim:#64748B;
+--gradient-gold:linear-gradient(135deg,#D4AF37 0%,#F5D76E 50%,#D4AF37 100%);
+--gradient-emerald:linear-gradient(135deg,#10B981 0%,#34D399 100%);
+--shadow:0 20px 60px rgba(0,0,0,0.4);--shadow-soft:0 8px 24px rgba(0,0,0,0.2);
+}
+body{background:var(--bg);color:var(--text);overflow-x:hidden;min-height:100vh}
+button{cursor:pointer;border:none;font-family:inherit;background:none;color:inherit}
+input,select,textarea{font-family:inherit}
+.splash{position:fixed;inset:0;background:radial-gradient(ellipse at top,#1a1f35 0%,#0A0E1A 70%);display:flex;align-items:center;justify-content:center;z-index:9999;flex-direction:column;overflow:hidden}
+.splash::before{content:'';position:absolute;width:600px;height:600px;background:radial-gradient(circle,rgba(212,175,55,0.15),transparent 70%);top:-200px;left:50%;transform:translateX(-50%);filter:blur(40px)}
+.splash-logo{font-family:'Playfair Display',serif;font-size:84px;font-weight:700;background:var(--gradient-gold);-webkit-background-clip:text;background-clip:text;-webkit-text-fill-color:transparent;letter-spacing:-3px;animation:logoIn 1.2s cubic-bezier(0.16,1,0.3,1);position:relative;z-index:2}
+.splash-logo::after{content:'';position:absolute;bottom:-8px;left:50%;transform:translateX(-50%);width:60px;height:2px;background:var(--gradient-gold);border-radius:2px}
+.splash-tagline{color:var(--text-muted);font-size:15px;margin-top:28px;letter-spacing:3px;text-transform:uppercase;font-weight:500;animation:fadeUp 1.4s ease;position:relative;z-index:2}
+.splash-loader{margin-top:60px;width:200px;height:1px;background:rgba(255,255,255,0.08);border-radius:2px;overflow:hidden;position:relative;z-index:2}
+.splash-loader::after{content:'';display:block;height:100%;background:var(--gradient-gold);width:0;animation:load 2s ease forwards}
+@keyframes logoIn{from{opacity:0;transform:translateY(20px) scale(0.9);letter-spacing:10px}to{opacity:1;transform:translateY(0) scale(1);letter-spacing:-3px}}
+@keyframes fadeUp{from{opacity:0;transform:translateY(10px)}to{opacity:1;transform:translateY(0)}}
+@keyframes load{to{width:100%}}
+.landing{min-height:100vh;background:radial-gradient(ellipse at top left,rgba(212,175,55,0.08),transparent 50%),radial-gradient(ellipse at bottom right,rgba(16,185,129,0.06),transparent 50%),var(--bg);padding:60px 40px;display:flex;flex-direction:column;align-items:center;justify-content:center;position:relative;overflow:hidden}
+.landing::before{content:'';position:absolute;inset:0;background-image:radial-gradient(rgba(255,255,255,0.03) 1px,transparent 1px);background-size:40px 40px;pointer-events:none}
+.landing-header{display:flex;justify-content:space-between;align-items:center;width:100%;max-width:1200px;margin-bottom:80px;position:relative;z-index:2}
+.landing-brand{font-family:'Playfair Display',serif;font-size:32px;font-weight:700;background:var(--gradient-gold);-webkit-background-clip:text;background-clip:text;-webkit-text-fill-color:transparent;letter-spacing:-1px}
+.landing-badge{padding:8px 16px;border:1px solid var(--border-strong);border-radius:100px;font-size:12px;color:var(--text-muted);letter-spacing:1px;text-transform:uppercase;font-weight:500}
+.landing-hero{text-align:center;max-width:800px;margin-bottom:80px;position:relative;z-index:2}
+.landing-eyebrow{display:inline-block;padding:6px 14px;background:rgba(212,175,55,0.1);border:1px solid rgba(212,175,55,0.2);border-radius:100px;color:var(--gold-soft);font-size:12px;letter-spacing:2px;text-transform:uppercase;font-weight:600;margin-bottom:24px}
+.landing-title{font-family:'Playfair Display',serif;font-size:64px;font-weight:700;line-height:1.1;margin-bottom:24px;letter-spacing:-2px}
+.landing-title .accent{background:var(--gradient-gold);-webkit-background-clip:text;background-clip:text;-webkit-text-fill-color:transparent;font-style:italic}
+.landing-sub{color:var(--text-muted);font-size:18px;line-height:1.6;max-width:600px;margin:0 auto}
+.landing-cards{display:grid;grid-template-columns:repeat(auto-fit,minmax(320px,1fr));gap:24px;max-width:1200px;width:100%;position:relative;z-index:2}
+.landing-card{background:linear-gradient(135deg,rgba(255,255,255,0.04),rgba(255,255,255,0.01));backdrop-filter:blur(20px);border:1px solid var(--border);border-radius:24px;padding:40px 36px;cursor:pointer;transition:all 0.4s cubic-bezier(0.16,1,0.3,1);position:relative;overflow:hidden}
+.landing-card::before{content:'';position:absolute;top:0;left:0;right:0;height:1px;background:linear-gradient(90deg,transparent,rgba(212,175,55,0.3),transparent);opacity:0;transition:opacity 0.4s}
+.landing-card:hover{transform:translateY(-8px);border-color:rgba(212,175,55,0.3);background:linear-gradient(135deg,rgba(255,255,255,0.06),rgba(255,255,255,0.02))}
+.landing-card:hover::before{opacity:1}
+.landing-card-icon{width:64px;height:64px;background:linear-gradient(135deg,rgba(212,175,55,0.15),rgba(212,175,55,0.05));border:1px solid rgba(212,175,55,0.2);border-radius:18px;display:flex;align-items:center;justify-content:center;font-size:28px;margin-bottom:24px;color:var(--gold-soft)}
+.landing-card h3{font-family:'Playfair Display',serif;font-size:24px;font-weight:700;margin-bottom:10px;letter-spacing:-0.5px}
+.landing-card p{color:var(--text-muted);font-size:14px;line-height:1.6;margin-bottom:24px}
+.landing-card .arrow{color:var(--gold-soft);font-weight:600;font-size:13px;letter-spacing:1px;text-transform:uppercase;display:flex;align-items:center;gap:8px;transition:gap 0.3s}
+.landing-card:hover .arrow{gap:14px}
+.app{display:none;min-height:100vh}
+.app.active{display:block}
+.phone-frame{max-width:440px;margin:20px auto;background:var(--bg);border-radius:40px;box-shadow:0 30px 80px rgba(0,0,0,0.6),0 0 0 1px rgba(255,255,255,0.05);overflow:hidden;min-height:calc(100vh - 40px);position:relative;display:flex;flex-direction:column;border:1px solid var(--border)}
+.phone-screen{flex:1;overflow-y:auto;padding-bottom:90px;background:var(--bg)}
+.phone-header{background:rgba(10,14,26,0.85);backdrop-filter:blur(20px);padding:18px 24px 16px;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;position:sticky;top:0;z-index:10}
+.phone-header h2{font-size:18px;font-weight:600;letter-spacing:-0.3px}
+.back-btn{width:38px;height:38px;border-radius:12px;background:var(--surface);border:1px solid var(--border);display:flex;align-items:center;justify-content:center;color:var(--text);font-size:16px;transition:all 0.2s}
+.back-btn:hover{background:var(--surface-hover);border-color:var(--border-strong)}
+.bottom-nav{position:absolute;bottom:0;left:0;right:0;background:rgba(10,14,26,0.95);backdrop-filter:blur(20px);border-top:1px solid var(--border);display:flex;padding:10px 8px 24px;justify-content:space-around}
+.nav-item{flex:1;display:flex;flex-direction:column;align-items:center;gap:4px;padding:8px;color:var(--text-dim);cursor:pointer;font-size:10px;font-weight:600;border-radius:12px;transition:all 0.2s;letter-spacing:0.5px;text-transform:uppercase}
+.nav-item.active{color:var(--gold-soft)}
+.nav-item .nav-icon{font-size:20px;transition:transform 0.2s}
+.btn{padding:14px 24px;border-radius:14px;font-weight:600;font-size:14px;transition:all 0.3s cubic-bezier(0.16,1,0.3,1);display:inline-flex;align-items:center;justify-content:center;gap:8px;letter-spacing:0.3px}
+.btn-primary{background:var(--gradient-gold);color:#0A0E1A;box-shadow:0 4px 20px rgba(212,175,55,0.25)}
+.btn-primary:hover{transform:translateY(-2px);box-shadow:0 8px 30px rgba(212,175,55,0.4)}
+.btn-secondary{background:var(--surface);color:var(--text);border:1px solid var(--border-strong)}
+.btn-secondary:hover{background:var(--surface-hover)}
+.btn-urgent{background:linear-gradient(135deg,#EF4444,#DC2626);color:#fff;box-shadow:0 4px 20px rgba(239,68,68,0.3)}
+.btn-success{background:var(--gradient-emerald);color:#fff;box-shadow:0 4px 20px rgba(16,185,129,0.25)}
+.btn-block{width:100%}
+.btn-lg{padding:18px 32px;font-size:15px;border-radius:16px}
+.btn-ghost{background:transparent;color:var(--text-muted);border:1px solid var(--border)}
+.btn-ghost:hover{color:var(--text);border-color:var(--border-strong)}
+.btn-danger{background:rgba(239,68,68,0.1);color:var(--red);border:1px solid rgba(239,68,68,0.25)}
+.btn-sm{padding:10px 18px;font-size:13px;border-radius:10px}
+.welcome{padding:40px 28px;display:flex;flex-direction:column;min-height:100%}
+.welcome-logo{font-family:'Playfair Display',serif;font-size:44px;font-weight:700;background:var(--gradient-gold);-webkit-background-clip:text;background-clip:text;-webkit-text-fill-color:transparent;letter-spacing:-1.5px;margin-bottom:4px}
+.welcome-tag{color:var(--text-muted);font-size:12px;letter-spacing:2px;text-transform:uppercase;margin-bottom:36px;font-weight:500}
+.welcome-illustration{width:100%;height:240px;background:linear-gradient(135deg,#1a1f35,#0A0E1A);border-radius:28px;margin-bottom:36px;display:flex;align-items:center;justify-content:center;font-size:80px;position:relative;overflow:hidden;border:1px solid var(--border)}
+.welcome-illustration::before{content:'';position:absolute;inset:0;background:radial-gradient(circle at 30% 30%,rgba(212,175,55,0.2),transparent 60%)}
+.welcome-illustration::after{content:'';position:absolute;inset:0;background:radial-gradient(circle at 70% 70%,rgba(16,185,129,0.15),transparent 60%)}
+.welcome h1{font-family:'Playfair Display',serif;font-size:32px;font-weight:700;margin-bottom:12px;line-height:1.2;letter-spacing:-0.5px}
+.welcome p{color:var(--text-muted);margin-bottom:32px;line-height:1.6;font-size:14px}
+.welcome-buttons{display:flex;flex-direction:column;gap:12px;margin-top:auto}
+.form-screen{padding:28px 24px}
+.form-screen h1{font-family:'Playfair Display',serif;font-size:28px;font-weight:700;margin-bottom:8px;letter-spacing:-0.5px}
+.form-screen .sub{color:var(--text-muted);margin-bottom:28px;font-size:14px;line-height:1.5}
+.form-group{margin-bottom:16px}
+.form-group label{display:block;font-size:12px;font-weight:600;margin-bottom:8px;color:var(--text-muted);letter-spacing:0.5px;text-transform:uppercase}
+.form-group input,.form-group select,.form-group textarea{width:100%;padding:14px 16px;border:1px solid var(--border);border-radius:12px;font-size:14px;background:var(--bg-card);color:var(--text);transition:all 0.2s}
+.form-group input:focus,.form-group select:focus,.form-group textarea:focus{outline:none;border-color:var(--gold);background:var(--bg-elevated);box-shadow:0 0 0 3px rgba(212,175,55,0.1)}
+.form-group input::placeholder{color:var(--text-dim)}
+.form-row{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+.checkbox-row{display:flex;align-items:flex-start;gap:10px;margin-bottom:12px;font-size:13px;color:var(--text-muted);line-height:1.5}
+.checkbox-row input{margin-top:2px;width:18px;height:18px;accent-color:var(--gold)}
+.sms-screen{padding:40px 24px;text-align:center}
+.sms-icon{width:84px;height:84px;background:linear-gradient(135deg,rgba(212,175,55,0.2),rgba(212,175,55,0.05));border:1px solid rgba(212,175,55,0.3);border-radius:24px;margin:0 auto 24px;display:flex;align-items:center;justify-content:center;font-size:40px}
+.sms-code{display:flex;gap:8px;justify-content:center;margin:32px 0}
+.sms-code input{width:48px;height:60px;text-align:center;font-size:24px;font-weight:700;border:1px solid var(--border);border-radius:14px;background:var(--bg-card);color:var(--text)}
+.sms-code input:focus{outline:none;border-color:var(--gold);background:var(--bg-elevated)}
+.prof-list{display:flex;flex-direction:column;gap:10px;margin-top:20px}
+.prof-option{padding:16px;border:1px solid var(--border);border-radius:16px;display:flex;align-items:center;gap:14px;cursor:pointer;transition:all 0.2s;background:var(--bg-card)}
+.prof-option:hover{border-color:var(--border-strong);background:var(--bg-elevated)}
+.prof-option.selected{border-color:var(--gold);background:rgba(212,175,55,0.05);box-shadow:0 0 0 3px rgba(212,175,55,0.1)}
+.prof-option-icon{width:44px;height:44px;background:var(--surface);border-radius:12px;display:flex;align-items:center;justify-content:center;font-size:22px}
+.prof-option.selected .prof-option-icon{background:var(--gradient-gold);color:#0A0E1A}
+.prof-option-text{flex:1}
+.prof-option-text h4{font-size:15px;font-weight:600;margin-bottom:2px}
+.prof-option-text p{font-size:12px;color:var(--text-muted)}
+.prof-option .check{width:24px;height:24px;border:2px solid var(--border-strong);border-radius:50%;display:flex;align-items:center;justify-content:center;color:transparent;font-size:12px}
+.prof-option.selected .check{background:var(--gradient-gold);border-color:var(--gold);color:#0A0E1A}
+.verify-screen{padding:32px 24px;text-align:center}
+.status-badge{display:inline-flex;align-items:center;gap:8px;padding:8px 16px;border-radius:100px;font-size:12px;font-weight:600;margin-bottom:20px;letter-spacing:0.5px}
+.status-pending{background:rgba(245,158,11,0.12);color:var(--amber);border:1px solid rgba(245,158,11,0.25)}
+.status-verified{background:rgba(16,185,129,0.12);color:var(--emerald-soft);border:1px solid rgba(16,185,129,0.25)}
+.upload-box{border:1px dashed var(--border-strong);border-radius:16px;padding:20px;margin-bottom:12px;cursor:pointer;transition:all 0.2s;background:var(--bg-card);text-align:left}
+.upload-box:hover{border-color:var(--gold);background:rgba(212,175,55,0.03)}
+.upload-box h4{font-size:14px;font-weight:600;margin-bottom:4px}
+.upload-box p{font-size:12px;color:var(--text-muted)}
+.upload-box.uploaded{border-style:solid;border-color:rgba(16,185,129,0.3);background:rgba(16,185,129,0.04)}
+
+/* ============ PROFILE PREMIUM ============ */
+.profile-cover{position:relative;height:180px;background:linear-gradient(135deg,#1a1f35 0%,#0A0E1A 100%);overflow:hidden;border-bottom:1px solid var(--border)}
+.profile-cover::before{content:'';position:absolute;inset:0;background:radial-gradient(circle at 30% 30%,rgba(212,175,55,0.25),transparent 60%)}
+.profile-cover::after{content:'';position:absolute;inset:0;background:radial-gradient(circle at 70% 70%,rgba(16,185,129,0.2),transparent 60%)}
+.profile-cover-pattern{position:absolute;inset:0;background-image:radial-gradient(rgba(255,255,255,0.05) 1px,transparent 1px);background-size:20px 20px}
+.profile-edit-cover-btn{position:absolute;top:16px;right:16px;width:36px;height:36px;border-radius:50%;background:rgba(0,0,0,0.5);backdrop-filter:blur(10px);border:1px solid rgba(255,255,255,0.1);display:flex;align-items:center;justify-content:center;font-size:14px;color:#fff;z-index:3;cursor:pointer}
+.profile-avatar-wrap{position:absolute;bottom:-50px;left:24px;z-index:4}
+.profile-avatar{width:100px;height:100px;border-radius:50%;background:var(--gradient-gold);display:flex;align-items:center;justify-content:center;font-size:36px;font-weight:700;color:#0A0E1A;border:4px solid var(--bg);box-shadow:0 8px 24px rgba(212,175,55,0.3)}
+.profile-avatar-badge{position:absolute;bottom:4px;right:4px;width:28px;height:28px;border-radius:50%;background:var(--gradient-emerald);border:3px solid var(--bg);display:flex;align-items:center;justify-content:center;font-size:12px;color:#fff}
+.profile-header-info{padding:60px 24px 20px;background:linear-gradient(135deg,#1a1f35 0%,#0A0E1A 100%);border-bottom:1px solid var(--border);position:relative}
+.profile-header-info::before{content:'';position:absolute;top:-50%;right:-20%;width:300px;height:300px;background:radial-gradient(circle,rgba(212,175,55,0.1),transparent 70%);filter:blur(40px)}
+.profile-name-row{display:flex;align-items:flex-start;justify-content:space-between;gap:12px;margin-bottom:8px;position:relative;z-index:2}
+.profile-name-row h2{font-family:'Playfair Display',serif;font-size:26px;font-weight:700;letter-spacing:-0.5px}
+.profile-verified-tag{display:inline-flex;align-items:center;gap:6px;padding:5px 10px;background:rgba(16,185,129,0.12);color:var(--emerald-soft);border:1px solid rgba(16,185,129,0.25);border-radius:100px;font-size:11px;font-weight:600}
+.profile-role{color:var(--text-muted);font-size:13px;margin-bottom:14px;letter-spacing:1px;text-transform:uppercase;font-weight:500;position:relative;z-index:2}
+.profile-meta{display:flex;gap:16px;font-size:13px;color:var(--text-muted);flex-wrap:wrap;position:relative;z-index:2}
+.profile-meta span{display:flex;align-items:center;gap:6px}
+
+/* Profile stats */
+.profile-stats{display:grid;grid-template-columns:repeat(4,1fr);gap:1px;background:var(--border);border-bottom:1px solid var(--border)}
+.profile-stat{background:var(--bg);padding:16px 8px;text-align:center;cursor:pointer;transition:background 0.2s}
+.profile-stat:hover{background:var(--bg-card)}
+.profile-stat-value{font-family:'Playfair Display',serif;font-size:22px;font-weight:700;color:var(--gold-soft);margin-bottom:2px}
+.profile-stat-label{font-size:10px;color:var(--text-muted);text-transform:uppercase;letter-spacing:1px;font-weight:600}
+
+.profile-body{padding:20px 24px}
+.profile-section{background:var(--bg-card);border:1px solid var(--border);border-radius:18px;padding:20px;margin-bottom:14px}
+.profile-section h3{font-size:11px;font-weight:700;margin-bottom:14px;color:var(--text-muted);letter-spacing:1.5px;text-transform:uppercase}
+.profile-section .info-row{display:flex;justify-content:space-between;padding:10px 0;border-bottom:1px solid var(--border);font-size:13px}
+.profile-section .info-row:last-child{border:none}
+.profile-section .info-row .label{color:var(--text-muted)}
+.profile-section .info-row .value{font-weight:600;color:var(--text);text-align:right;max-width:60%}
+.tag{display:inline-block;padding:6px 12px;background:var(--surface);border:1px solid var(--border);border-radius:10px;font-size:12px;margin:3px 4px 3px 0;color:var(--text-muted);font-weight:500}
+
+/* Profile menu */
+.profile-menu{display:flex;flex-direction:column;gap:4px}
+.profile-menu-item{display:flex;align-items:center;gap:14px;padding:14px 16px;background:var(--bg-card);border:1px solid var(--border);border-radius:14px;cursor:pointer;transition:all 0.2s}
+.profile-menu-item:hover{border-color:var(--border-strong);background:var(--bg-elevated);transform:translateX(2px)}
+.profile-menu-icon{width:40px;height:40px;border-radius:12px;display:flex;align-items:center;justify-content:center;font-size:18px;flex-shrink:0}
+.profile-menu-icon.gold{background:rgba(212,175,55,0.12);color:var(--gold-soft);border:1px solid rgba(212,175,55,0.2)}
+.profile-menu-icon.emerald{background:rgba(16,185,129,0.12);color:var(--emerald-soft);border:1px solid rgba(16,185,129,0.2)}
+.profile-menu-icon.blue{background:rgba(59,130,246,0.12);color:var(--blue);border:1px solid rgba(59,130,246,0.2)}
+.profile-menu-icon.red{background:rgba(239,68,68,0.12);color:var(--red);border:1px solid rgba(239,68,68,0.2)}
+.profile-menu-icon.amber{background:rgba(245,158,11,0.12);color:var(--amber);border:1px solid rgba(245,158,11,0.2)}
+.profile-menu-icon.purple{background:rgba(139,92,246,0.12);color:var(--purple);border:1px solid rgba(139,92,246,0.2)}
+.profile-menu-content{flex:1;min-width:0}
+.profile-menu-content h4{font-size:14px;font-weight:600;margin-bottom:2px}
+.profile-menu-content p{font-size:11px;color:var(--text-muted)}
+.profile-menu-arrow{color:var(--text-dim);font-size:14px}
+.profile-menu-badge{background:var(--red);color:#fff;font-size:10px;font-weight:700;padding:2px 7px;border-radius:10px;margin-left:auto}
+
+.logout-btn{display:flex;align-items:center;justify-content:center;gap:8px;padding:14px;background:rgba(239,68,68,0.08);border:1px solid rgba(239,68,68,0.2);border-radius:14px;color:var(--red);font-weight:600;font-size:14px;width:100%;margin-top:10px;transition:all 0.2s}
+.logout-btn:hover{background:rgba(239,68,68,0.15);border-color:rgba(239,68,68,0.4)}
+
+/* Profile sub-screens */
+.profile-sub-header{padding:20px 24px 16px;background:rgba(10,14,26,0.85);backdrop-filter:blur(20px);border-bottom:1px solid var(--border);position:sticky;top:0;z-index:10;display:flex;align-items:center;gap:12px}
+.profile-sub-header h2{font-size:18px;font-weight:600;flex:1}
+.profile-sub-body{padding:20px 24px}
+
+/* Document card */
+.doc-card{background:var(--bg-card);border:1px solid var(--border);border-radius:16px;padding:16px;margin-bottom:10px;display:flex;align-items:center;gap:14px;transition:all 0.2s}
+.doc-card:hover{border-color:var(--border-strong)}
+.doc-icon{width:44px;height:44px;border-radius:12px;display:flex;align-items:center;justify-content:center;font-size:20px;flex-shrink:0}
+.doc-icon.valid{background:rgba(16,185,129,0.12);color:var(--emerald-soft);border:1px solid rgba(16,185,129,0.2)}
+.doc-icon.pending{background:rgba(245,158,11,0.12);color:var(--amber);border:1px solid rgba(245,158,11,0.2)}
+.doc-icon.missing{background:rgba(239,68,68,0.12);color:var(--red);border:1px solid rgba(239,68,68,0.2)}
+.doc-info{flex:1;min-width:0}
+.doc-info h4{font-size:14px;font-weight:600;margin-bottom:2px}
+.doc-info p{font-size:11px;color:var(--text-muted)}
+.doc-status{font-size:11px;font-weight:600;padding:4px 10px;border-radius:8px;flex-shrink:0}
+.doc-status.valid{background:rgba(16,185,129,0.12);color:var(--emerald-soft);border:1px solid rgba(16,185,129,0.2)}
+.doc-status.pending{background:rgba(245,158,11,0.12);color:var(--amber);border:1px solid rgba(245,158,11,0.2)}
+.doc-status.missing{background:rgba(239,68,68,0.12);color:var(--red);border:1px solid rgba(239,68,68,0.2)}
+
+/* Review card */
+.review-card{background:var(--bg-card);border:1px solid var(--border);border-radius:16px;padding:16px;margin-bottom:10px}
+.review-header{display:flex;align-items:center;gap:12px;margin-bottom:10px}
+.review-avatar{width:40px;height:40px;border-radius:50%;background:var(--gradient-emerald);color:#fff;display:flex;align-items:center;justify-content:center;font-weight:700;font-size:13px;flex-shrink:0}
+.review-info{flex:1;min-width:0}
+.review-info h4{font-size:13px;font-weight:600;margin-bottom:2px}
+.review-info p{font-size:11px;color:var(--text-muted)}
+.review-stars{color:var(--gold-soft);font-size:13px;letter-spacing:2px}
+.review-text{font-size:13px;line-height:1.5;color:var(--text-muted);margin-bottom:8px}
+.review-meta{display:flex;justify-content:space-between;font-size:11px;color:var(--text-dim)}
+
+/* Stat card */
+.mini-stat{background:var(--bg-card);border:1px solid var(--border);border-radius:16px;padding:16px;text-align:center}
+.mini-stat-icon{width:44px;height:44px;border-radius:12px;margin:0 auto 10px;display:flex;align-items:center;justify-content:center;font-size:20px}
+.mini-stat-value{font-family:'Playfair Display',serif;font-size:24px;font-weight:700;margin-bottom:2px}
+.mini-stat-label{font-size:11px;color:var(--text-muted);text-transform:uppercase;letter-spacing:1px;font-weight:600}
+.mini-stat-trend{font-size:11px;margin-top:4px;font-weight:600}
+
+/* Toggle switch */
+.toggle-row{display:flex;align-items:center;justify-content:space-between;padding:14px 0;border-bottom:1px solid var(--border)}
+.toggle-row:last-child{border:none}
+.toggle-row-info{flex:1;margin-right:12px}
+.toggle-row-info h4{font-size:14px;font-weight:600;margin-bottom:2px}
+.toggle-row-info p{font-size:12px;color:var(--text-muted)}
+.toggle-switch{position:relative;width:44px;height:24px;background:var(--surface);border:1px solid var(--border);border-radius:12px;cursor:pointer;transition:all 0.2s;flex-shrink:0}
+.toggle-switch.on{background:var(--gradient-gold);border-color:transparent}
+.toggle-switch::after{content:'';position:absolute;top:2px;left:2px;width:18px;height:18px;background:#fff;border-radius:50%;transition:all 0.2s;box-shadow:0 2px 4px rgba(0,0,0,0.2)}
+.toggle-switch.on::after{left:22px}
+
+.avail-screen{padding:20px 24px}
+.avail-grid{background:var(--bg-card);border:1px solid var(--border);border-radius:18px;padding:16px;margin-bottom:16px}
+.avail-row{display:grid;grid-template-columns:80px 1fr 1fr 1fr;gap:8px;padding:10px 0;border-bottom:1px solid var(--border);align-items:center;font-size:13px}
+.avail-row:last-child{border:none}
+.avail-row.header{font-weight:700;color:var(--text-muted);font-size:11px;letter-spacing:1px;text-transform:uppercase}
+.avail-cell{display:flex;justify-content:center}
+.avail-toggle{width:38px;height:38px;border-radius:12px;background:var(--surface);border:1px solid var(--border);display:flex;align-items:center;justify-content:center;cursor:pointer;font-size:14px;transition:all 0.2s;color:var(--text-dim)}
+.avail-toggle.on{background:var(--gradient-emerald);color:#fff;border-color:transparent;box-shadow:0 4px 12px rgba(16,185,129,0.3)}
+.avail-toggle.off{background:rgba(239,68,68,0.08);color:var(--red);border-color:rgba(239,68,68,0.2)}
+.radius-screen{padding:28px 24px}
+.radius-options{display:flex;flex-direction:column;gap:10px;margin-top:20px}
+.radius-option{padding:18px;border:1px solid var(--border);border-radius:16px;cursor:pointer;display:flex;align-items:center;justify-content:space-between;transition:all 0.2s;background:var(--bg-card)}
+.radius-option:hover{border-color:var(--border-strong)}
+.radius-option.selected{border-color:var(--gold);background:rgba(212,175,55,0.05);box-shadow:0 0 0 3px rgba(212,175,55,0.1)}
+.radius-option h4{font-size:16px;font-weight:600}
+.radius-option p{font-size:12px;color:var(--text-muted);margin-top:2px}
+.home-screen{padding:20px 24px}
+.greeting{font-family:'Playfair Display',serif;font-size:28px;font-weight:700;margin-bottom:4px;letter-spacing:-0.5px}
+.greeting-sub{color:var(--text-muted);font-size:13px;margin-bottom:20px}
+.flash-banner{background:linear-gradient(135deg,#DC2626 0%,#991B1B 100%);color:#fff;padding:20px;border-radius:20px;margin-bottom:24px;display:flex;align-items:center;gap:14px;cursor:pointer;position:relative;overflow:hidden;border:1px solid rgba(255,255,255,0.1)}
+.flash-banner::before{content:'';position:absolute;top:-50%;right:-20%;width:200px;height:200px;background:radial-gradient(circle,rgba(255,255,255,0.15),transparent 70%);filter:blur(20px)}
+.flash-banner-icon{width:48px;height:48px;background:rgba(255,255,255,0.2);border-radius:14px;display:flex;align-items:center;justify-content:center;font-size:24px;position:relative;z-index:2}
+.flash-banner h4{font-size:15px;font-weight:700;letter-spacing:1px;position:relative;z-index:2}
+.flash-banner p{font-size:12px;opacity:0.9;position:relative;z-index:2}
+.section-title{font-size:11px;font-weight:700;color:var(--text-muted);text-transform:uppercase;letter-spacing:1.5px;margin-bottom:14px;display:flex;justify-content:space-between;align-items:center}
+.section-title a{color:var(--gold-soft);font-size:11px;cursor:pointer}
+.mission-card{background:var(--bg-card);border:1px solid var(--border);border-radius:20px;padding:20px;margin-bottom:12px;cursor:pointer;transition:all 0.3s cubic-bezier(0.16,1,0.3,1);position:relative;overflow:hidden}
+.mission-card::before{content:'';position:absolute;top:0;left:0;right:0;height:1px;background:linear-gradient(90deg,transparent,rgba(212,175,55,0.3),transparent);opacity:0;transition:opacity 0.3s}
+.mission-card:hover{border-color:rgba(212,175,55,0.3);transform:translateY(-2px);box-shadow:0 12px 30px rgba(0,0,0,0.3)}
+.mission-card:hover::before{opacity:1}
+.mission-type{display:inline-block;padding:5px 12px;background:rgba(59,130,246,0.12);color:var(--blue);border:1px solid rgba(59,130,246,0.2);border-radius:10px;font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:1px;margin-bottom:12px}
+.mission-type.urgent{background:rgba(239,68,68,0.12);color:var(--red);border-color:rgba(239,68,68,0.25)}
+.mission-card h3{font-size:17px;font-weight:700;margin-bottom:10px;letter-spacing:-0.3px}
+.mission-info{display:flex;flex-direction:column;gap:7px;font-size:13px;color:var(--text-muted)}
+.mission-info span{display:flex;align-items:center;gap:8px}
+.mission-footer{display:flex;justify-content:space-between;align-items:center;margin-top:16px;padding-top:16px;border-top:1px solid var(--border)}
+.mission-price{font-family:'Playfair Display',serif;font-size:22px;font-weight:700;background:var(--gradient-emerald);-webkit-background-clip:text;background-clip:text;-webkit-text-fill-color:transparent}
+.mission-price small{font-size:11px;color:var(--text-muted);font-weight:400;font-family:'Inter',sans-serif;-webkit-text-fill-color:var(--text-muted)}
+.detail-screen{padding:20px 24px}
+.detail-hero{background:linear-gradient(135deg,#1a1f35 0%,#0A0E1A 100%);border:1px solid var(--border);border-radius:22px;padding:24px;margin-bottom:20px;position:relative;overflow:hidden}
+.detail-hero::before{content:'';position:absolute;top:-50%;right:-20%;width:300px;height:300px;background:radial-gradient(circle,rgba(212,175,55,0.12),transparent 70%);filter:blur(40px)}
+.detail-hero .mission-type{background:rgba(212,175,55,0.15);color:var(--gold-soft);border-color:rgba(212,175,55,0.3);position:relative;z-index:2}
+.detail-hero h2{font-family:'Playfair Display',serif;font-size:24px;font-weight:700;margin:12px 0 6px;letter-spacing:-0.5px;position:relative;z-index:2}
+.detail-hero p{color:var(--text-muted);font-size:13px;position:relative;z-index:2}
+.detail-section{background:var(--bg-card);border:1px solid var(--border);border-radius:18px;padding:20px;margin-bottom:14px}
+.detail-section h3{font-size:11px;font-weight:700;color:var(--text-muted);text-transform:uppercase;margin-bottom:14px;letter-spacing:1.5px}
+.detail-row{display:flex;justify-content:space-between;padding:10px 0;border-bottom:1px solid var(--border);font-size:14px}
+.detail-row:last-child{border:none}
+.detail-row .label{color:var(--text-muted)}
+.detail-row .value{font-weight:600;text-align:right;max-width:60%}
+.apply-bar{position:sticky;bottom:0;background:rgba(10,14,26,0.95);backdrop-filter:blur(20px);padding:16px 24px;border-top:1px solid var(--border);margin:0 -24px}
+.route-btn{display:flex;align-items:center;gap:12px;padding:14px;background:var(--surface);border:1px solid var(--border);border-radius:14px;cursor:pointer;transition:all 0.2s;width:100%;text-align:left;margin-top:12px}
+.route-btn:hover{border-color:var(--gold);background:rgba(212,175,55,0.05)}
+.route-btn-icon{width:40px;height:40px;border-radius:12px;background:var(--gradient-gold);display:flex;align-items:center;justify-content:center;font-size:18px;color:#0A0E1A;flex-shrink:0}
+.route-btn-text{flex:1}
+.route-btn-text h4{font-size:14px;font-weight:600;margin-bottom:2px}
+.route-btn-text p{font-size:12px;color:var(--text-muted)}
+.map-screen{position:fixed;inset:0;background:var(--bg);z-index:500;display:none;flex-direction:column}
+.map-screen.active{display:flex}
+.map-header{background:rgba(10,14,26,0.95);backdrop-filter:blur(20px);padding:16px 20px;border-bottom:1px solid var(--border);display:flex;align-items:center;gap:12px;z-index:10}
+.map-header h2{font-size:16px;font-weight:600;flex:1}
+.map-container{flex:1;position:relative}
+#mapRoute{width:100%;height:100%;background:var(--bg-soft)}
+.map-panel{position:absolute;bottom:0;left:0;right:0;background:rgba(10,14,26,0.97);backdrop-filter:blur(20px);border-top:1px solid var(--border);border-radius:24px 24px 0 0;padding:20px;max-height:60%;overflow-y:auto;z-index:5}
+.map-panel-handle{width:40px;height:4px;background:var(--border-strong);border-radius:2px;margin:0 auto 16px}
+.route-tabs{display:flex;gap:6px;margin-bottom:16px;overflow-x:auto;padding-bottom:4px}
+.route-tab{padding:10px 14px;border-radius:12px;background:var(--surface);border:1px solid var(--border);font-size:12px;font-weight:600;color:var(--text-muted);cursor:pointer;white-space:nowrap;display:flex;align-items:center;gap:6px;transition:all 0.2s;flex-shrink:0}
+.route-tab.active{background:var(--gradient-gold);color:#0A0E1A;border-color:transparent;box-shadow:0 4px 12px rgba(212,175,55,0.3)}
+.route-summary{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:16px}
+.route-stat{background:var(--surface);border:1px solid var(--border);border-radius:14px;padding:14px}
+.route-stat .label{font-size:10px;color:var(--text-muted);text-transform:uppercase;letter-spacing:1px;margin-bottom:6px;font-weight:600}
+.route-stat .value{font-family:'Playfair Display',serif;font-size:24px;font-weight:700}
+.route-steps{margin-top:12px}
+.route-step{display:flex;gap:12px;padding:10px 0;font-size:13px;color:var(--text-muted);border-bottom:1px solid var(--border)}
+.route-step:last-child{border:none}
+.route-step-icon{width:28px;height:28px;border-radius:8px;background:var(--surface);display:flex;align-items:center;justify-content:center;font-size:14px;flex-shrink:0}
+.status-card{background:var(--bg-card);border:1px solid var(--border);border-radius:18px;padding:18px;margin-bottom:12px;display:flex;gap:14px;align-items:flex-start}
+.status-dot{width:10px;height:10px;border-radius:50%;margin-top:6px;flex-shrink:0;box-shadow:0 0 0 4px rgba(255,255,255,0.05)}
+.status-dot.pending{background:var(--amber)}
+.status-dot.accepted{background:var(--emerald)}
+.status-dot.rejected{background:var(--red)}
+.status-label{display:inline-block;padding:4px 10px;border-radius:8px;font-size:11px;font-weight:600;letter-spacing:0.3px}
+.status-label.pending{background:rgba(245,158,11,0.12);color:var(--amber);border:1px solid rgba(245,158,11,0.2)}
+.status-label.accepted{background:rgba(16,185,129,0.12);color:var(--emerald-soft);border:1px solid rgba(16,185,129,0.2)}
+.notif-item{background:var(--bg-card);border:1px solid var(--border);border-radius:16px;padding:16px;margin-bottom:10px;display:flex;gap:12px;align-items:flex-start;transition:all 0.2s}
+.notif-item:hover{border-color:var(--border-strong)}
+.notif-icon{width:42px;height:42px;border-radius:12px;background:rgba(59,130,246,0.12);color:var(--blue);display:flex;align-items:center;justify-content:center;font-size:18px;flex-shrink:0;border:1px solid rgba(59,130,246,0.2)}
+.notif-icon.urgent{background:rgba(239,68,68,0.12);color:var(--red);border-color:rgba(239,68,68,0.2)}
+.notif-icon.success{background:rgba(16,185,129,0.12);color:var(--emerald-soft);border-color:rgba(16,185,129,0.2)}
+.notif-content h4{font-size:14px;font-weight:600;margin-bottom:3px}
+.notif-content p{font-size:12px;color:var(--text-muted);line-height:1.5}
+.notif-time{font-size:11px;color:var(--text-dim);margin-top:6px}
+.msg-list{padding:0 24px}
+.msg-item{background:var(--bg-card);border:1px solid var(--border);border-radius:16px;padding:14px;margin-bottom:10px;display:flex;gap:12px;cursor:pointer;transition:all 0.2s}
+.msg-item:hover{border-color:var(--border-strong)}
+.msg-avatar{width:46px;height:46px;border-radius:50%;background:var(--gradient-gold);color:#0A0E1A;display:flex;align-items:center;justify-content:center;font-weight:700;font-size:15px;flex-shrink:0}
+.msg-content{flex:1;min-width:0}
+.msg-content h4{font-size:14px;font-weight:600;margin-bottom:3px}
+.msg-content p{font-size:13px;color:var(--text-muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.msg-meta{text-align:right;font-size:11px;color:var(--text-dim)}
+.msg-unread{width:20px;height:20px;background:var(--gradient-gold);color:#0A0E1A;border-radius:50%;font-size:10px;font-weight:700;display:flex;align-items:center;justify-content:center;margin-left:auto;margin-top:6px}
+.chat-screen{display:flex;flex-direction:column;height:100%}
+.chat-messages{flex:1;padding:20px 24px;overflow-y:auto;display:flex;flex-direction:column;gap:10px}
+.chat-bubble{max-width:78%;padding:11px 15px;border-radius:18px;font-size:14px;line-height:1.5}
+.chat-bubble.received{background:var(--bg-card);border:1px solid var(--border);align-self:flex-start;border-bottom-left-radius:4px;color:var(--text)}
+.chat-bubble.sent{background:var(--gradient-gold);color:#0A0E1A;align-self:flex-end;border-bottom-right-radius:4px;font-weight:500}
+.chat-time{font-size:10px;opacity:0.6;margin-top:4px}
+.chat-input{padding:12px 16px;border-top:1px solid var(--border);display:flex;gap:10px;background:rgba(10,14,26,0.95);backdrop-filter:blur(20px)}
+.chat-input input{flex:1;padding:12px 16px;border:1px solid var(--border);border-radius:24px;font-size:14px;background:var(--bg-card);color:var(--text)}
+.chat-input input:focus{outline:none;border-color:var(--gold)}
+.chat-input button{width:42px;height:42px;border-radius:50%;background:var(--gradient-gold);color:#0A0E1A;font-size:16px;font-weight:700}
+.etab-layout{min-height:100vh;background:var(--bg);display:flex}
+.etab-sidebar{width:280px;background:var(--bg-soft);border-right:1px solid var(--border);padding:28px 0;position:fixed;height:100vh;overflow-y:auto;display:flex;flex-direction:column}
+.etab-brand{padding:0 28px 28px;border-bottom:1px solid var(--border);margin-bottom:20px;flex-shrink:0}
+.etab-brand h2{font-family:'Playfair Display',serif;font-size:28px;font-weight:700;background:var(--gradient-gold);-webkit-background-clip:text;background-clip:text;-webkit-text-fill-color:transparent;letter-spacing:-1px}
+.etab-brand p{font-size:11px;color:var(--text-muted);margin-top:4px;letter-spacing:2px;text-transform:uppercase;font-weight:500}
+.etab-nav{padding:0 14px;flex:1}
+.etab-nav-item{padding:13px 18px;border-radius:12px;color:var(--text-muted);font-weight:500;font-size:14px;cursor:pointer;display:flex;align-items:center;gap:14px;margin-bottom:4px;transition:all 0.2s}
+.etab-nav-item:hover{background:var(--surface);color:var(--text)}
+.etab-nav-item.active{background:rgba(212,175,55,0.08);color:var(--gold-soft);border:1px solid rgba(212,175,55,0.15)}
+.etab-main{margin-left:280px;flex:1;padding:36px}
+.etab-topbar{display:flex;justify-content:space-between;align-items:center;margin-bottom:36px;flex-wrap:wrap;gap:16px}
+.etab-topbar h1{font-family:'Playfair Display',serif;font-size:32px;font-weight:700;letter-spacing:-0.5px}
+.etab-user{display:flex;align-items:center;gap:14px}
+.etab-user-avatar{width:44px;height:44px;border-radius:50%;background:var(--gradient-gold);color:#0A0E1A;display:flex;align-items:center;justify-content:center;font-weight:700}
+.etab-logout{padding:10px 18px;border-radius:12px;background:rgba(239,68,68,0.08);border:1px solid rgba(239,68,68,0.2);color:var(--red);font-size:13px;font-weight:600;cursor:pointer;transition:all 0.2s;display:flex;align-items:center;gap:8px}
+.etab-logout:hover{background:rgba(239,68,68,0.15)}
+.stat-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:18px;margin-bottom:36px}
+.stat-card{background:var(--bg-card);border:1px solid var(--border);border-radius:20px;padding:24px;position:relative;overflow:hidden;transition:all 0.3s}
+.stat-card:hover{border-color:var(--border-strong);transform:translateY(-2px)}
+.stat-card::before{content:'';position:absolute;top:0;right:0;width:100px;height:100px;background:radial-gradient(circle,rgba(212,175,55,0.08),transparent 70%);filter:blur(20px)}
+.stat-card .stat-label{font-size:11px;color:var(--text-muted);margin-bottom:12px;font-weight:600;letter-spacing:1.5px;text-transform:uppercase}
+.stat-card .stat-value{font-family:'Playfair Display',serif;font-size:36px;font-weight:700;margin-bottom:8px;letter-spacing:-1px}
+.stat-card .stat-sub{font-size:12px;display:flex;align-items:center;gap:4px;color:var(--text-muted)}
+.stat-card .stat-sub.up{color:var(--emerald-soft)}
+.stat-card .stat-sub.pending{color:var(--amber)}
+.stat-card .stat-sub.down{color:var(--red)}
+.bo-layout{min-height:100vh;background:var(--bg);display:flex}
+.bo-sidebar{width:280px;background:var(--bg-soft);padding:0;position:fixed;height:100vh;overflow-y:auto;border-right:1px solid var(--border);display:flex;flex-direction:column;z-index:20}
+.bo-sidebar::-webkit-scrollbar{width:6px}
+.bo-sidebar::-webkit-scrollbar-thumb{background:var(--border-strong);border-radius:3px}
+.bo-brand{padding:24px 28px;border-bottom:1px solid var(--border);flex-shrink:0}
+.bo-brand h2{font-family:'Playfair Display',serif;font-size:28px;font-weight:700;background:var(--gradient-gold);-webkit-background-clip:text;background-clip:text;-webkit-text-fill-color:transparent;letter-spacing:-1px}
+.bo-brand p{font-size:10px;color:var(--text-muted);margin-top:4px;text-transform:uppercase;letter-spacing:2px;font-weight:600}
+.bo-brand-status{display:flex;align-items:center;gap:8px;margin-top:10px;padding:6px 10px;background:rgba(16,185,129,0.08);border:1px solid rgba(16,185,129,0.2);border-radius:8px;font-size:11px;color:var(--emerald-soft);font-weight:600}
+.bo-brand-status .dot{width:6px;height:6px;border-radius:50%;background:var(--emerald-soft);animation:pulse 2s infinite}
+@keyframes pulse{0%,100%{opacity:1}50%{opacity:0.4}}
+.bo-nav{padding:16px 14px;flex:1}
+.bo-nav-section{font-size:10px;color:var(--text-dim);text-transform:uppercase;letter-spacing:1.5px;font-weight:700;padding:12px 18px 8px;margin-top:8px}
+.bo-nav-item{padding:11px 16px;border-radius:10px;color:var(--text-muted);font-weight:500;font-size:13px;cursor:pointer;display:flex;align-items:center;gap:12px;margin-bottom:2px;transition:all 0.2s;position:relative}
+.bo-nav-item:hover{background:var(--surface);color:var(--text)}
+.bo-nav-item.active{background:var(--gradient-gold);color:#0A0E1A;font-weight:600}
+.bo-nav-item .badge{margin-left:auto;background:var(--red);color:#fff;font-size:10px;font-weight:700;padding:2px 7px;border-radius:10px;min-width:20px;text-align:center}
+.bo-nav-item.active .badge{background:#0A0E1A;color:var(--gold-soft)}
+.bo-sidebar-footer{padding:16px 14px;border-top:1px solid var(--border);flex-shrink:0}
+.bo-admin-card{display:flex;align-items:center;gap:12px;padding:10px;border-radius:12px;background:var(--surface);margin-bottom:10px}
+.bo-admin-avatar{width:38px;height:38px;border-radius:50%;background:var(--gradient-gold);color:#0A0E1A;display:flex;align-items:center;justify-content:center;font-weight:700;font-size:14px;flex-shrink:0}
+.bo-admin-info{flex:1;min-width:0}
+.bo-admin-info strong{font-size:13px;display:block;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.bo-admin-info span{font-size:11px;color:var(--text-muted)}
+.bo-logout{width:100%;padding:10px;border-radius:10px;background:rgba(239,68,68,0.08);border:1px solid rgba(239,68,68,0.2);color:var(--red);font-size:12px;font-weight:600;cursor:pointer;transition:all 0.2s;display:flex;align-items:center;justify-content:center;gap:8px}
+.bo-logout:hover{background:rgba(239,68,68,0.15)}
+.bo-main{margin-left:280px;flex:1;padding:0;min-height:100vh}
+.bo-topbar{background:rgba(17,24,39,0.6);backdrop-filter:blur(20px);padding:18px 32px;border-bottom:1px solid var(--border);display:flex;justify-content:space-between;align-items:center;position:sticky;top:0;z-index:15;gap:16px;flex-wrap:wrap}
+.bo-topbar-left h1{font-family:'Playfair Display',serif;font-size:26px;font-weight:700;letter-spacing:-0.5px}
+.bo-topbar-left p{color:var(--text-muted);font-size:12px;margin-top:2px}
+.bo-topbar-right{display:flex;gap:10px;align-items:center;flex-wrap:wrap}
+.bo-search{background:var(--bg-card);border:1px solid var(--border);border-radius:10px;padding:10px 14px;color:var(--text);width:260px;font-size:13px;transition:all 0.2s}
+.bo-search:focus{outline:none;border-color:var(--gold);box-shadow:0 0 0 3px rgba(212,175,55,0.1)}
+.bo-search::placeholder{color:var(--text-dim)}
+.icon-btn{width:40px;height:40px;border-radius:10px;background:var(--bg-card);border:1px solid var(--border);display:flex;align-items:center;justify-content:center;font-size:16px;cursor:pointer;transition:all 0.2s;position:relative}
+.icon-btn:hover{background:var(--surface-hover);border-color:var(--border-strong)}
+.icon-btn .notif-dot{position:absolute;top:8px;right:8px;width:8px;height:8px;border-radius:50%;background:var(--red);border:2px solid var(--bg-soft)}
+.bo-content{padding:28px 32px}
+.bo-stat-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:16px;margin-bottom:28px}
+.bo-stat{background:var(--bg-card);border:1px solid var(--border);border-radius:18px;padding:22px;position:relative;overflow:hidden;transition:all 0.3s;cursor:pointer}
+.bo-stat:hover{border-color:var(--border-strong);transform:translateY(-2px)}
+.bo-stat::before{content:'';position:absolute;top:0;right:0;width:120px;height:120px;background:radial-gradient(circle,rgba(212,175,55,0.06),transparent 70%);filter:blur(20px)}
+.bo-stat-header{display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:14px}
+.bo-stat .stat-label{font-size:11px;color:var(--text-muted);font-weight:600;text-transform:uppercase;letter-spacing:1.5px}
+.bo-stat .stat-icon{width:36px;height:36px;border-radius:10px;display:flex;align-items:center;justify-content:center;font-size:16px}
+.bo-stat .stat-icon.gold{background:rgba(212,175,55,0.12);color:var(--gold-soft);border:1px solid rgba(212,175,55,0.2)}
+.bo-stat .stat-icon.emerald{background:rgba(16,185,129,0.12);color:var(--emerald-soft);border:1px solid rgba(16,185,129,0.2)}
+.bo-stat .stat-icon.blue{background:rgba(59,130,246,0.12);color:var(--blue);border:1px solid rgba(59,130,246,0.2)}
+.bo-stat .stat-icon.red{background:rgba(239,68,68,0.12);color:var(--red);border:1px solid rgba(239,68,68,0.2)}
+.bo-stat .stat-icon.amber{background:rgba(245,158,11,0.12);color:var(--amber);border:1px solid rgba(245,158,11,0.2)}
+.bo-stat .stat-icon.purple{background:rgba(139,92,246,0.12);color:var(--purple);border:1px solid rgba(139,92,246,0.2)}
+.bo-stat .stat-value{font-family:'Playfair Display',serif;font-size:34px;font-weight:700;margin-bottom:6px;letter-spacing:-1px}
+.bo-stat .stat-trend{font-size:11px;display:flex;align-items:center;gap:4px;font-weight:600}
+.bo-stat .stat-trend.up{color:var(--emerald-soft)}
+.bo-stat .stat-trend.down{color:var(--red)}
+.bo-stat .stat-trend.neutral{color:var(--text-muted)}
+.bo-card{background:var(--bg-card);border:1px solid var(--border);border-radius:18px;padding:22px;margin-bottom:18px}
+.bo-card-header{display:flex;justify-content:space-between;align-items:center;margin-bottom:18px;flex-wrap:wrap;gap:12px}
+.bo-card h3{font-family:'Playfair Display',serif;font-size:17px;font-weight:700;letter-spacing:-0.3px}
+.bo-card-subtitle{font-size:12px;color:var(--text-muted);margin-top:2px}
+.bo-table{width:100%;border-collapse:collapse}
+.bo-table th{text-align:left;padding:12px;font-size:10px;color:var(--text-muted);text-transform:uppercase;letter-spacing:1.5px;border-bottom:1px solid var(--border);font-weight:700}
+.bo-table td{padding:14px 12px;font-size:13px;border-bottom:1px solid var(--border);vertical-align:middle}
+.bo-table tr:hover td{background:var(--surface)}
+.bo-table tr:last-child td{border:none}
+.bo-user-cell{display:flex;align-items:center;gap:10px}
+.bo-user-avatar{width:34px;height:34px;border-radius:50%;background:var(--gradient-gold);color:#0A0E1A;display:flex;align-items:center;justify-content:center;font-weight:700;font-size:11px;flex-shrink:0}
+.bo-user-avatar.emerald{background:var(--gradient-emerald)}
+.bo-user-avatar.red{background:linear-gradient(135deg,#EF4444,#DC2626);color:#fff}
+.bo-user-avatar.blue{background:linear-gradient(135deg,#3B82F6,#60A5FA);color:#fff}
+.bo-user-avatar.purple{background:linear-gradient(135deg,#8B5CF6,#A78BFA);color:#fff}
+.bo-badge{padding:4px 10px;border-radius:8px;font-size:10px;font-weight:700;display:inline-block;letter-spacing:0.3px;text-transform:uppercase}
+.bo-badge.verified{background:rgba(16,185,129,0.12);color:var(--emerald-soft);border:1px solid rgba(16,185,129,0.2)}
+.bo-badge.pending{background:rgba(245,158,11,0.12);color:var(--amber);border:1px solid rgba(245,158,11,0.2)}
+.bo-badge.rejected{background:rgba(239,68,68,0.12);color:var(--red);border:1px solid rgba(239,68,68,0.2)}
+.bo-badge.info{background:rgba(59,130,246,0.12);color:var(--blue);border:1px solid rgba(59,130,246,0.2)}
+.bo-action-btn{padding:6px 11px;border-radius:7px;background:var(--surface);border:1px solid var(--border);color:var(--text);font-size:11px;font-weight:600;margin-right:3px;cursor:pointer;transition:all 0.2s}
+.bo-action-btn:hover{background:var(--surface-hover);border-color:var(--border-strong)}
+.bo-action-btn.accept{background:rgba(16,185,129,0.12);color:var(--emerald-soft);border-color:rgba(16,185,129,0.25)}
+.bo-action-btn.reject{background:rgba(239,68,68,0.12);color:var(--red);border-color:rgba(239,68,68,0.25)}
+.bo-action-btn.view{background:rgba(59,130,246,0.12);color:var(--blue);border-color:rgba(59,130,246,0.25)}
+.filters-bar{display:flex;gap:10px;margin-bottom:20px;flex-wrap:wrap;align-items:center}
+.filter-chip{padding:8px 14px;border-radius:10px;background:var(--bg-card);border:1px solid var(--border);font-size:12px;font-weight:600;color:var(--text-muted);cursor:pointer;transition:all 0.2s;display:flex;align-items:center;gap:6px}
+.filter-chip:hover{border-color:var(--border-strong);color:var(--text)}
+.filter-chip.active{background:rgba(212,175,55,0.1);border-color:var(--gold);color:var(--gold-soft)}
+.filter-select{padding:8px 12px;border-radius:10px;background:var(--bg-card);border:1px solid var(--border);font-size:12px;font-weight:600;color:var(--text);cursor:pointer}
+.filter-select:focus{outline:none;border-color:var(--gold)}
+.tabs{display:flex;gap:4px;margin-bottom:20px;border-bottom:1px solid var(--border);overflow-x:auto}
+.tab{padding:10px 18px;font-size:13px;font-weight:600;color:var(--text-muted);cursor:pointer;border-bottom:2px solid transparent;transition:all 0.2s;white-space:nowrap}
+.tab:hover{color:var(--text)}
+.tab.active{color:var(--gold-soft);border-bottom-color:var(--gold)}
+.modal-overlay{position:fixed;inset:0;background:rgba(10,14,26,0.85);backdrop-filter:blur(8px);display:none;align-items:center;justify-content:center;z-index:1000;padding:20px}
+.modal-overlay.active{display:flex}
+.modal{background:var(--bg-card);border:1px solid var(--border);border-radius:20px;max-width:700px;width:100%;max-height:90vh;overflow:hidden;display:flex;flex-direction:column;box-shadow:var(--shadow)}
+.modal.lg{max-width:900px}
+.modal-header{padding:20px 24px;border-bottom:1px solid var(--border);display:flex;justify-content:space-between;align-items:center;flex-shrink:0}
+.modal-header h2{font-family:'Playfair Display',serif;font-size:22px;font-weight:700;letter-spacing:-0.3px}
+.modal-close{width:32px;height:32px;border-radius:8px;background:var(--surface);border:1px solid var(--border);display:flex;align-items:center;justify-content:center;cursor:pointer;font-size:14px;color:var(--text-muted)}
+.modal-close:hover{background:var(--surface-hover);color:var(--text)}
+.modal-body{padding:24px;overflow-y:auto;flex:1}
+.modal-footer{padding:16px 24px;border-top:1px solid var(--border);display:flex;gap:10px;justify-content:flex-end;flex-shrink:0}
+.detail-hero-bo{display:flex;gap:20px;padding:20px;background:linear-gradient(135deg,rgba(212,175,55,0.08),rgba(16,185,129,0.04));border:1px solid var(--border);border-radius:16px;margin-bottom:20px;align-items:center}
+.detail-avatar-bo{width:80px;height:80px;border-radius:20px;background:var(--gradient-gold);color:#0A0E1A;display:flex;align-items:center;justify-content:center;font-weight:700;font-size:28px;flex-shrink:0}
+.detail-info-bo h3{font-family:'Playfair Display',serif;font-size:22px;font-weight:700;margin-bottom:4px}
+.detail-info-bo p{color:var(--text-muted);font-size:13px;margin-bottom:8px}
+.detail-meta{display:flex;gap:14px;flex-wrap:wrap}
+.detail-meta-item{display:flex;align-items:center;gap:6px;font-size:12px;color:var(--text-muted)}
+.detail-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:12px;margin-bottom:20px}
+.detail-item{background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:14px}
+.detail-item .label{font-size:10px;color:var(--text-muted);text-transform:uppercase;letter-spacing:1px;font-weight:700;margin-bottom:6px}
+.detail-item .value{font-size:14px;font-weight:600}
+.chart-container{position:relative;height:240px;padding:10px 0}
+.chart-svg{width:100%;height:100%}
+.feed-item{display:flex;gap:12px;padding:12px 0;border-bottom:1px solid var(--border)}
+.feed-item:last-child{border:none}
+.feed-icon{width:36px;height:36px;border-radius:10px;display:flex;align-items:center;justify-content:center;font-size:16px;flex-shrink:0}
+.feed-icon.gold{background:rgba(212,175,55,0.12);color:var(--gold-soft)}
+.feed-icon.emerald{background:rgba(16,185,129,0.12);color:var(--emerald-soft)}
+.feed-icon.blue{background:rgba(59,130,246,0.12);color:var(--blue)}
+.feed-icon.red{background:rgba(239,68,68,0.12);color:var(--red)}
+.feed-icon.amber{background:rgba(245,158,11,0.12);color:var(--amber)}
+.feed-icon.purple{background:rgba(139,92,246,0.12);color:var(--purple)}
+.feed-content{flex:1;min-width:0}
+.feed-content strong{font-weight:600}
+.feed-content p{font-size:13px;line-height:1.5}
+.feed-time{font-size:11px;color:var(--text-dim);margin-top:2px}
+.progress-bar{height:6px;background:var(--surface);border-radius:3px;overflow:hidden;margin-top:6px}
+.progress-fill{height:100%;border-radius:3px;transition:width 0.6s ease}
+.progress-fill.gold{background:var(--gradient-gold)}
+.progress-fill.emerald{background:var(--gradient-emerald)}
+.progress-fill.red{background:linear-gradient(90deg,#EF4444,#DC2626)}
+.progress-fill.blue{background:linear-gradient(90deg,#3B82F6,#60A5FA)}
+.map-widget{height:360px;border-radius:14px;overflow:hidden;border:1px solid var(--border);position:relative}
+.leaflet-container{background:var(--bg-soft);font-family:'Inter',sans-serif}
+.leaflet-control-attribution{background:rgba(10,14,26,0.8) !important;color:var(--text-muted) !important;font-size:10px !important}
+.leaflet-control-attribution a{color:var(--gold-soft) !important}
+.leaflet-popup-content-wrapper{background:var(--bg-card) !important;color:var(--text) !important;border-radius:10px !important;border:1px solid var(--border) !important}
+.leaflet-popup-tip{background:var(--bg-card) !important}
+.notif-panel{position:fixed;top:70px;right:20px;width:380px;max-height:500px;background:var(--bg-card);border:1px solid var(--border);border-radius:16px;box-shadow:var(--shadow);z-index:50;display:none;overflow:hidden;flex-direction:column}
+.notif-panel.active{display:flex}
+.notif-panel-header{padding:16px 20px;border-bottom:1px solid var(--border);display:flex;justify-content:space-between;align-items:center}
+.notif-panel-header h3{font-size:15px;font-weight:700}
+.notif-panel-body{overflow-y:auto;flex:1}
+.notif-panel-item{padding:14px 20px;border-bottom:1px solid var(--border);display:flex;gap:12px;cursor:pointer;transition:background 0.2s}
+.notif-panel-item:hover{background:var(--surface)}
+.notif-panel-item.unread{background:rgba(212,175,55,0.03)}
+.notif-panel-icon{width:36px;height:36px;border-radius:10px;display:flex;align-items:center;justify-content:center;font-size:16px;flex-shrink:0}
+.notif-panel-content{flex:1;min-width:0}
+.notif-panel-content h4{font-size:13px;font-weight:600;margin-bottom:2px}
+.notif-panel-content p{font-size:12px;color:var(--text-muted);line-height:1.4}
+.notif-panel-time{font-size:10px;color:var(--text-dim);margin-top:4px}
+.toast-container{position:fixed;bottom:24px;right:24px;z-index:2000;display:flex;flex-direction:column;gap:10px}
+.toast{background:var(--bg-card);border:1px solid var(--border);border-radius:12px;padding:14px 18px;box-shadow:var(--shadow);display:flex;align-items:center;gap:12px;min-width:300px;animation:slideIn 0.3s ease}
+.toast.success{border-color:rgba(16,185,129,0.3)}
+.toast.error{border-color:rgba(239,68,68,0.3)}
+.toast.info{border-color:rgba(59,130,246,0.3)}
+.toast-icon{font-size:18px}
+.toast-content{flex:1}
+.toast-content strong{font-size:13px;display:block;margin-bottom:2px}
+.toast-content span{font-size:12px;color:var(--text-muted)}
+@keyframes slideIn{from{transform:translateX(100%);opacity:0}to{transform:translateX(0);opacity:1}}
+.grid-2{display:grid;grid-template-columns:2fr 1fr;gap:18px}
+.grid-3{display:grid;grid-template-columns:repeat(3,1fr);gap:18px}
+.grid-4{display:grid;grid-template-columns:repeat(2,1fr);gap:12px}
+@media(max-width:1100px){.grid-2,.grid-3{grid-template-columns:1fr}}
+.interface-switcher{position:fixed;top:20px;right:20px;background:rgba(10,14,26,0.9);backdrop-filter:blur(20px);border:1px solid var(--border);border-radius:14px;padding:6px;display:flex;gap:4px;z-index:100;box-shadow:var(--shadow-soft)}
+.switch-btn{padding:8px 14px;border-radius:10px;background:transparent;color:var(--text-muted);font-size:12px;font-weight:600;transition:all 0.2s;letter-spacing:0.3px}
+.switch-btn:hover{color:var(--text)}
+.switch-btn.active{background:var(--gradient-gold);color:#0A0E1A}
+@media(max-width:900px){
+.etab-sidebar,.bo-sidebar{transform:translateX(-100%);transition:transform 0.3s;z-index:50}
+.etab-sidebar.open,.bo-sidebar.open{transform:translateX(0)}
+.etab-main,.bo-main{margin-left:0;padding:20px}
+.interface-switcher{top:10px;right:10px}
+.switch-btn{padding:6px 10px;font-size:11px}
+.landing-title{font-size:40px}
+.landing{padding:30px 20px}
+}
+.hidden{display:none !important}
+.fade-in{animation:fadeIn 0.4s cubic-bezier(0.16,1,0.3,1)}
+@keyframes fadeIn{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:translateY(0)}}
+</style>
+</head>
+<body>
+<div class="app active" id="interface-pro">
+<div class="phone-frame">
+<div class="phone-screen" id="pro-screen"></div>
+<div class="bottom-nav" id="pro-nav">
+<div class="nav-item active" onclick="showProScreen('home')"><div class="nav-icon">🏠</div>Accueil</div>
+<div class="nav-item" onclick="showProScreen('missions')"><div class="nav-icon">📋</div>Missions</div>
+<div class="nav-item" onclick="showProScreen('notif')" style="position:relative"><div class="nav-icon">🔔</div>Alertes<span class="urgad-badge" id="proNotifBadge" style="display:none"></span></div>
+<div class="nav-item" onclick="showProScreen('msg')"><div class="nav-icon">💬</div>Messages</div>
+<div class="nav-item" onclick="showProScreen('profile')"><div class="nav-icon">👤</div>Profil</div>
+</div>
+</div>
+<div class="urgad-legal-footer" style="text-align:center;font-size:11px;color:var(--text-dim);padding:14px 10px">© URGAD · <a href="cgu.html" target="_blank" rel="noopener">CGU</a> · <a href="confidentialite.html" target="_blank" rel="noopener">Politique de confidentialité</a></div>
+</div>
+<div class="map-screen" id="mapScreen">
+<div class="map-header">
+<button class="back-btn" onclick="closeMap()">←</button>
+<h2 id="mapTitle">Itinéraire</h2>
+<button class="btn btn-primary" style="padding:10px 16px;font-size:13px" onclick="startNavigation()">🧭 Naviguer</button>
+</div>
+<div class="map-container">
+<div id="mapRoute"></div>
+<div class="map-panel">
+<div class="map-panel-handle"></div>
+<div class="route-tabs" id="routeTabs">
+<div class="route-tab active" data-mode="driving" data-label="Voiture" onclick="switchRouteMode('driving','Voiture',this)">🚗 Voiture</div>
+<div class="route-tab" data-mode="driving" data-label="Moto" onclick="switchRouteMode('driving','Moto',this)">🏍️ Moto</div>
+<div class="route-tab" data-mode="transit" data-label="Transport" onclick="switchRouteMode('transit','Transport',this)">🚌 Transport</div>
+<div class="route-tab" data-mode="cycling" data-label="Vélo" onclick="switchRouteMode('cycling','Vélo',this)">🚴 Vélo</div>
+<div class="route-tab" data-mode="walking" data-label="À pied" onclick="switchRouteMode('walking','À pied',this)">🚶 À pied</div>
+</div>
+<div class="route-summary">
+<div class="route-stat"><div class="label">Durée</div><div class="value" id="routeDuration">--</div></div>
+<div class="route-stat"><div class="label">Distance</div><div class="value" id="routeDistance">--</div></div>
+</div>
+<div id="routeDetails"></div>
+<button class="btn btn-primary btn-block btn-lg" style="margin-top:16px" onclick="startNavigation()">🧭 Démarrer la navigation</button>
+</div>
+</div>
+</div>
+
+<div class="modal-overlay" id="modal">
+<div class="modal" id="modalContent"></div>
+</div>
+<div class="toast-container" id="toastContainer"></div>
+<script src="urgad-store.js"></script>
+<script src="urgad-features.js"></script>
+<script>
+const U = UrgadStore.load();
+let missions = U.missions;
+let professionals = U.professionals;
+let establishments = U.establishments;
+let disputes = U.disputes;
+let supportTickets = U.supportTickets;
+let admins = U.admins;
+let auditLog = U.auditLog;
+let feedItems = U.feedItems;
+let systemNotifications = U.alerts.bo;
+let notifications = U.alerts.pro;
+let userProfile = U.proProfile;
+let userDocuments = U.documents;
+let userReviews = U.reviews;
+let monthlyStats = U.monthlyStats;
+let threads = U.threads;
+const userLocation = {lat:48.8566,lng:2.3522};
+let currentRouteMission = null;
+let mapRoute = null;
+let routeLayer = null;
+let markersLayer = null;
+let liveMap = null;
+let currentBoScreen = 'dashboard';
+let currentThreadId = 1;
+function urgadCommit(){ /* aperçu mémoire uniquement — pas de localStorage */ }
+
+function proInitials(){
+  return (((userProfile.firstName||'U').charAt(0))+((userProfile.lastName||'').charAt(0))).toUpperCase();
+}
+function fieldVal(id){ const el=document.getElementById(id); return el?String(el.value||'').trim():''; }
+async function saveProDraft(){
+  const draft = {
+    firstName: fieldVal('reg-first'), lastName: fieldVal('reg-last'), phone: fieldVal('reg-phone'),
+    email: fieldVal('reg-email'), password: fieldVal('reg-pass'), birthDate: fieldVal('reg-birth'),
+    address: fieldVal('reg-address'), city: fieldVal('reg-city'), postalCode: fieldVal('reg-cp')
+  };
+  if(!draft.firstName || !draft.lastName || !draft.email || !draft.password || !draft.phone){
+    toast('error','Compte incomplet','Prénom, nom, téléphone, e-mail et mot de passe sont requis par l\'API');
+    return;
+  }
+  const cgu = document.getElementById('cgu'), priv = document.getElementById('priv');
+  if(!(cgu && cgu.checked) || !(priv && priv.checked)){
+    toast('error','Conditions','Acceptez les CGU et la politique de confidentialité pour continuer.');
+    return;
+  }
+  draft.acceptTerms = true;
+  U.draftPro = draft;
+  try {
+    let created;
+    try {
+      created = await UrgadApi.registerProfessional(draft);
+    } catch(e) {
+      if (e.status !== 409) throw e;
+      created = await UrgadApi.requestCode({ email: draft.email, phone: draft.phone });
+    }
+    U.draftPro.userId = created.userId || U.draftPro.userId;
+    U.draftPro.verificationCode = created.verificationCode || '';
+    showProScreen('sms');
+    toast('info','Code stocké','Aucun SMS envoyé. Saisissez le code affiché.');
+  } catch(e) {
+    toast('error','Compte', e.message || 'Échec');
+  }
+}
+function moveSms(el){
+  const box = document.getElementById('sms-code');
+  if(!box) return;
+  const inputs = Array.from(box.querySelectorAll('input'));
+  const i = inputs.indexOf(el);
+  if(el.value && inputs[i+1]) inputs[i+1].focus();
+}
+async function submitSmsCode(){
+  const box = document.getElementById('sms-code');
+  const code = box ? Array.from(box.querySelectorAll('input')).map(function(i){ return i.value; }).join('').trim() : '';
+  const draft = U.draftPro || {};
+  if(code.length !== 6){ toast('error','Code','Saisissez les 6 chiffres'); return; }
+  try {
+    await UrgadApi.verifyPhone({ code: code, email: draft.email, userId: draft.userId, phone: draft.phone });
+    if(draft.email && draft.password) await UrgadApi.login(draft.email, draft.password, 'professional');
+    showProScreen('profession');
+    toast('success','Téléphone vérifié','Compte marqué vérifié. Aucun SMS réel.');
+  } catch(e) { toast('error','Vérification', e.message || 'Échec'); }
+}
+function saveProProfession(){
+  const h = document.querySelector('.prof-option.selected h4');
+  U.draftPro = U.draftPro || {};
+  U.draftPro.profession = h ? h.textContent : 'Aide-soignant';
+  showProScreen('verify');
+}
+async function finishProSignup(){
+  const draft = U.draftPro || {};
+  try {
+    if(!UrgadApi.token('professional')){
+      try { await UrgadApi.registerProfessional(draft); }
+      catch(e) { if(e.status !== 409) throw e; }
+      await UrgadApi.login(draft.email, draft.password, 'professional');
+    }
+    if(draft.profession){ try { await UrgadApi.updateProfile('professional', { profession: draft.profession }); } catch(e) {} }
+    await refreshPro();
+    showProScreen('home');
+    toast('success','Compte créé','Enregistré sur l\'API, session ouverte.');
+  } catch(e) {
+    toast('error','Compte', e.message || 'Échec');
+    showProScreen('register');
+  }
+}
+async function tryProLogin(){
+  const id = fieldVal('login-id');
+  const pass = fieldVal('login-pass');
+  if(id.indexOf('@')===-1){
+    toast('error','Connexion refusée','L\'API attend un e-mail (pas de connexion par téléphone).');
+    return;
+  }
+  try {
+    await UrgadApi.login(id, pass, 'professional');
+    await refreshPro();
+    showProScreen('home');
+    toast('success','Connecté', userProfile.email || id);
+  } catch(e) {
+    toast('error','Connexion refusée', e.message || 'Échec');
+  }
+}
+async function clearProSession(){
+  closeModal();
+  try { await UrgadFeatures.unregisterNativePush('professional'); } catch(e) {}
+  UrgadFeatures.stopNotifications('professional');
+  proNotifStarted = false;
+  UrgadApi.clearToken('professional');
+  U.sessions.pro = null;
+  missions = [];
+  threads = [];
+  U.candidatures = [];
+  notifications = [];
+  showProScreen('welcome');
+  toast('info','Déconnexion','Jeton retiré de cette session');
+}
+async function refreshPro(){
+  const profile = await UrgadApi.profile('professional');
+  const userId = profile.user_id || profile.id;
+  let card = {};
+  try { card = await UrgadApi.professional('professional', userId) || {}; } catch(e) { card = {}; }
+  userProfile.firstName = card.first_name || userProfile.firstName || 'Pro';
+  userProfile.lastName = card.last_name || '';
+  userProfile.email = profile.email || card.email || '';
+  userProfile.phone = profile.phone || card.phone || '';
+  userProfile.role = card.profession || profile.profession || 'Aide-soignant(e)';
+  userProfile.experienceYears = (card.experience_years!=null ? card.experience_years : profile.experience_years);
+  userProfile.radius = card.mobility_radius || profile.mobility_radius || userProfile.radius || 20;
+  userProfile.address = card.address || profile.address || '';
+  userProfile.city = card.city || profile.city || '';
+  userProfile.postalCode = card.postal_code || profile.postal_code || '';
+  userProfile.geocodeLabel = profile.geocode_label || '';
+  userProfile.geocodePrecision = profile.geocode_precision || '';
+  userProfile.joined = String(profile.created_at || '').slice(0,10);
+  U.sessions.pro = { loggedIn:true, email: userProfile.email, userId: userId };
+  const near = await UrgadApi.nearbyMissions('professional', proDevicePosition || {});
+  U.nearby = near || {};
+  missions = ((near && near.missions) || []).map(UrgadApi.mapMission);
+  U.missions = missions;
+  if(near && near.origin){ userLocation.lat = near.origin.latitude; userLocation.lng = near.origin.longitude; userLocation.real = true; userLocation.label = near.origin.source==='device' ? 'Votre position' : (near.origin.label || 'Votre adresse'); }
+  else { userLocation.real = false; userLocation.label = ''; }
+  U.candidatures = (await UrgadApi.myApplications('professional') || []).map(UrgadApi.mapApplication);
+  // Missions déjà candidatées hors du rayon : les garder pour l'écran "Mes missions".
+  for (const c of U.candidatures) {
+    if (!missions.some(function(m){ return m.id===c.missionId; })) {
+      try { const extra = await UrgadApi.request('professional','GET','/api/missions/'+c.missionId); if(extra){ const mm = UrgadApi.mapMission(extra); mm.outOfRadius = true; U.extraMissions = (U.extraMissions||[]).filter(function(x){return x.id!==mm.id;}).concat([mm]); } } catch(e) {}
+    }
+  }
+  threads = (await UrgadApi.conversations('professional') || []).map(UrgadApi.mapConversation);
+  U.threads = threads;
+  try {
+    notifications = (await UrgadApi.notifications('professional') || []).map(mapProNotif);
+  } catch(e) { notifications = []; }
+  startProNotifications();
+  try { U.verification = await UrgadApi.verificationMe(); } catch(e) { U.verification = null; }
+  try {
+    const docs = await UrgadApi.professionalDocuments() || [];
+    const uploaded = docs.map(function(d){
+      return { name:d.name, file:d.storedName||'fichier', size:d.sizeBytes?Math.max(1,Math.round(d.sizeBytes/1024))+' Ko':'', status:(d.status==='approved'||d.status==='valid')?'valid':'pending', date:String(d.createdAt||'').slice(0,10), icon:'📄' };
+    });
+    const missing = [
+      {name:'Diplôme',file:null,size:null,status:'missing',date:null,icon:'🎓'},
+      {name:"Pièce d'identité",file:null,size:null,status:'missing',date:null,icon:'🆔'}
+    ].filter(function(d){ return !uploaded.some(function(u){ return String(u.name||'').toLowerCase().indexOf(d.name.slice(0,4).toLowerCase())>=0; }); });
+    if(uploaded.length || missing.length) userDocuments = uploaded.concat(missing);
+  } catch(e) {}
+}
+async function submitCandidature(id){
+  closeModal();
+  if(!UrgadApi.token('professional')){ toast('error','Candidature','Connectez-vous'); showProScreen('login'); return; }
+  try {
+    await UrgadApi.apply('professional', id);
+    await refreshPro();
+    showProScreen('missions');
+    toast('success','Candidature envoyée','Enregistrée sur l\'API');
+  } catch(e) { toast('error','Candidature', e.message || 'Échec'); }
+}
+async function saveProProfile(){
+  userProfile.firstName = fieldVal('ep-first') || userProfile.firstName;
+  userProfile.lastName = fieldVal('ep-last') || userProfile.lastName;
+  userProfile.phone = fieldVal('ep-phone') || userProfile.phone;
+  userProfile.email = fieldVal('ep-email') || userProfile.email;
+  userProfile.birthDate = fieldVal('ep-birth') || userProfile.birthDate;
+  userProfile.address = fieldVal('ep-address') || userProfile.address;
+  userProfile.city = fieldVal('ep-city') || userProfile.city;
+  userProfile.postalCode = fieldVal('ep-cp') || userProfile.postalCode;
+  const exp = document.getElementById('ep-exp');
+  if(exp && exp.value!=='') userProfile.experienceYears = Math.max(0, Math.min(60, parseInt(exp.value,10)||0));
+  const prof = document.getElementById('ep-prof');
+  if(prof && prof.value) userProfile.role = prof.value;
+  if(!UrgadApi.token('professional')){ toast('info','Aperçu local','Connectez-vous pour enregistrer le profil sur l\'API'); return; }
+  try {
+    const res = await UrgadApi.updateProfile('professional', {
+      phone: userProfile.phone,
+      firstName: userProfile.firstName,
+      lastName: userProfile.lastName,
+      address: userProfile.address,
+      city: userProfile.city,
+      postalCode: userProfile.postalCode,
+      profession: userProfile.role,
+      experienceYears: userProfile.experienceYears
+    });
+    await refreshPro();
+    const g = res && res.professional;
+    toast('success','Profil mis à jour', g && g.latitude!=null ? ('Adresse localisée : '+(g.geocode_label||'')+(g.geocode_precision==='municipality'?' (commune)':'')) : (userProfile.address||userProfile.city ? 'Adresse enregistrée mais introuvable : vérifiez-la pour le filtre par distance.' : 'Enregistré sur l\'API.'));
+    showProScreen('profile');
+  } catch(e) { toast('error','Profil', e.message || 'Échec'); }
+}
+async function saveProRadius(){
+  const el = document.querySelector('.radius-option.selected h4');
+  const radius = el ? (parseInt(el.textContent,10)||20) : (userProfile.radius||20);
+  const userId = U.sessions.pro && U.sessions.pro.userId;
+  if(!userId){ toast('error','Zone','Connectez-vous'); return; }
+  try {
+    await UrgadApi.setMobility('professional', userId, radius);
+    userProfile.radius = radius;
+    await refreshPro();
+    toast('success','Zone enregistrée','Rayon de '+radius+' km : '+missions.length+' mission(s) dans la zone');
+    showProScreen('profile');
+  } catch(e) { toast('error','Zone', e.message || 'Échec'); }
+}
+function markDocUploaded(name, category, idKind, side){
+  if(category===undefined){
+    const n = String(name||'').toLowerCase();
+    if(/identit|cni|passeport/.test(n)){ openIdentityUpload(); return; }
+    if(/dipl/.test(n)) category = 'diploma';
+  }
+  const input = document.createElement('input');
+  input.accept = 'image/*,application/pdf';
+  input.type = 'file';
+  input.onchange = async function(){
+    const file = input.files && input.files[0];
+    if(!file) return;
+    if(!UrgadApi.token('professional')){ toast('error','Document','Vérifiez le téléphone pour ouvrir la session, puis réessayez.'); return; }
+    try {
+      const payload = await UrgadApi.readFile(file);
+      await UrgadApi.addProfessionalDocument(Object.assign({ name: name || file.name, type: name || 'document', category: category || 'other', idKind: idKind || undefined, side: side || undefined }, payload));
+      closeModal();
+      await refreshPro();
+      toast('success','Document', category==='identity' ? "Pièce d'identité transmise : visible uniquement par l'équipe URGAD." : 'Document transmis pour vérification.');
+      showProScreen('my-documents');
+    } catch(e) { toast('error','Document', e.message || 'Échec'); }
+  };
+  input.click();
+}
+const ID_KIND_LABELS = { cni: "Carte nationale d'identité", passeport: 'Passeport', titre_sejour: 'Titre de séjour' };
+const VERIF_LABELS = { en_attente: 'En attente', verifie: 'Vérifié', refuse: 'Refusé' };
+function escP(v){ return String(v==null?'':v).replace(/[&<>"']/g, function(c){ return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]; }); }
+function openIdentityUpload(){
+  if(!UrgadApi.token('professional')){ toast('error','Document','Connectez-vous pour transmettre un document.'); return; }
+  document.getElementById('modalContent').innerHTML =
+    '<h3 style="font-family:\'Playfair Display\',serif;font-size:22px;margin-bottom:6px">Pièce d\'identité</h3>'+
+    '<p style="font-size:13px;color:var(--text-muted);margin-bottom:14px;line-height:1.5">Carte d\'identité, passeport ou titre de séjour en cours de validité. Le document est visible uniquement par l\'équipe URGAD (jamais par les établissements) et le fichier est supprimé après vérification.</p>'+
+    '<div class="form-group"><label>Type de document</label><select id="id-kind"><option value="cni">Carte nationale d\'identité</option><option value="passeport">Passeport</option><option value="titre_sejour">Titre de séjour</option></select></div>'+
+    '<div style="display:flex;gap:10px;margin-top:10px">'+
+    '<button class="btn btn-primary" style="flex:1" onclick="uploadIdentitySide(\'recto\')">📎 Recto</button>'+
+    '<button class="btn btn-ghost" style="flex:1" onclick="uploadIdentitySide(\'verso\')">📎 Verso</button></div>'+
+    '<p style="font-size:11px;color:var(--text-muted);margin-top:10px">Passeport : la page avec la photo (recto) suffit.</p>'+
+    '<button class="btn btn-ghost btn-block" style="margin-top:12px" onclick="closeModal()">Fermer</button>';
+  document.getElementById('modal').classList.add('active');
+}
+function uploadIdentitySide(side){
+  const sel = document.getElementById('id-kind');
+  const kind = sel ? sel.value : 'cni';
+  markDocUploaded((ID_KIND_LABELS[kind]||"Pièce d'identité")+' ('+side+')', 'identity', kind, side);
+}
+function verifBadge(st){
+  const cls = st==='verifie'?'valid':st==='refuse'?'missing':'pending';
+  const icon = st==='verifie'?'✓':st==='refuse'?'✕':'⏳';
+  return '<div class="doc-status '+cls+'">'+icon+' '+(VERIF_LABELS[st]||'En attente')+'</div>';
+}
+function renderProDocuments(){
+  const v = U.verification || { identity:{status:'en_attente',documents:0,sides:[]}, diploma:{status:'en_attente',documents:0}, documents:[] };
+  const docs = v.documents || [];
+  const block = function(kind, title, icon, action){
+    const s = v[kind] || {};
+    const list = docs.filter(function(d){ return d.category===kind; });
+    const missing = !list.length;
+    return '<div class="doc-card" style="flex-wrap:wrap'+(missing?';border-style:dashed;cursor:pointer':'')+'"'+(missing?' onclick="'+action+'"':'')+'>'+
+      '<div class="doc-icon '+(s.status==='verifie'?'valid':missing?'missing':'pending')+'">'+icon+'</div>'+
+      '<div class="doc-info"><h4>'+title+'</h4><p>'+(missing?'Aucun document : cliquez pour ajouter':list.length+' fichier(s)'+(kind==='identity'&&s.sides&&s.sides.length?' • '+s.sides.join(' + '):''))+'</p>'+
+      (s.status==='refuse'&&s.reason?'<p style="color:#f87171">Motif : '+escP(s.reason)+'</p>':'')+
+      (s.reviewedAt?'<p>Revu le '+escP(String(s.reviewedAt).slice(0,10))+'</p>':'')+'</div>'+
+      verifBadge(missing?'en_attente':s.status)+
+      (!missing && s.status!=='verifie' ? '<button class="btn btn-ghost" style="width:100%;margin-top:10px" onclick="'+action+'">+ Ajouter / remplacer</button>' : '')+
+      '</div>';
+  };
+  const others = docs.filter(function(d){ return d.category!=='identity' && d.category!=='diploma'; });
+  return '<div class="profile-sub-header"><button class="back-btn" onclick="showProScreen(\'profile\')">←</button><h2>Mes documents</h2><div></div></div>'+
+  '<div class="profile-sub-body fade-in">'+
+  '<div style="background:linear-gradient(135deg,rgba(212,175,55,0.08),rgba(16,185,129,0.04));border:1px solid var(--border);border-radius:18px;padding:18px;margin-bottom:18px;text-align:center">'+
+    '<div style="font-size:40px;margin-bottom:6px">'+(v.proposable?'✅':'📋')+'</div>'+
+    '<div style="font-weight:700;color:var(--gold-soft);margin-bottom:4px">'+(v.proposable?'Profil vérifié':'Vérification en cours')+'</div>'+
+    '<div style="font-size:13px;color:var(--text-muted);line-height:1.5">'+(v.proposable?'Identité et diplôme vérifiés : l\'équipe peut proposer votre profil aux établissements.':'Votre identité et votre diplôme doivent être vérifiés par l\'équipe URGAD avant que votre profil soit proposé à un établissement.')+'</div></div>'+
+  '<div class="section-title">Identité</div>'+ block('identity', "Pièce d'identité", '🆔', 'openIdentityUpload()')+
+  '<p style="font-size:11px;color:var(--text-muted);margin:6px 0 16px;line-height:1.5">Visible uniquement par l\'équipe URGAD, jamais par les établissements. Fichier supprimé '+(v.identityRetentionDays!=null?v.identityRetentionDays+' jours ':'')+'après vérification (seul le résultat est conservé).</p>'+
+  '<div class="section-title">Diplôme</div>'+ block('diploma', 'Diplôme (DEAS, DEI…)', '🎓', "markDocUploaded('Diplôme','diploma')")+
+  (others.length?'<div class="section-title" style="margin-top:16px">Autres documents</div>'+others.map(function(d){ return '<div class="doc-card"><div class="doc-icon pending">📄</div><div class="doc-info"><h4>'+escP(d.name)+'</h4><p>'+escP(String(d.createdAt||'').slice(0,10))+'</p></div><div class="doc-status '+(d.status==='approved'?'valid':d.status==='rejected'?'missing':'pending')+'">'+(d.status==='approved'?'✓ Validé':d.status==='rejected'?'✕ Refusé':'⏳ En cours')+'</div></div>'; }).join(''):'')+
+  '<button class="btn btn-ghost btn-block" style="margin-top:16px" onclick="markDocUploaded(\'Document\',\'other\')">+ Autre document</button></div>';
+}
+function renderMyMissions(){
+  const email = (U.sessions.pro&&U.sessions.pro.email)||'';
+  const mine = (U.candidatures||[]).filter(function(c){ return !email || c.proEmail===email || !c.proEmail; });
+  const cards = mine.map(function(c){
+    const m = missions.find(function(x){ return x.id===c.missionId; });
+    const label = c.status==='accepted'?'accepted':(c.status==='rejected'||c.status==='withdrawn')?'rejected':'pending';
+    const text = c.statusLabel || (c.status==='accepted'?'Confirmé':c.status==='rejected'?'Non retenu':c.status==='proposed'?'Proposé à l\'établissement':c.status==='withdrawn'?'Retirée':'En attente');
+    return '<div class="mission-card" onclick="showProScreen(\'detail-'+c.missionId+'\')">'+
+      '<span class="mission-type">'+(c.title||(m?m.type:'Mission'))+'</span>'+
+      '<h3>'+(c.etab||(m?m.etab:'Mission'))+'</h3>'+
+      '<div class="mission-info"><span>📅 '+(c.date||'')+'</span><span>🕐 '+(c.start||'')+' → '+(c.end||'')+'</span></div>'+
+      '<div class="mission-footer"><span class="status-label '+label+'">'+text+'</span></div></div>';
+  }).join('');
+  return '<div class="home-screen fade-in">'+
+    '<div class="greeting">Mes missions</div>'+
+    '<div class="greeting-sub">'+(mine.length?mine.length+' candidature(s) API':'Aucune candidature renvoyée par l\'API')+'</div>'+
+    '<div class="section-title" style="margin-top:16px">Candidatures</div>'+
+    (cards || '<p style="color:var(--text-muted);margin-bottom:16px">Postulez depuis une mission. L\'envoi part sur l\'API.</p>')+
+    '<button class="btn btn-primary btn-block" onclick="showProScreen(\'home\')">Voir les missions disponibles</button></div>';
+}
+function renderMsgList(){
+  const list = threads||[];
+  return '<div class="home-screen fade-in"><div class="greeting">Messages</div><div class="greeting-sub">Conversations API</div>'+
+  (list.map(function(t){ return '<div class="msg-item" onclick="openThread(\''+t.id+'\')">'+
+    '<div class="msg-avatar">'+(t.avatar||'ET')+'</div>'+
+    '<div class="msg-content"><h4>'+t.etab+'</h4><p>'+(t.preview||'Conversation')+'</p></div>'+
+    '<div class="msg-meta">'+(t.time||'')+'</div></div>'; }).join('') || '<p style="color:var(--text-muted)">Aucun message</p>')+
+  '</div>';
+}
+async function openThread(id){
+  currentThreadId = id;
+  const t = threads.find(function(x){ return String(x.id)===String(id); });
+  if(!t){ toast('error','Message','Conversation introuvable'); return; }
+  try {
+    const rows = await UrgadApi.conversationMessages('professional', id);
+    t.thread = (rows||[]).map(UrgadApi.mapMessage);
+  } catch(e) { toast('error','Message', e.message||'Échec'); return; }
+  showProScreen('chat');
+}
+function renderChat(){
+  const t = threads.find(function(x){ return String(x.id)===String(currentThreadId); }) || threads[0];
+  if(!t) return '<div class="home-screen"><p>Aucune conversation</p></div>';
+  currentThreadId = t.id;
+  return '<div class="chat-screen fade-in">'+
+    '<div class="phone-header"><button class="back-btn" onclick="showProScreen(\'msg\')">←</button>'+
+      '<div style="display:flex;align-items:center;gap:10px"><div class="msg-avatar" style="width:38px;height:38px;font-size:13px">'+(t.avatar||'ET')+'</div>'+
+      '<div><h2 style="font-size:15px">'+t.etab+'</h2><p style="font-size:11px;color:var(--text-muted)">Messages API</p></div></div><div></div></div>'+
+    '<div class="chat-messages">'+
+      ((t.thread||[]).map(function(b){ return '<div class="chat-bubble '+(b.from==='pro'?'sent':'received')+'"><p>'+b.text+'</p><div class="chat-time">'+(b.sender?b.sender+' · ':'')+(b.time||'')+'</div></div>'; }).join(''))+
+    '</div>'+
+    '<div class="chat-input"><input id="chat-input" type="text" placeholder="Votre message..." onkeydown="if(event.key===\'Enter\')sendProChat()"><button onclick="sendProChat()">➤</button></div></div>';
+}
+async function sendProChat(){
+  const input = document.getElementById('chat-input');
+  const body = input ? String(input.value||'').trim() : '';
+  if(!body){ toast('error','Message','Message vide'); return; }
+  if(!currentThreadId){ toast('error','Message','Aucune conversation'); return; }
+  try {
+    await UrgadApi.sendMessage('professional', currentThreadId, body);
+    await openThread(currentThreadId);
+  } catch(e) { toast('error','Message', e.message||'Échec'); }
+}
+let proNotifStarted = false;
+let proDevicePosition = null;
+function mapProNotif(n){
+  return { id:n.id, icon:UrgadFeatures.iconFor(n.type), type:(n.type==='new_mission'&&/urgent/i.test(n.title||''))?'urgent':((/accepted|approved/.test(n.type||''))?'success':''), title:UrgadFeatures.esc(n.title), text:UrgadFeatures.esc(n.content||''), time:UrgadFeatures.timeAgo(n.created_at), read:!!n.read, data:n.data||{} };
+}
+function startProNotifications(){
+  if(proNotifStarted) return;
+  proNotifStarted = true;
+  UrgadFeatures.registerNativePush('professional');
+  UrgadFeatures.startNotifications('professional', function(rows, unread){
+    notifications = rows.map(mapProNotif);
+    UrgadFeatures.setBadge(document.getElementById('proNotifBadge'), unread);
+    const sub = document.getElementById('proNotifCount');
+    if(sub){ showProScreen('notif'); }
+  });
+}
+async function openProNotif(id){
+  const n = notifications.find(function(x){ return String(x.id)===String(id); });
+  await UrgadFeatures.markRead('professional', id);
+  const screen = n && n.data && n.data.screen;
+  if(screen && /^detail-\d+$/.test(screen)){
+    const mid = parseInt(screen.split('-')[1],10);
+    if(!missions.some(function(m){ return m.id===mid; })){
+      try { const extra = await UrgadApi.request('professional','GET','/api/missions/'+mid); if(extra) missions.push(UrgadApi.mapMission(extra)); } catch(e) {}
+    }
+    if(missions.some(function(m){ return m.id===mid; })){ showProScreen(screen); return; }
+  }
+  if(screen==='missions' || screen==='my-documents'){ showProScreen(screen); return; }
+  if(screen && screen.indexOf('chat-')===0){ showProScreen('msg'); return; }
+  showProScreen('notif');
+}
+async function proMarkAllRead(){ await UrgadFeatures.markAllRead('professional'); showProScreen('notif'); }
+async function proEnableBrowserNotif(){
+  const p = await UrgadFeatures.enableBrowserNotifications();
+  toast(p==='granted'?'success':'info','Notifications', p==='granted'?'Alertes du navigateur activées pendant que la page est ouverte.':'Autorisation refusée ou non disponible.');
+  showProScreen('notif');
+}
+function useDevicePosition(){
+  if(!navigator.geolocation){ toast('error','Position','Géolocalisation indisponible'); return; }
+  navigator.geolocation.getCurrentPosition(async function(pos){
+    proDevicePosition = { lat: pos.coords.latitude, lng: pos.coords.longitude };
+    try { await refreshPro(); showProScreen('home'); toast('success','Position','Missions filtrées autour de votre position actuelle'); } catch(e) { toast('error','Missions', e.message||'Échec'); }
+  }, function(){ toast('error','Position','Autorisation refusée'); }, { enableHighAccuracy:false, timeout:10000, maximumAge:300000 });
+}
+function initProNearMap(){
+  const near = U.nearby || {};
+  UrgadFeatures.missionsMap('proNearMap', {
+    missions: missions,
+    origin: near.origin ? { lat: near.origin.latitude, lng: near.origin.longitude, label: userLocation.label || 'Votre adresse' } : null,
+    radiusKm: near.origin ? near.radiusKm : null,
+    openFn: 'openMissionFromMap', openLabel: 'Voir la mission'
+  });
+}
+function openMissionFromMap(id){ showProScreen('detail-'+id); }
+function proNearbySummary(){
+  const near = U.nearby || {};
+  if(near.filter==='distance') return missions.length+' mission(s) à moins de '+near.radiusKm+' km de '+(near.origin&&near.origin.source==='device'?'votre position':'votre adresse');
+  return near.reason || "Renseignez votre adresse pour voir les missions autour de vous.";
+}
+async function proExportData(){
+  try { await UrgadFeatures.downloadMyData('professional'); toast('success','Export RGPD','Fichier urgad-mes-donnees.json téléchargé'); }
+  catch(e){ toast('error','Export', e.message||'Échec'); }
+}
+function proDeleteAccount(){
+  UrgadFeatures.confirmDeleteAccount('professional', function(err){
+    if(err){ toast('error','Suppression', err.message||'Échec'); return; }
+    U.sessions.pro = null; missions = []; threads = []; notifications = []; proNotifStarted = false;
+    showProScreen('welcome');
+    toast('success','Compte supprimé','Vos données ont été effacées ou anonymisées.');
+  });
+}
+async function bootPro(){
+  try { await UrgadApi.health(); }
+  catch(e){ toast('error','API', e.message||'API injoignable'); }
+  if(!UrgadApi.token('professional')){ showProScreen('welcome'); return; }
+  try {
+    await refreshPro();
+    showProScreen('home');
+  } catch(e) {
+    UrgadApi.clearToken('professional');
+    U.sessions.pro = null;
+    showProScreen('welcome');
+    toast('error','Session', e.message||'Jeton refusé');
+  }
+}
+
+function showProScreen(screen){
+const container = document.getElementById('pro-screen');
+const nav = document.getElementById('pro-nav');
+const navItems = nav.querySelectorAll('.nav-item');
+navItems.forEach(n=>n.classList.remove('active'));
+let html='';
+let showNav=true;
+switch(screen){
+case 'welcome':
+showNav=false;
+html=`<div class="welcome fade-in">
+<div class="welcome-logo">URGAD</div>
+<div class="welcome-tag">Plateforme Premium</div>
+<div class="welcome-illustration">🏥</div>
+<h1>Bienvenue sur URGAD</h1>
+<p>La plateforme qui met en relation les établissements de santé avec les professionnels disponibles, instantanément.</p>
+<div class="welcome-buttons">
+<button class="btn btn-primary btn-lg btn-block" onclick="showProScreen('register')">Créer mon compte</button>
+<button class="btn btn-ghost btn-lg btn-block" onclick="showProScreen('login')">Se connecter</button>
+</div>
+</div>`;
+break;
+case 'register':
+showNav=false;
+html=`<div class="form-screen fade-in">
+<button class="back-btn" onclick="showProScreen('welcome')">←</button>
+<h1 style="margin-top:16px">Créer mon compte</h1>
+<p class="sub">Rejoignez la communauté URGAD</p>
+<div class="form-row">
+<div class="form-group"><label>Prénom</label><input type="text" id="reg-first" placeholder="Jean"></div>
+<div class="form-group"><label>Nom</label><input type="text" id="reg-last" placeholder="Lomama"></div>
+</div>
+<div class="form-group"><label>Téléphone</label><input type="tel" id="reg-phone" placeholder="06 12 34 56 78"></div>
+<div class="form-group"><label>E-mail</label><input type="email" id="reg-email" placeholder="marie.dupont@email.fr"></div>
+<div class="form-group"><label>Mot de passe</label><input type="password" id="reg-pass" placeholder="••••••••"></div>
+<div class="form-group"><label>Date de naissance</label><input id="reg-birth" type="date"></div>
+<div class="form-group"><label>Adresse</label><input type="text" id="reg-address" placeholder="12 rue de la Paix"></div>
+<div class="form-row">
+<div class="form-group"><label>Ville</label><input type="text" id="reg-city" placeholder="Paris"></div>
+<div class="form-group"><label>Code postal</label><input type="text" id="reg-cp" placeholder="75015"></div>
+</div>
+<div class="checkbox-row urgad-legal"><input type="checkbox" id="cgu"><label for="cgu">J'accepte les <a href="cgu.html" target="_blank" rel="noopener">conditions générales d'utilisation</a> (obligatoire)</label></div>
+<div class="checkbox-row urgad-legal"><input type="checkbox" id="priv"><label for="priv">J'ai lu la <a href="confidentialite.html" target="_blank" rel="noopener">politique de confidentialité</a> (obligatoire)</label></div>
+<p style="font-size:11px;color:var(--text-muted);margin-top:6px">Votre adresse sert uniquement à calculer la distance jusqu'aux missions.</p>
+<button class="btn btn-primary btn-block btn-lg" style="margin-top:20px" onclick="saveProDraft()">Continuer</button>
+</div>`;
+break;
+case 'login':
+showNav=false;
+html=`<div class="form-screen fade-in">
+<button class="back-btn" onclick="showProScreen('welcome')">←</button>
+<h1 style="margin-top:16px">Connexion</h1>
+<p class="sub">Compte professionnel via l'API. Le jeton reste dans cette session navigateur.</p>
+<div class="form-group"><label>E-mail</label><input id="login-id" type="email" placeholder="marie.dupont@email.fr"></div>
+<div class="form-group"><label>Mot de passe</label><input id="login-pass" type="password" placeholder="••••••••"></div>
+<p style="font-size:12px;color:var(--text-muted);margin-top:8px">Compte seed : marie.dupont@email.fr / pro123. Le téléphone n'est pas un identifiant API.</p>
+<button class="btn btn-primary btn-block btn-lg" style="margin-top:20px" onclick="tryProLogin()">Se connecter</button>
+<p style="text-align:center;margin-top:16px;font-size:13px;color:var(--text-muted)">Pas de compte ? <a style="color:var(--gold-soft);font-weight:600;cursor:pointer" onclick="showProScreen('register')">Créer un compte</a></p>
+</div>`;
+break;
+case 'sms': {
+showNav=false;
+const shown = (U.draftPro && U.draftPro.verificationCode) ? U.draftPro.verificationCode : '';
+html=`<div class="sms-screen fade-in">
+<div class="sms-icon">📱</div>
+<h1 style="font-family:'Playfair Display',serif;font-size:28px;margin-bottom:8px">Vérification SMS</h1>
+<p class="sub">Aucun SMS réel (pas de fournisseur). Le code est stocké par l'API. Saisissez-le pour marquer le compte vérifié.</p>
+<div class="sms-code" id="sms-code">
+<input id="sms0" type="text" inputmode="numeric" maxlength="1" oninput="moveSms(this,1)">
+<input id="sms1" type="text" inputmode="numeric" maxlength="1" oninput="moveSms(this,1)">
+<input id="sms2" type="text" inputmode="numeric" maxlength="1" oninput="moveSms(this,1)">
+<input id="sms3" type="text" inputmode="numeric" maxlength="1" oninput="moveSms(this,1)">
+<input id="sms4" type="text" inputmode="numeric" maxlength="1" oninput="moveSms(this,1)">
+<input id="sms5" type="text" inputmode="numeric" maxlength="1" oninput="moveSms(this,1)">
+</div>
+<p style="font-size:13px;color:var(--gold-soft);margin-bottom:8px">Code API : <strong>${shown || '—'}</strong></p>
+<p style="font-size:12px;color:var(--text-muted);margin-bottom:20px">Rien n'est envoyé à un opérateur SMS.</p>
+<button class="btn btn-primary btn-block btn-lg" onclick="submitSmsCode()">Vérifier le code</button>
+</div>`;
+break;
+}
+case 'profession':
+showNav=false;
+html=`<div class="form-screen fade-in">
+<h1>Quelle est votre profession ?</h1>
+<p class="sub">Sélectionnez votre métier</p>
+<div class="prof-list">
+<div class="prof-option selected" onclick="selectProf(this)"><div class="prof-option-icon">💉</div><div class="prof-option-text"><h4>Aide-soignant(e)</h4><p>Soins d'hygiène et de confort</p></div><div class="check">✓</div></div>
+<div class="prof-option" onclick="selectProf(this)"><div class="prof-option-icon">🩺</div><div class="prof-option-text"><h4>Infirmier(ère)</h4><p>Prochainement disponible</p></div><div class="check">✓</div></div>
+<div class="prof-option" onclick="selectProf(this)"><div class="prof-option-icon">🤝</div><div class="prof-option-text"><h4>AES</h4><p>Prochainement disponible</p></div><div class="check">✓</div></div>
+<div class="prof-option" onclick="selectProf(this)"><div class="prof-option-icon">👴</div><div class="prof-option-text"><h4>AMP</h4><p>Prochainement disponible</p></div><div class="check">✓</div></div>
+<div class="prof-option" onclick="selectProf(this)"><div class="prof-option-icon">🏠</div><div class="prof-option-text"><h4>Auxiliaire de vie</h4><p>Prochainement disponible</p></div><div class="check">✓</div></div>
+<div class="prof-option" onclick="selectProf(this)"><div class="prof-option-icon">🧹</div><div class="prof-option-text"><h4>ASH</h4><p>Prochainement disponible</p></div><div class="check">✓</div></div>
+</div>
+<button class="btn btn-primary btn-block btn-lg" style="margin-top:24px" onclick="saveProProfession()">Continuer</button>
+</div>`;
+break;
+case 'verify':
+showNav=false;
+html=`<div class="verify-screen fade-in">
+<div class="sms-icon" style="background:linear-gradient(135deg,rgba(245,158,11,0.2),rgba(245,158,11,0.05));border-color:rgba(245,158,11,0.3)">📄</div>
+<div class="status-badge status-pending">🟠 Vérification en cours</div>
+<h1 style="font-family:'Playfair Display',serif;font-size:26px;margin-bottom:8px">Vérification professionnelle</h1>
+<p class="sub">Transmettez vos documents pour valider votre profil</p>
+<div class="upload-box" onclick="markDocUploaded('Diplôme','diploma')"><h4>📎 Diplôme</h4><p>DEAS, DEI… (photo ou PDF)</p></div>
+<div class="upload-box" onclick="openIdentityUpload()"><h4>📎 Pièce d'identité</h4><p>CNI, passeport ou titre de séjour — recto/verso</p></div>
+<div class="upload-box" onclick="markDocUploaded('Justificatif de domicile','other')"><h4>📎 Justificatif de domicile</h4><p>Facultatif</p></div>
+<p style="font-size:12px;color:var(--text-muted);margin:20px 0;line-height:1.6">L'équipe URGAD vérifie votre identité et votre diplôme avant de proposer votre profil aux établissements. La pièce d'identité n'est jamais visible par les établissements et le fichier est supprimé après vérification.</p>
+<button class="btn btn-primary btn-block btn-lg" onclick="finishProSignup()">Accéder à l'application</button>
+</div>`;
+break;
+case 'home':
+navItems[0].classList.add('active');
+html=`<div class="home-screen fade-in">
+<div class="greeting">Bonjour ${userProfile.firstName||'vous'} 👋</div>
+<div class="greeting-sub">${UrgadFeatures.esc(proNearbySummary())}</div>
+<div class="section-title">Carte des missions <a onclick="useDevicePosition()">📡 Ma position</a></div>
+<div id="proNearMap" style="height:240px;border-radius:16px;overflow:hidden;border:1px solid var(--border);margin-bottom:18px"></div>
+${(function(){var u=missions.find(function(m){return m.urgent}); if(!u) return ""; return '<div class="flash-banner" onclick="showProScreen(\'detail-'+u.id+'\')"><div class="flash-banner-icon">🚨</div><div style="flex:1"><h4>Mission urgente</h4><p>'+u.etab+'</p></div><div style="font-size:20px">→</div></div>';})()}
+<div class="section-title">Missions disponibles <a onclick="showProScreen('missions')">Voir tout →</a></div>
+${missions.slice(0,20).map(m=>`
+<div class="mission-card" onclick="showProScreen('detail-${m.id}')">
+<span class="mission-type ${m.urgent?'urgent':''}">${m.urgent?'🚨 Urgent':''}${m.type}</span>
+<h3>${m.etab}</h3>
+<div class="mission-info">
+<span>📍 ${m.address||'Lieu non précisé'}${m.distance!=null?' • '+String(m.distance).replace('.',',')+' km':''}</span>
+<span>📅 ${m.date}</span>
+<span>🕐 ${m.start} → ${m.end}${m.title?' • '+m.title:''}</span>
+</div>
+<div class="mission-footer">
+<div class="mission-price">${m.price}<small> / vacation</small></div>
+<button class="btn btn-primary" style="padding:9px 18px;font-size:12px">Voir</button>
+</div>
+</div>
+`).join('')}
+</div>`;
+break;
+case 'missions':
+navItems[1].classList.add('active');
+html=renderMyMissions();
+break;
+
+// ============ PROFILE PRINCIPAL AMÉLIORÉ ============
+case 'profile':
+navItems[4].classList.add('active');
+html=`<div class="fade-in">
+  <div class="profile-cover">
+    <div class="profile-cover-pattern"></div>
+    <button class="profile-edit-cover-btn" onclick="showProScreen('edit-profile')" title="Modifier">✏️</button>
+    <div class="profile-avatar-wrap">
+      <div class="profile-avatar">${proInitials()}</div>
+      <div class="profile-avatar-badge">✓</div>
+    </div>
+  </div>
+  <div class="profile-header-info">
+    <div class="profile-name-row">
+      <h2>${userProfile.firstName} ${(userProfile.lastName||'').toUpperCase()}</h2>
+      <button class="btn btn-ghost btn-sm" style="padding:8px 12px;font-size:11px" onclick="showProScreen('edit-profile')">✏️ Modifier</button>
+    </div>
+    <div style="display:flex;align-items:center;gap:10px;margin-bottom:8px;position:relative;z-index:2;flex-wrap:wrap">
+      <span class="profile-verified-tag">✓ Profil vérifié</span>
+      <span style="color:var(--gold-soft);font-size:13px;font-weight:600">⭐ ${userProfile.rating} <span style="color:var(--text-muted);font-weight:400">(${userProfile.reviews} avis)</span></span>
+    </div>
+    <div class="profile-role">${userProfile.role} • ${userProfile.experience} d'expérience</div>
+    <div class="profile-meta">
+      <span>📍 ${userProfile.city} ${userProfile.postalCode}</span>
+      <span>🎯 ${userProfile.radius} km</span>
+      <span>📅 Membre depuis ${userProfile.joined}</span>
+    </div>
+  </div>
+
+  <p style="font-size:12px;color:var(--text-muted);margin:0 0 8px">Identité lue sur l'API. Note, missions, heures et gains : aperçu local.</p><div class="profile-stats">
+    <div class="profile-stat" onclick="showProScreen('my-stats')">
+      <div class="profile-stat-value">${userProfile.totalMissions}</div>
+      <div class="profile-stat-label">Missions</div>
+    </div>
+    <div class="profile-stat" onclick="showProScreen('my-stats')">
+      <div class="profile-stat-value">${userProfile.totalHours}h</div>
+      <div class="profile-stat-label">Heures</div>
+    </div>
+    <div class="profile-stat" onclick="showProScreen('my-stats')">
+      <div class="profile-stat-value">${userProfile.totalEarnings}€</div>
+      <div class="profile-stat-label">Gains</div>
+    </div>
+    <div class="profile-stat" onclick="showProScreen('reviews')">
+      <div class="profile-stat-value">${userProfile.rating}</div>
+      <div class="profile-stat-label">Note</div>
+    </div>
+  </div>
+
+  <div class="profile-body">
+    <div class="section-title">Mon compte</div>
+    <div class="profile-menu" style="margin-bottom:18px">
+      <div class="profile-menu-item" onclick="showProScreen('edit-profile')">
+        <div class="profile-menu-icon gold">📝</div>
+        <div class="profile-menu-content">
+          <h4>Modifier mon profil</h4>
+          <p>Informations personnelles, photo</p>
+        </div>
+        <div class="profile-menu-arrow">›</div>
+      </div>
+      <div class="profile-menu-item" onclick="showProScreen('my-documents')">
+        <div class="profile-menu-icon emerald">📄</div>
+        <div class="profile-menu-content">
+          <h4>Mes documents</h4>
+          <p>Diplôme, identité, justificatifs</p>
+        </div>
+        <div class="profile-menu-badge">${userDocuments.filter(d=>d.status!=='valid').length}</div>
+        <div class="profile-menu-arrow">›</div>
+      </div>
+      <div class="profile-menu-item" onclick="showProScreen('my-stats')">
+        <div class="profile-menu-icon blue">📊</div>
+        <div class="profile-menu-content">
+          <h4>Mes statistiques</h4>
+          <p>Missions, heures, gains</p>
+        </div>
+        <div class="profile-menu-arrow">›</div>
+      </div>
+      <div class="profile-menu-item" onclick="showProScreen('reviews')">
+        <div class="profile-menu-icon gold">⭐</div>
+        <div class="profile-menu-content">
+          <h4>Mes évaluations</h4>
+          <p>${userProfile.reviews} avis • Note ${userProfile.rating}/5</p>
+        </div>
+        <div class="profile-menu-arrow">›</div>
+      </div>
+    </div>
+
+    <div class="section-title">Préférences</div>
+    <div class="profile-menu" style="margin-bottom:18px">
+      <div class="profile-menu-item" onclick="showProScreen('availability')">
+        <div class="profile-menu-icon emerald">📅</div>
+        <div class="profile-menu-content">
+          <h4>Disponibilités</h4>
+          <p>Calendrier hebdomadaire</p>
+        </div>
+        <div class="profile-menu-arrow">›</div>
+      </div>
+      <div class="profile-menu-item" onclick="showProScreen('radius')">
+        <div class="profile-menu-icon blue">🗺️</div>
+        <div class="profile-menu-content">
+          <h4>Zone de déplacement</h4>
+          <p>Rayon actuel : ${userProfile.radius} km</p>
+        </div>
+        <div class="profile-menu-arrow">›</div>
+      </div>
+      <div class="profile-menu-item" onclick="showProScreen('preferences')">
+        <div class="profile-menu-icon purple">🎯</div>
+        <div class="profile-menu-content">
+          <h4>Préférences de mission</h4>
+          <p>Services, types, compétences</p>
+        </div>
+        <div class="profile-menu-arrow">›</div>
+      </div>
+      <div class="profile-menu-item" onclick="showProScreen('notif-settings')">
+        <div class="profile-menu-icon amber">🔔</div>
+        <div class="profile-menu-content">
+          <h4>Notifications</h4>
+          <p>Push, email, SMS</p>
+        </div>
+        <div class="profile-menu-arrow">›</div>
+      </div>
+    </div>
+
+    <div class="section-title">Sécurité & Support</div>
+    <div class="profile-menu" style="margin-bottom:18px">
+      <div class="profile-menu-item" onclick="showProScreen('security')">
+        <div class="profile-menu-icon blue">🔒</div>
+        <div class="profile-menu-content">
+          <h4>Sécurité & confidentialité</h4>
+          <p>Mot de passe, 2FA, données</p>
+        </div>
+        <div class="profile-menu-arrow">›</div>
+      </div>
+      <div class="profile-menu-item" onclick="showProScreen('help')">
+        <div class="profile-menu-icon emerald">💬</div>
+        <div class="profile-menu-content">
+          <h4>Aide & support</h4>
+          <p>FAQ, contacter l'équipe</p>
+        </div>
+        <div class="profile-menu-arrow">›</div>
+      </div>
+      <div class="profile-menu-item" onclick="showProScreen('about')">
+        <div class="profile-menu-icon gold">ℹ️</div>
+        <div class="profile-menu-content">
+          <h4>À propos d'URGAD</h4>
+          <p>CGU, confidentialité, mentions</p>
+        </div>
+        <div class="profile-menu-arrow">›</div>
+      </div>
+    </div>
+
+    <button class="logout-btn" onclick="confirmLogout('pro')">🚪 Se déconnecter</button>
+    <p style="text-align:center;font-size:11px;color:var(--text-dim);margin-top:16px">URGAD v1.0.0 • Build 2026.09</p>
+  </div>
+</div>`;
+break;
+
+// ============ EDIT PROFILE ============
+case 'edit-profile':
+showNav=false;
+html=`<div class="profile-sub-header">
+  <button class="back-btn" onclick="showProScreen('profile')">←</button>
+  <h2>Modifier mon profil</h2>
+  <button class="btn btn-primary btn-sm" style="padding:8px 14px;font-size:12px" onclick="saveProProfile()">Enregistrer</button>
+</div>
+<div class="profile-sub-body fade-in">
+  <div style="text-align:center;margin-bottom:24px">
+    <div style="position:relative;display:inline-block">
+      <div class="profile-avatar" style="margin:0 auto;width:100px;height:100px;font-size:36px">${proInitials()}</div>
+      <button style="position:absolute;bottom:0;right:0;width:32px;height:32px;border-radius:50%;background:var(--gradient-gold);color:#0A0E1A;display:flex;align-items:center;justify-content:center;font-size:14px;border:3px solid var(--bg)">📷</button>
+    </div>
+    <button class="btn btn-ghost btn-sm" style="margin-top:12px;padding:8px 14px;font-size:12px">Changer la photo</button>
+  </div>
+
+  <div class="profile-section">
+    <h3>Informations personnelles</h3>
+    <div class="form-row">
+      <div class="form-group"><label>Prénom</label><input type="text" id="ep-first" value="${userProfile.firstName}"></div>
+      <div class="form-group"><label>Nom</label><input type="text" id="ep-last" value="${userProfile.lastName}"></div>
+    </div>
+    <div class="form-group"><label>Date de naissance</label><input type="text" id="ep-birth" value="${userProfile.birthDate}"></div>
+    <div class="form-group"><label>Adresse</label><input type="text" id="ep-address" value="${userProfile.address}"></div>
+    <div class="form-row">
+      <div class="form-group"><label>Ville</label><input type="text" id="ep-city" value="${userProfile.city}"></div>
+      <div class="form-group"><label>Code postal</label><input type="text" id="ep-cp" value="${userProfile.postalCode}"></div>
+    </div>
+  </div>
+
+  <div class="profile-section">
+    <h3>Contact</h3>
+    <div class="form-group"><label>Téléphone</label><input type="tel" id="ep-phone" value="${userProfile.phone}"></div>
+    <div class="form-group"><label>E-mail</label><input type="email" id="ep-email" value="${userProfile.email}"></div>
+  </div>
+
+  <div class="profile-section">
+    <h3>Informations professionnelles</h3>
+    <div class="form-group"><label>Profession</label><select id="ep-prof">${['Aide-soignant(e)','Infirmier(ère)','AES','AMP','Auxiliaire de vie','ASH'].map(p=>`<option ${p===userProfile.role?'selected':''}>${p}</option>`).join('')}</select></div>
+    <div class="form-group"><label>Années d'expérience</label><input type="number" id="ep-exp" min="0" max="60" step="1" value="${userProfile.experienceYears!=null?userProfile.experienceYears:''}" placeholder="ex. 5"></div>
+    <div class="form-group"><label>Établissements précédents</label>
+      <textarea rows="3" placeholder="Listez vos expériences...">${userProfile.previousEmployers.join('\n')}</textarea>
+    </div>
+    <div class="form-group">
+      <label>Compétences</label>
+      <div style="display:flex;flex-wrap:wrap;gap:6px;margin-top:8px">
+        ${['Toilette','Repas','Transmission','Alzheimer','Soins palliatifs','Personnes dépendantes','Mobilité réduite','Diabète','Escarres'].map(s=>`<span class="tag" style="cursor:pointer;${userProfile.skills.includes(s)?'background:rgba(212,175,55,0.12);color:var(--gold-soft);border-color:rgba(212,175,55,0.3)':''}" onclick="this.style.background=this.style.background?'':'rgba(212,175,55,0.12)';this.style.color=this.style.color?'var(--gold-soft)':''">${s}</span>`).join('')}
+      </div>
+    </div>
+  </div>
+
+  <button class="btn btn-primary btn-block btn-lg" onclick="saveProProfile()">💾 Enregistrer les modifications</button>
+</div>`;
+break;
+
+// ============ MY DOCUMENTS ============
+case 'my-documents':
+showNav=false;
+html=renderProDocuments();
+break;
+
+// ============ MY STATS ============
+case 'my-stats':
+showNav=false;
+html=`<div class="profile-sub-header">
+  <button class="back-btn" onclick="showProScreen('profile')">←</button>
+  <h2>Mes statistiques</h2>
+  <div></div>
+</div>
+<div class="profile-sub-body fade-in">
+  <div style="background:linear-gradient(135deg,rgba(212,175,55,0.08),rgba(16,185,129,0.04));border:1px solid var(--border);border-radius:18px;padding:20px;margin-bottom:20px">
+    <div style="font-size:11px;color:var(--text-muted);text-transform:uppercase;letter-spacing:1.5px;font-weight:700;margin-bottom:10px">Vue d'ensemble</div>
+    <div class="grid-4">
+      <div class="mini-stat" style="background:transparent;border:none;padding:10px 0">
+        <div class="mini-stat-icon gold" style="background:rgba(212,175,55,0.12);border:1px solid rgba(212,175,55,0.2)">📋</div>
+        <div class="mini-stat-value" style="color:var(--gold-soft)">${userProfile.totalMissions}</div>
+        <div class="mini-stat-label">Missions</div>
+      </div>
+      <div class="mini-stat" style="background:transparent;border:none;padding:10px 0">
+        <div class="mini-stat-icon emerald" style="background:rgba(16,185,129,0.12);border:1px solid rgba(16,185,129,0.2)">⏱️</div>
+        <div class="mini-stat-value" style="color:var(--emerald-soft)">${userProfile.totalHours}h</div>
+        <div class="mini-stat-label">Heures</div>
+      </div>
+      <div class="mini-stat" style="background:transparent;border:none;padding:10px 0">
+        <div class="mini-stat-icon gold" style="background:rgba(212,175,55,0.12);border:1px solid rgba(212,175,55,0.2)">💰</div>
+        <div class="mini-stat-value" style="color:var(--gold-soft)">${userProfile.totalEarnings}€</div>
+        <div class="mini-stat-label">Gains</div>
+      </div>
+      <div class="mini-stat" style="background:transparent;border:none;padding:10px 0">
+        <div class="mini-stat-icon emerald" style="background:rgba(16,185,129,0.12);border:1px solid rgba(16,185,129,0.2)">⭐</div>
+        <div class="mini-stat-value" style="color:var(--emerald-soft)">${userProfile.rating}</div>
+        <div class="mini-stat-label">Note</div>
+      </div>
+    </div>
+  </div>
+
+  <div class="section-title">Performance</div>
+  <div class="profile-section">
+    <div class="info-row"><span class="label">Taux d'acceptation</span><span class="value" style="color:var(--emerald-soft)">${userProfile.acceptanceRate}%</span></div>
+    <div class="info-row"><span class="label">Temps de réponse moyen</span><span class="value">${userProfile.responseTime}</span></div>
+    <div class="info-row"><span class="label">Missions ce mois</span><span class="value">10</span></div>
+    <div class="info-row"><span class="label">Heures ce mois</span><span class="value">80h</span></div>
+    <div class="info-row"><span class="label">Gains ce mois</span><span class="value" style="color:var(--gold-soft)">2 200€</span></div>
+  </div>
+
+  <div class="section-title">Évolution mensuelle</div>
+  <div class="profile-section">
+    ${monthlyStats.map(s=>{
+      const maxMissions = Math.max(...monthlyStats.map(x=>x.missions));
+      const pct = Math.round(s.missions/maxMissions*100);
+      return `<div style="margin-bottom:12px">
+        <div style="display:flex;justify-content:space-between;font-size:12px;margin-bottom:6px">
+          <span style="font-weight:600">${s.month}</span>
+          <span style="color:var(--text-muted)">${s.missions} missions • ${s.hours}h • ${s.earnings}€</span>
+        </div>
+        <div class="progress-bar" style="height:8px"><div class="progress-fill gold" style="width:${pct}%"></div></div>
+      </div>`;
+    }).join('')}
+  </div>
+
+  <div class="section-title">Répartition par service</div>
+  <div class="profile-section">
+    <div style="margin-bottom:12px">
+      <div style="display:flex;justify-content:space-between;font-size:12px;margin-bottom:6px"><span>🌙 Nuit</span><strong>45%</strong></div>
+      <div class="progress-bar"><div class="progress-fill gold" style="width:45%"></div></div>
+    </div>
+    <div style="margin-bottom:12px">
+      <div style="display:flex;justify-content:space-between;font-size:12px;margin-bottom:6px"><span>🌅 Matin</span><strong>35%</strong></div>
+      <div class="progress-bar"><div class="progress-fill emerald" style="width:35%"></div></div>
+    </div>
+    <div>
+      <div style="display:flex;justify-content:space-between;font-size:12px;margin-bottom:6px"><span>🌇 Après-midi</span><strong>20%</strong></div>
+      <div class="progress-bar"><div class="progress-fill blue" style="width:20%"></div></div>
+    </div>
+  </div>
+
+  <button class="btn btn-ghost btn-block" onclick="toast('success','Export','Statistiques exportées en PDF')">📥 Exporter mes statistiques</button>
+</div>`;
+break;
+
+// ============ REVIEWS ============
+case 'reviews':
+showNav=false;
+const ratings = [5,5,4,5,5];
+const avgRating = (ratings.reduce((a,b)=>a+b,0)/ratings.length).toFixed(1);
+const dist5 = ratings.filter(r=>r===5).length;
+const dist4 = ratings.filter(r=>r===4).length;
+html=`<div class="profile-sub-header">
+  <button class="back-btn" onclick="showProScreen('profile')">←</button>
+  <h2>Mes évaluations</h2>
+  <div></div>
+</div>
+<div class="profile-sub-body fade-in">
+  <div style="background:linear-gradient(135deg,rgba(212,175,55,0.08),rgba(16,185,129,0.04));border:1px solid var(--border);border-radius:18px;padding:24px;margin-bottom:20px;display:flex;gap:20px;align-items:center">
+    <div style="text-align:center">
+      <div style="font-family:'Playfair Display',serif;font-size:48px;font-weight:700;color:var(--gold-soft);line-height:1">${avgRating}</div>
+      <div style="color:var(--gold-soft);font-size:16px;letter-spacing:2px;margin:4px 0">★★★★★</div>
+      <div style="font-size:12px;color:var(--text-muted)">${userProfile.reviews} avis</div>
+    </div>
+    <div style="flex:1">
+      ${[5,4,3,2,1].map(n=>{
+        const count = ratings.filter(r=>r===n).length;
+        const pct = Math.round(count/ratings.length*100);
+        return `<div style="display:flex;align-items:center;gap:8px;margin-bottom:4px;font-size:11px">
+          <span style="width:14px;color:var(--gold-soft)">${n}★</span>
+          <div class="progress-bar" style="flex:1;height:6px;margin:0"><div class="progress-fill gold" style="width:${pct}%"></div></div>
+          <span style="width:24px;text-align:right;color:var(--text-muted)">${count}</span>
+        </div>`;
+      }).join('')}
+    </div>
+  </div>
+
+  <div class="section-title">Derniers avis</div>
+  ${userReviews.map(r=>`
+    <div class="review-card">
+      <div class="review-header">
+        <div class="review-avatar">${r.contact.split(' ').map(n=>n[0]).join('')}</div>
+        <div class="review-info">
+          <h4>${r.etab}</h4>
+          <p>${r.contact} • ${r.mission}</p>
+        </div>
+        <div class="review-stars">${'★'.repeat(r.rating)}${'☆'.repeat(5-r.rating)}</div>
+      </div>
+      <div class="review-text">${r.text}</div>
+      <div class="review-meta">
+        <span>${r.date}</span>
+        <span style="color:var(--emerald-soft)">✓ Mission vérifiée</span>
+      </div>
+    </div>
+  `).join('')}
+
+  <div style="text-align:center;padding:20px;color:var(--text-muted);font-size:13px">
+    <p>💡 <strong style="color:var(--text)">Conseil</strong></p>
+    <p style="margin-top:6px">Maintenez votre excellente réputation en restant ponctuel et professionnel.</p>
+  </div>
+</div>`;
+break;
+
+// ============ PREFERENCES ============
+case 'preferences':
+showNav=false;
+html=`<div class="profile-sub-header">
+  <button class="back-btn" onclick="showProScreen('profile')">←</button>
+  <h2>Préférences de mission</h2>
+  <button class="btn btn-primary btn-sm" style="padding:8px 14px;font-size:12px" onclick="toast('success','Préférences enregistrées','Le matching sera optimisé');showProScreen('profile')">Enregistrer</button>
+</div>
+<div class="profile-sub-body fade-in">
+  <div class="profile-section">
+    <h3>Services préférés</h3>
+    <p style="font-size:12px;color:var(--text-muted);margin-bottom:14px">Sélectionnez les créneaux que vous préférez</p>
+    <div style="display:flex;flex-direction:column;gap:8px">
+      ${[{name:'Matin',time:'06h - 14h',icon:'🌅',selected:true},{name:'Après-midi',time:'14h - 22h',icon:'🌇',selected:false},{name:'Nuit',time:'22h - 06h',icon:'🌙',selected:true}].map(s=>`
+        <div class="radius-option ${s.selected?'selected':''}" onclick="this.classList.toggle('selected')">
+          <div style="display:flex;align-items:center;gap:12px">
+            <div style="font-size:24px">${s.icon}</div>
+            <div><h4>${s.name}</h4><p>${s.time}</p></div>
+          </div>
+          <div>${s.selected?'✓':'›'}</div>
+        </div>
+      `).join('')}
+    </div>
+  </div>
+
+  <div class="profile-section">
+    <h3>Types de mission préférés</h3>
+    <p style="font-size:12px;color:var(--text-muted);margin-bottom:14px">Quels types de missions recherchez-vous ?</p>
+    <div style="display:flex;flex-direction:column;gap:8px">
+      ${[{name:'Vacation',desc:'Mission ponctuelle',icon:'📋',selected:true},{name:'Remplacement',desc:'Remplacement longue durée',icon:'🔄',selected:true},{name:'Mission courte',desc:'Quelques heures',icon:'⚡',selected:false},{name:'Urgence FLASH',desc:'Missions urgentes',icon:'🚨',selected:true}].map(t=>`
+        <div class="radius-option ${t.selected?'selected':''}" onclick="this.classList.toggle('selected')">
+          <div style="display:flex;align-items:center;gap:12px">
+            <div style="font-size:24px">${t.icon}</div>
+            <div><h4>${t.name}</h4><p>${t.desc}</p></div>
+          </div>
+          <div>${t.selected?'✓':'›'}</div>
+        </div>
+      `).join('')}
+    </div>
+  </div>
+
+  <div class="profile-section">
+    <h3>Tarif minimum souhaité</h3>
+    <div class="form-group">
+      <label>Par heure</label>
+      <input type="text" value="15€" placeholder="Ex: 15€">
+    </div>
+    <p style="font-size:11px;color:var(--text-dim);margin-top:4px">Vous ne recevrez que les missions respectant ce tarif</p>
+  </div>
+
+  <div class="profile-section">
+    <h3>Types d'établissements préférés</h3>
+    <div style="display:flex;flex-wrap:wrap;gap:6px">
+      ${['EHPAD','Clinique','Maison de retraite','Hôpital','Centre de soins','SSR'].map((t,i)=>`<span class="tag" style="cursor:pointer;${i<3?'background:rgba(212,175,55,0.12);color:var(--gold-soft);border-color:rgba(212,175,55,0.3)':''}" onclick="this.style.background=this.style.background?'':'rgba(212,175,55,0.12)';this.style.color=this.style.color?'var(--gold-soft)':''">${t}</span>`).join('')}
+    </div>
+  </div>
+
+  <button class="btn btn-primary btn-block btn-lg">💾 Enregistrer les préférences</button>
+</div>`;
+break;
+
+// ============ NOTIFICATION SETTINGS ============
+case 'notif-settings':
+showNav=false;
+html=`<div class="profile-sub-header">
+  <button class="back-btn" onclick="showProScreen('profile')">←</button>
+  <h2>Notifications</h2>
+  <button class="btn btn-primary btn-sm" style="padding:8px 14px;font-size:12px" onclick="toast('success','Préférences enregistrées','Notifications mises à jour');showProScreen('profile')">Enregistrer</button>
+</div>
+<div class="profile-sub-body fade-in">
+  <div class="profile-section">
+    <h3>Notifications push</h3>
+    <div class="toggle-row">
+      <div class="toggle-row-info">
+        <h4>Nouvelles missions</h4>
+        <p>Être alerté des nouvelles missions près de vous</p>
+      </div>
+      <div class="toggle-switch on" onclick="this.classList.toggle('on')"></div>
+    </div>
+    <div class="toggle-row">
+      <div class="toggle-row-info">
+        <h4>Missions urgentes FLASH</h4>
+        <p>Alertes prioritaires pour missions urgentes</p>
+      </div>
+      <div class="toggle-switch on" onclick="this.classList.toggle('on')"></div>
+    </div>
+    <div class="toggle-row">
+      <div class="toggle-row-info">
+        <h4>Réponses aux candidatures</h4>
+        <p>Acceptation ou refus de vos candidatures</p>
+      </div>
+      <div class="toggle-switch on" onclick="this.classList.toggle('on')"></div>
+    </div>
+    <div class="toggle-row">
+      <div class="toggle-row-info">
+        <h4>Rappels de mission</h4>
+        <p>Rappel 2h avant le début d'une mission</p>
+      </div>
+      <div class="toggle-switch on" onclick="this.classList.toggle('on')"></div>
+    </div>
+    <div class="toggle-row">
+      <div class="toggle-row-info">
+        <h4>Nouveaux messages</h4>
+        <p>Messages des établissements</p>
+      </div>
+      <div class="toggle-switch on" onclick="this.classList.toggle('on')"></div>
+    </div>
+  </div>
+
+  <div class="profile-section">
+    <h3>Notifications email</h3>
+    <div class="toggle-row">
+      <div class="toggle-row-info">
+        <h4>Récapitulatif hebdomadaire</h4>
+        <p>Résumé de votre activité chaque lundi</p>
+      </div>
+      <div class="toggle-switch on" onclick="this.classList.toggle('on')"></div>
+    </div>
+    <div class="toggle-row">
+      <div class="toggle-row-info">
+        <h4>Offres personnalisées</h4>
+        <p>Missions correspondant à vos préférences</p>
+      </div>
+      <div class="toggle-switch" onclick="this.classList.toggle('on')"></div>
+    </div>
+    <div class="toggle-row">
+      <div class="toggle-row-info">
+        <h4>Newsletter URGAD</h4>
+        <p>Actualités et conseils de la plateforme</p>
+      </div>
+      <div class="toggle-switch" onclick="this.classList.toggle('on')"></div>
+    </div>
+  </div>
+
+  <div class="profile-section">
+    <h3>Notifications SMS</h3>
+    <div class="toggle-row">
+      <div class="toggle-row-info">
+        <h4>Missions urgentes</h4>
+        <p>Recevoir les missions urgentes par SMS</p>
+      </div>
+      <div class="toggle-switch on" onclick="this.classList.toggle('on')"></div>
+    </div>
+    <div class="toggle-row">
+      <div class="toggle-row-info">
+        <h4>Confirmations de mission</h4>
+        <p>Rappel SMS avant chaque mission</p>
+      </div>
+      <div class="toggle-switch on" onclick="this.classList.toggle('on')"></div>
+    </div>
+  </div>
+
+  <div class="profile-section">
+    <h3>Horaires de notification</h3>
+    <p style="font-size:12px;color:var(--text-muted);margin-bottom:14px">Ne pas recevoir de notifications pendant ces horaires</p>
+    <div class="form-row">
+      <div class="form-group"><label>Début (silence)</label><input type="time" value="22:00"></div>
+      <div class="form-group"><label>Fin (silence)</label><input type="time" value="07:00"></div>
+    </div>
+  </div>
+
+  <button class="btn btn-primary btn-block btn-lg">💾 Enregistrer</button>
+</div>`;
+break;
+
+// ============ SECURITY ============
+case 'security':
+showNav=false;
+html=`<div class="profile-sub-header">
+  <button class="back-btn" onclick="showProScreen('profile')">←</button>
+  <h2>Sécurité & confidentialité</h2>
+  <div></div>
+</div>
+<div class="profile-sub-body fade-in">
+  <div class="profile-section">
+    <h3>🔐 Authentification</h3>
+    <div class="toggle-row">
+      <div class="toggle-row-info">
+        <h4>Authentification à deux facteurs (2FA)</h4>
+        <p>Renforcez la sécurité de votre compte</p>
+      </div>
+      <div class="toggle-switch on" onclick="this.classList.toggle('on')"></div>
+    </div>
+    <div class="toggle-row">
+      <div class="toggle-row-info">
+        <h4>Biométrie (Face ID / Touch ID)</h4>
+        <p>Connexion rapide par empreinte ou visage</p>
+      </div>
+      <div class="toggle-switch" onclick="this.classList.toggle('on')"></div>
+    </div>
+  </div>
+
+  <div class="profile-section">
+    <h3>🔑 Mot de passe</h3>
+    <div class="info-row"><span class="label">Dernière modification</span><span class="value">Il y a 2 mois</span></div>
+    <div class="info-row"><span class="label">Force du mot de passe</span><span class="value" style="color:var(--emerald-soft)">● Fort</span></div>
+    <button class="btn btn-ghost btn-block" style="margin-top:12px" onclick="toast('info','Modification','Email de vérification envoyé')">Changer le mot de passe</button>
+  </div>
+
+  <div class="profile-section">
+    <h3>📱 Appareils connectés</h3>
+    <div class="info-row">
+      <div>
+        <div style="font-weight:600;font-size:13px">📱 iPhone 14 Pro</div>
+        <div style="font-size:11px;color:var(--text-muted)">Paris • Actif maintenant</div>
+      </div>
+      <span class="doc-status valid">Actif</span>
+    </div>
+    <div class="info-row">
+      <div>
+        <div style="font-weight:600;font-size:13px">💻 MacBook Pro</div>
+        <div style="font-size:11px;color:var(--text-muted)">Paris • Il y a 2 jours</div>
+      </div>
+      <button class="btn btn-ghost btn-sm" style="padding:6px 10px;font-size:11px">Déconnecter</button>
+    </div>
+  </div>
+
+  <div class="profile-section">
+    <h3>🛡️ Confidentialité des données</h3>
+    <div class="toggle-row">
+      <div class="toggle-row-info">
+        <h4>Profil visible</h4>
+        <p>Les établissements peuvent voir votre profil</p>
+      </div>
+      <div class="toggle-switch on" onclick="this.classList.toggle('on')"></div>
+    </div>
+    <div class="toggle-row">
+      <div class="toggle-row-info">
+        <h4>Afficher note moyenne</h4>
+        <p>Votre note est visible par les établissements</p>
+      </div>
+      <div class="toggle-switch on" onclick="this.classList.toggle('on')"></div>
+    </div>
+    <div class="toggle-row">
+      <div class="toggle-row-info">
+        <h4>Partager statistiques</h4>
+        <p>Contribuer aux statistiques anonymisées</p>
+      </div>
+      <div class="toggle-switch on" onclick="this.classList.toggle('on')"></div>
+    </div>
+  </div>
+
+  <div class="profile-section">
+    <h3>📥 Mes données</h3>
+    <button class="btn btn-ghost btn-block" onclick="proExportData()">Télécharger toutes mes données (RGPD)</button>
+    <p style="font-size:11px;color:var(--text-muted);margin-top:8px" class="urgad-legal">Voir la <a href="confidentialite.html" target="_blank" rel="noopener">politique de confidentialité</a>.</p>
+  </div>
+
+  <div class="profile-section" style="border-color:rgba(239,68,68,0.3)">
+    <h3 style="color:var(--red)">⚠️ Zone dangereuse</h3>
+    <button class="btn btn-danger btn-block" onclick="proDeleteAccount()">Supprimer mon compte</button>
+  </div>
+</div>`;
+break;
+
+// ============ HELP ============
+case 'help':
+showNav=false;
+html=`<div class="profile-sub-header">
+  <button class="back-btn" onclick="showProScreen('profile')">←</button>
+  <h2>Aide & support</h2>
+  <div></div>
+</div>
+<div class="profile-sub-body fade-in">
+  <div style="background:linear-gradient(135deg,rgba(212,175,55,0.08),rgba(16,185,129,0.04));border:1px solid var(--border);border-radius:18px;padding:24px;margin-bottom:20px;text-align:center">
+    <div style="font-size:48px;margin-bottom:10px">💬</div>
+    <h3 style="font-family:'Playfair Display',serif;font-size:20px;margin-bottom:6px">Comment pouvons-nous vous aider ?</h3>
+    <p style="font-size:13px;color:var(--text-muted)">Notre équipe est disponible 7j/7</p>
+  </div>
+
+  <div class="section-title">Contact rapide</div>
+  <div class="profile-menu" style="margin-bottom:18px">
+    <div class="profile-menu-item" onclick="toast('info','Chat','Conversation avec le support ouverte')">
+      <div class="profile-menu-icon emerald">💬</div>
+      <div class="profile-menu-content">
+        <h4>Chat en direct</h4>
+        <p>Réponse en moins de 5 min</p>
+      </div>
+      <div style="color:var(--emerald-soft);font-size:11px;font-weight:600">● En ligne</div>
+    </div>
+    <div class="profile-menu-item" onclick="toast('info','Email','support@urgad.fr')">
+      <div class="profile-menu-icon blue">📧</div>
+      <div class="profile-menu-content">
+        <h4>Email</h4>
+        <p>support@urgad.fr</p>
+      </div>
+      <div class="profile-menu-arrow">›</div>
+    </div>
+    <div class="profile-menu-item" onclick="toast('info','Téléphone','01 23 45 67 89')">
+      <div class="profile-menu-icon gold">📞</div>
+      <div class="profile-menu-content">
+        <h4>Téléphone</h4>
+        <p>01 23 45 67 89 • Lun-Ven 9h-18h</p>
+      </div>
+      <div class="profile-menu-arrow">›</div>
+    </div>
+  </div>
+
+  <div class="section-title">Questions fréquentes</div>
+  <div class="profile-section">
+    ${[{q:'Comment postuler à une mission ?',a:'Consultez les missions disponibles et cliquez sur POSTULER.'},{q:'Comment sont calculés mes gains ?',a:'Les gains sont affichés sur chaque mission avant postulation.'},{q:'Comment modifier mes disponibilités ?',a:'Rendez-vous dans Profil > Disponibilités.'},{q:'Que faire en cas de litige ?',a:'Contactez le support via Chat ou Email.'},{q:'Comment fonctionne la vérification ?',a:'Notre équipe vérifie vos documents sous 24-48h.'}].map(faq=>`
+      <div style="padding:12px 0;border-bottom:1px solid var(--border);cursor:pointer" onclick="this.querySelector('.faq-a').style.display=this.querySelector('.faq-a').style.display==='block'?'none':'block'">
+        <div style="display:flex;justify-content:space-between;align-items:center">
+          <strong style="font-size:13px">${faq.q}</strong>
+          <span style="color:var(--gold-soft)">+</span>
+        </div>
+        <div class="faq-a" style="display:none;margin-top:10px;font-size:12px;color:var(--text-muted);line-height:1.5">${faq.a}</div>
+      </div>
+    `).join('')}
+  </div>
+
+  <div class="section-title">Signaler un problème</div>
+  <div class="profile-section">
+    <div class="form-group"><label>Type de problème</label>
+      <select>
+        <option>Problème technique</option>
+        <option>Problème de mission</option>
+        <option>Problème de paiement</option>
+        <option>Signalement utilisateur</option>
+        <option>Autre</option>
+      </select>
+    </div>
+    <div class="form-group"><label>Description</label>
+      <textarea rows="4" placeholder="Décrivez votre problème..."></textarea>
+    </div>
+    <button class="btn btn-primary btn-block" onclick="toast('success','Signalement envoyé','Nous vous répondrons sous 24h')">Envoyer le signalement</button>
+  </div>
+</div>`;
+break;
+
+// ============ ABOUT ============
+case 'about':
+showNav=false;
+html=`<div class="profile-sub-header">
+  <button class="back-btn" onclick="showProScreen('profile')">←</button>
+  <h2>À propos d'URGAD</h2>
+  <div></div>
+</div>
+<div class="profile-sub-body fade-in">
+  <div style="text-align:center;padding:20px 0 30px">
+    <div style="font-family:'Playfair Display',serif;font-size:48px;font-weight:700;background:var(--gradient-gold);-webkit-background-clip:text;background-clip:text;-webkit-text-fill-color:transparent;letter-spacing:-1.5px;margin-bottom:8px">URGAD</div>
+    <div style="font-size:12px;color:var(--text-muted);letter-spacing:2px;text-transform:uppercase">Le soin au bon endroit, au bon moment</div>
+    <div style="font-size:11px;color:var(--text-dim);margin-top:8px">Version 1.0.0 • Build 2026.09.23</div>
+  </div>
+
+  <div class="profile-section">
+    <h3>Notre mission</h3>
+    <p style="font-size:13px;line-height:1.6;color:var(--text-muted)">URGAD est une plateforme numérique de mise en relation entre les établissements de santé et les professionnels disponibles. Notre objectif : permettre à chaque établissement de trouver rapidement le personnel qualifié dont il a besoin.</p>
+  </div>
+
+  <div class="profile-section">
+    <h3>Informations légales</h3>
+    <div class="info-row"><span class="label">Raison sociale</span><span class="value">[RAISON SOCIALE]</span></div>
+    <div class="info-row"><span class="label">SIRET</span><span class="value">[SIRET]</span></div>
+    <div class="info-row"><span class="label">Siège social</span><span class="value">[ADRESSE]</span></div>
+    <div class="info-row"><span class="label">Contact</span><span class="value">[EMAIL CONTACT]</span></div>
+  </div>
+
+  <div class="profile-section">
+    <h3>Documents légaux</h3>
+    <div class="profile-menu">
+      <div class="profile-menu-item" onclick="window.open('cgu.html','_blank')">
+        <div class="profile-menu-icon blue">📄</div>
+        <div class="profile-menu-content"><h4>Conditions générales d'utilisation</h4><p>Version du 08/10/2026</p></div>
+        <div class="profile-menu-arrow">›</div>
+      </div>
+      <div class="profile-menu-item" onclick="window.open('confidentialite.html','_blank')">
+        <div class="profile-menu-icon emerald">🔒</div>
+        <div class="profile-menu-content"><h4>Politique de confidentialité</h4><p>Conforme RGPD</p></div>
+        <div class="profile-menu-arrow">›</div>
+      </div>
+      <div class="profile-menu-item" onclick="toast('info','Mentions','Mentions légales ouvertes')">
+        <div class="profile-menu-icon gold">⚖️</div>
+        <div class="profile-menu-content"><h4>Mentions légales</h4><p>Informations légales</p></div>
+        <div class="profile-menu-arrow">›</div>
+      </div>
+      <div class="profile-menu-item" onclick="window.open('confidentialite.html#cookies','_blank')">
+        <div class="profile-menu-icon purple">🍪</div>
+        <div class="profile-menu-content"><h4>Gestion des cookies</h4><p>Personnaliser vos préférences</p></div>
+        <div class="profile-menu-arrow">›</div>
+      </div>
+    </div>
+  </div>
+
+  <div class="profile-section">
+    <h3>Suivez-nous</h3>
+    <div style="display:flex;gap:10px;justify-content:center;margin-top:10px">
+      ${['🌐','📘','📸','💼','🐦'].map(i=>`<button style="width:44px;height:44px;border-radius:12px;background:var(--surface);border:1px solid var(--border);display:flex;align-items:center;justify-content:center;font-size:18px;cursor:pointer" onclick="toast('info','Lien','Ouverture du site')">${i}</button>`).join('')}
+    </div>
+  </div>
+
+  <p style="text-align:center;font-size:11px;color:var(--text-dim);margin-top:20px;line-height:1.6">
+    © 2026 [RAISON SOCIALE] • Tous droits réservés<br>
+    Fait avec ❤️ à Paris, France
+  </p>
+</div>`;
+break;
+
+case 'availability':
+showNav=false;
+html=`<div class="profile-sub-header">
+  <button class="back-btn" onclick="showProScreen('profile')">←</button>
+  <h2>Mes disponibilités</h2>
+  <button class="btn btn-primary btn-sm" style="padding:8px 14px;font-size:12px" onclick="toast('info','Aperçu local','La grille n\'est pas envoyée. Rien n\'est enregistré.');showProScreen('profile')">Enregistrer</button>
+</div>
+<div class="profile-sub-body fade-in">
+  <p style="font-size:13px;color:var(--text-muted);margin-bottom:16px">Sélectionnez vos créneaux disponibles</p>
+  <div class="avail-grid">
+    <div class="avail-row header"><div>Jour</div><div>Matin</div><div>Après-midi</div><div>Nuit</div></div>
+    ${['Lundi','Mardi','Mercredi','Jeudi','Vendredi','Samedi','Dimanche'].map((d,i)=>`
+      <div class="avail-row"><div>${d}</div>
+        <div class="avail-cell"><div class="avail-toggle ${i<5&&Math.random()>0.3?'on':'off'}" onclick="toggleAvail(this)">${i<5&&Math.random()>0.3?'✓':'✕'}</div></div>
+        <div class="avail-cell"><div class="avail-toggle ${i<4&&Math.random()>0.5?'on':'off'}" onclick="toggleAvail(this)">${i<4&&Math.random()>0.5?'✓':'✕'}</div></div>
+        <div class="avail-cell"><div class="avail-toggle ${i<5&&Math.random()>0.4?'on':'off'}" onclick="toggleAvail(this)">${i<5&&Math.random()>0.4?'✓':'✕'}</div></div>
+      </div>
+    `).join('')}
+  </div>
+  <button class="btn btn-primary btn-block btn-lg" onclick="toast('info','Aperçu local','La grille n\'est pas envoyée. Rien n\'est enregistré.');showProScreen('profile')">💾 Enregistrer</button>
+</div>`;
+break;
+case 'radius':
+showNav=false;
+html=`<div class="profile-sub-header">
+  <button class="back-btn" onclick="showProScreen('profile')">←</button>
+  <h2>Zone de déplacement</h2>
+  <div></div>
+</div>
+<div class="profile-sub-body fade-in">
+  <p class="sub">Jusqu'où pouvez-vous vous déplacer ?</p>
+  <div class="radius-options">
+    ${[[5,'Proximité immédiate'],[10,'Recommandé'],[20,'Plus de missions'],[30,'Large zone'],[50,'Toute la région']].map(function(o){ var sel = Number(userProfile.radius||20)===o[0]; return '<div class="radius-option'+(sel?' selected':'')+'" onclick="selectRadius(this)"><div><h4>'+o[0]+' km</h4><p>'+o[1]+'</p></div><div>'+(sel?'✓':'→')+'</div></div>'; }).join('')}
+    <p style="font-size:12px;color:var(--text-muted);margin-top:12px">${userProfile.geocodeLabel?('Centre : '+UrgadFeatures.esc(userProfile.geocodeLabel)+(userProfile.geocodePrecision==='municipality'?' (commune)':'')):'Adresse non renseignée : ajoutez-la dans « Modifier le profil ».'}</p>
+  </div>
+  <button class="btn btn-primary btn-block btn-lg" style="margin-top:24px" onclick="saveProRadius()">Enregistrer</button>
+</div>`;
+break;
+case 'notif':
+navItems[2].classList.add('active');
+html=`<div class="home-screen fade-in">
+<div class="greeting">Notifications</div>
+<div class="greeting-sub" id="proNotifCount">${notifications.filter(n=>!n.read).length} non lue(s) sur ${notifications.length}</div>
+<div style="display:flex;gap:8px;flex-wrap:wrap;margin:10px 0 14px">
+<button class="btn btn-ghost btn-sm" style="padding:8px 12px;font-size:12px" onclick="proMarkAllRead()">✓ Tout marquer lu</button>
+${UrgadFeatures.browserSupported() && UrgadFeatures.browserPermission()==='default' ? '<button class="btn btn-ghost btn-sm" style="padding:8px 12px;font-size:12px" onclick="proEnableBrowserNotif()">🔔 Alertes navigateur</button>' : ''}
+</div>
+${notifications.length?'':'<p style="color:var(--text-muted)">Aucune notification pour le moment.</p>'}
+${notifications.map(n=>`
+<div class="notif-item ${n.read?'':'urgad-notif-unread'}" style="cursor:pointer" onclick="openProNotif(${JSON.stringify(n.id)})">
+<div class="notif-icon ${n.type}">${n.icon}</div>
+<div class="notif-content" style="flex:1">
+<h4>${n.title}</h4>
+<p>${n.text}</p>
+<div class="notif-time">${n.time}</div>
+</div>
+</div>
+`).join('')}
+</div>`;
+break;
+case 'msg':
+navItems[3].classList.add('active');
+html=renderMsgList();
+break;
+case 'chat':
+showNav=false;
+html=renderChat();
+break;
+default:
+if(screen.startsWith('detail-')){
+showNav=false;
+const id = parseInt(screen.split('-')[1]);
+const m = missions.find(x=>x.id===id) || (U.extraMissions||[]).find(x=>x.id===id) || missions[0];
+html = m ? renderMissionDetail(m) : '<div class="home-screen"><p>Mission introuvable</p></div>';
+}
+}
+if({profession:1,availability:1,preferences:1,reviews:1,'my-stats':1}[screen]){
+  html = '<div style="margin:12px 16px 0;padding:10px 12px;border:1px solid rgba(245,158,11,0.45);border-radius:12px;font-size:12px;color:var(--text-muted)"><strong style="color:#F59E0B">Aperçu local</strong> — cet écran n\'enregistre rien sur l\'API.</div>'+html;
+}
+container.innerHTML = html;
+nav.style.display = showNav ? 'flex' : 'none';
+container.scrollTop = 0;
+if(screen==='home') setTimeout(initProNearMap, 60);
+}
+function renderMissionDetail(m){
+return `<div class="detail-screen fade-in">
+<button class="back-btn" onclick="showProScreen('home')">←</button>
+<div class="detail-hero" style="margin-top:16px">
+<span class="mission-type">${m.type}</span>
+<h2>${m.etab}</h2>
+<p>📍 ${m.address}</p>
+</div>
+<div class="detail-section">
+<h3>🏢 Établissement</h3>
+<div class="detail-row"><span class="label">Nom</span><span class="value">${m.etab}</span></div>
+<div class="detail-row"><span class="label">Adresse</span><span class="value">${m.address}</span></div>
+<div class="detail-row"><span class="label">Distance</span><span class="value">${m.distance!=null?String(m.distance).replace('.',',')+" km (à vol d'oiseau)":"Adresse du profil non renseignée"}</span></div>
+</div>
+<div class="detail-section">
+<h3>📋 Mission</h3>
+<div class="detail-row"><span class="label">Date</span><span class="value">${m.date}</span></div>
+<div class="detail-row"><span class="label">Horaires</span><span class="value">${m.start} → ${m.end}</span></div>
+<div class="detail-row"><span class="label">Service</span><span class="value">${m.service}</span></div>
+<div class="detail-row"><span class="label">Type</span><span class="value">${m.type}</span></div>
+</div>
+<div class="detail-section">
+<h3>💶 Rémunération</h3>
+<div class="detail-row"><span class="label">Montant</span><span class="value" style="color:var(--emerald-soft);font-size:18px">${m.price}</span></div>
+<div class="detail-row"><span class="label">Majoration / frais</span><span class="value">Aperçu local — absent de l'API</span></div>
+</div>
+<div class="detail-section">
+<h3>ℹ️ Informations</h3>
+<p style="font-size:14px;line-height:1.6;color:var(--text-muted)">${m.desc}. Profils expérimentés en EHPAD appréciés.</p>
+</div>
+<div class="detail-section">
+<h3>🗺️ Itinéraire & géolocalisation</h3>
+<button class="route-btn" onclick="openRoute(${m.id})">
+<div class="route-btn-icon">🧭</div>
+<div class="route-btn-text">
+<h4>Voir l'itinéraire</h4>
+<p>Calculer le trajet depuis votre position</p>
+</div>
+<div style="color:var(--gold-soft);font-size:18px">→</div>
+</button>
+</div>
+<div class="apply-bar">
+${(U.candidatures||[]).some(c=>c.missionId===m.id && c.proEmail===((U.sessions.pro&&U.sessions.pro.email)||'') && c.status!=='rejected') ? '<button class="btn btn-success btn-block btn-lg" type="button">Candidature envoyée</button>' : `<button class="btn btn-primary btn-block btn-lg" onclick="confirmApply(${m.id})">POSTULER</button>`}
+</div>
+</div>`;
+}
+function selectProf(el){document.querySelectorAll('.prof-option').forEach(p=>p.classList.remove('selected'));el.classList.add('selected')}
+function toggleAvail(el){if(el.classList.contains('on')){el.classList.remove('on');el.classList.add('off');el.textContent='✕'}else{el.classList.remove('off');el.classList.add('on');el.textContent='✓'}}
+function selectRadius(el){document.querySelectorAll('.radius-option').forEach(r=>r.classList.remove('selected'));el.classList.add('selected')}
+function confirmApply(id){
+const m = missions.find(x=>x.id===id) || (U.extraMissions||[]).find(x=>x.id===id) || missions[0];
+document.getElementById('modalContent').innerHTML=`
+<div class="modal-header"><h2>Confirmer ma candidature</h2><button class="modal-close" onclick="closeModal()">✕</button></div>
+<div class="modal-body">
+<p>Vous êtes sur le point de postuler à cette mission :</p>
+<div style="background:var(--surface);padding:16px;border-radius:14px;margin:12px 0;border:1px solid var(--border)">
+<strong style="color:var(--text)">${m.etab}</strong><br>
+<span style="color:var(--text-muted);font-size:13px">${m.date} • ${m.start} → ${m.end}</span>
+</div>
+</div>
+<div class="modal-footer">
+<button class="btn btn-ghost" onclick="closeModal()">Annuler</button>
+<button class="btn btn-primary" onclick="submitCandidature(${id})">Confirmer</button>
+</div>`;
+document.getElementById('modal').classList.add('active');
+}
+function addUrgadBaseMap(map){
+L.maplibreGL({style:'https://tiles.openfreemap.org/styles/dark'}).addTo(map);
+if(map.attributionControl) map.attributionControl.addAttribution('© OpenStreetMap');
+}
+function openRoute(missionId){
+const m = missions.find(x=>x.id===missionId) || (U.extraMissions||[]).find(x=>x.id===missionId);
+if(!m) return;
+if(m.lat==null||m.lng==null){ toast('info','Itinéraire','Adresse de la mission non localisée.'); return; }
+currentRouteMission = m;
+document.getElementById('mapTitle').textContent = 'Itinéraire — ' + m.etab;
+document.getElementById('mapScreen').classList.add('active');
+document.querySelectorAll('.route-tab').forEach(t=>t.classList.remove('active'));
+document.querySelector('.route-tab[data-mode="driving"]').classList.add('active');
+setTimeout(()=>{initMap(m);calculateRoute('driving','Voiture')},100);
+}
+function closeMap(){
+document.getElementById('mapScreen').classList.remove('active');
+if(mapRoute){mapRoute.remove();mapRoute=null}
+routeLayer=null;markersLayer=null;
+}
+function initMap(m){
+if(mapRoute){mapRoute.remove();mapRoute=null}
+mapRoute = L.map('mapRoute',{zoomControl:false}).setView([m.lat,m.lng],13);
+L.control.zoom({position:'topright'}).addTo(mapRoute);
+addUrgadBaseMap(mapRoute);
+markersLayer = L.layerGroup().addTo(mapRoute);
+if(!userLocation.real){
+  const destOnly = L.divIcon({className:'',html:`<div style="width:40px;height:40px;border-radius:50%;background:linear-gradient(135deg,#10B981,#34D399);border:3px solid #0A0E1A;display:flex;align-items:center;justify-content:center;font-size:18px">🏥</div>`,iconSize:[40,40],iconAnchor:[20,20]});
+  L.marker([m.lat,m.lng],{icon:destOnly}).addTo(markersLayer).bindPopup(`<strong>🏥 ${m.etab}</strong><br>${m.address}`).openPopup();
+  return;
+}
+const userIcon = L.divIcon({className:'',html:`<div style="width:40px;height:40px;border-radius:50%;background:linear-gradient(135deg,#D4AF37,#F5D76E);border:3px solid #0A0E1A;display:flex;align-items:center;justify-content:center;font-size:18px;box-shadow:0 4px 12px rgba(212,175,55,0.5)">📍</div>`,iconSize:[40,40],iconAnchor:[20,20]});
+L.marker([userLocation.lat,userLocation.lng],{icon:userIcon}).addTo(markersLayer).bindPopup('<strong>📍 '+UrgadFeatures.esc(userLocation.label||'Votre adresse')+'</strong>');
+const destIcon = L.divIcon({className:'',html:`<div style="width:40px;height:40px;border-radius:50%;background:linear-gradient(135deg,#10B981,#34D399);border:3px solid #0A0E1A;display:flex;align-items:center;justify-content:center;font-size:18px;box-shadow:0 4px 12px rgba(16,185,129,0.5)">🏥</div>`,iconSize:[40,40],iconAnchor:[20,20]});
+L.marker([m.lat,m.lng],{icon:destIcon}).addTo(markersLayer).bindPopup(`<strong>🏥 ${m.etab}</strong><br>${m.address}`);
+const bounds = L.latLngBounds([userLocation.lat,userLocation.lng],[m.lat,m.lng]);
+mapRoute.fitBounds(bounds,{padding:[60,60]});
+}
+function switchRouteMode(mode,label,el){
+document.querySelectorAll('.route-tab').forEach(t=>t.classList.remove('active'));
+el.classList.add('active');
+calculateRoute(mode,label);
+}
+async function calculateRoute(mode,label){
+if(!currentRouteMission || !mapRoute) return;
+const m = currentRouteMission;
+if(!userLocation.real){
+  document.getElementById('routeDuration').textContent='--';
+  document.getElementById('routeDistance').textContent='--';
+  document.getElementById('routeDetails').innerHTML='<p style="color:var(--text-muted);font-size:13px;line-height:1.5">Renseignez votre adresse (profil) ou utilisez « Ma position » pour estimer la distance. « Naviguer » ouvre Google Maps depuis votre position actuelle.</p>';
+  return;
+}
+document.getElementById('routeDuration').textContent='...';
+document.getElementById('routeDistance').textContent='...';
+document.getElementById('routeDetails').innerHTML='<p style="color:var(--text-muted);font-size:13px;text-align:center;padding:10px">Calcul de l\'aperçu...</p>';
+if(routeLayer){mapRoute.removeLayer(routeLayer);routeLayer=null}
+const directDist = haversine(userLocation.lat,userLocation.lng,m.lat,m.lng);
+const speeds = {driving:28,cycling:15,transit:18,walking:4.5};
+const speed = speeds[mode]||28;
+let mult = 1;
+let modeIcon = '🚗';
+if(label==='Moto'){mult=0.85;modeIcon='🏍️'}
+if(label==='Transport'){mult=1.35;modeIcon='🚌'}
+if(label==='Vélo'){mult=1;modeIcon='🚴'}
+if(label==='À pied'){mult=1;modeIcon='🚶'}
+const duration = (directDist/speed)*3600*1.25*mult;
+const colors = {driving:'#D4AF37',cycling:'#3B82F6',transit:'#10B981',walking:'#F59E0B'};
+routeLayer = L.polyline([[userLocation.lat,userLocation.lng],[m.lat,m.lng]],{color:colors[mode]||'#D4AF37',weight:4,opacity:0.85,dashArray:'8,8'}).addTo(mapRoute);
+mapRoute.fitBounds(routeLayer.getBounds(),{padding:[80,80]});
+document.getElementById('routeDuration').textContent = formatDuration(duration);
+document.getElementById('routeDistance').textContent = formatDistance(directDist*1000);
+document.getElementById('routeDetails').innerHTML = `<div class="route-steps"><div style="font-size:11px;color:var(--text-muted);text-transform:uppercase;letter-spacing:1.5px;font-weight:600;margin-bottom:10px">${modeIcon} ${label}</div><p style="color:var(--text-muted);font-size:13px;line-height:1.5">Aperçu à vol d'oiseau, sans serveur d'itinéraire public. Le trajet réel s'ouvre avec Naviguer.</p></div>`;
+}
+function haversine(lat1,lon1,lat2,lon2){const R=6371;const dLat=(lat2-lat1)*Math.PI/180;const dLon=(lon2-lon1)*Math.PI/180;const a=Math.sin(dLat/2)**2+Math.cos(lat1*Math.PI/180)*Math.cos(lat2*Math.PI/180)*Math.sin(dLon/2)**2;return R*2*Math.atan2(Math.sqrt(a),Math.sqrt(1-a))}
+function formatDuration(sec){const h=Math.floor(sec/3600);const m=Math.round((sec%3600)/60);if(h===0)return m+' min';return h+'h'+(m>0?String(m).padStart(2,'0'):'')}
+function formatDistance(meters){if(meters<1000)return Math.round(meters)+' m';return (meters/1000).toFixed(1)+' km'}
+function startNavigation(){
+if(!currentRouteMission) return;
+const m = currentRouteMission;
+const activeTab = document.querySelector('.route-tab.active');
+const mode = activeTab ? activeTab.dataset.mode : 'driving';
+const destStr = `${m.lat},${m.lng}`;
+const originStr = `${userLocation.lat},${userLocation.lng}`;
+const travelMode = mode==='walking'?'walking':mode==='cycling'?'bicycling':mode==='transit'?'transit':'driving';
+const navUrl = `https://www.google.com/maps/dir/?api=1${userLocation.real?'&origin='+originStr:''}&destination=${destStr}&travelmode=${travelMode}&dir_action=navigate`;
+document.getElementById('modalContent').innerHTML=`
+<div class="modal-header"><h2>Démarrer la navigation</h2><button class="modal-close" onclick="closeModal()">✕</button></div>
+<div class="modal-body">
+<p>Vous allez être redirigé vers votre application de navigation pour rejoindre :</p>
+<div style="background:var(--surface);padding:16px;border-radius:14px;margin:12px 0;border:1px solid var(--border)">
+<strong style="color:var(--text)">🏥 ${m.etab}</strong><br>
+<span style="color:var(--text-muted);font-size:13px">${m.address}</span>
+</div>
+</div>
+<div class="modal-footer">
+<button class="btn btn-ghost" onclick="closeModal()">Annuler</button>
+<button class="btn btn-primary" onclick="window.open('${navUrl}','_blank');closeModal()">🧭 Naviguer</button>
+</div>`;
+document.getElementById('modal').classList.add('active');
+}
+
+function confirmLogout(type){
+document.getElementById('modalContent').innerHTML = `
+<div class="modal-header"><h2>Déconnexion</h2><button class="modal-close" onclick="closeModal()">✕</button></div>
+<div class="modal-body"><p>Êtes-vous sûr de vouloir vous déconnecter de votre compte ?</p></div>
+<div class="modal-footer">
+<button class="btn btn-ghost" onclick="closeModal()">Annuler</button>
+<button class="btn btn-danger" onclick="clearProSession()">Se déconnecter</button>
+</div>
+`;
+document.getElementById('modal').classList.add('active');
+}
+function toast(type,title,message){
+const container = document.getElementById('toastContainer');
+const icons = {success:'✅',error:'❌',info:'ℹ️'};
+const t = document.createElement('div');
+t.className = 'toast '+type;
+t.innerHTML = `<div class="toast-icon">${icons[type]}</div><div class="toast-content"><strong>${title}</strong><span>${message}</span></div>`;
+container.appendChild(t);
+setTimeout(()=>{t.style.opacity='0';t.style.transform='translateX(100%)';t.style.transition='all 0.3s';setTimeout(()=>t.remove(),300)},3500);
+}
+function closeModal(){document.getElementById('modal').classList.remove('active');document.getElementById('modalContent').classList.remove('lg')}
+
+document.getElementById('modal').addEventListener('click',e=>{if(e.target.id==='modal')closeModal()});
+document.addEventListener('keydown',e=>{if(e.key==='Escape')closeModal()});
+bootPro();
+</script>
+</body>
+</html>
