@@ -37,7 +37,17 @@ Stripe : `STRIPE_SECRET_KEY` active Checkout (199 / 249 / 299 € HT / mois). `S
 
 Après paiement : confirmation in-app (établissement + admin), écriture finance, écran de succès. Portail Stripe (factures, carte, résiliation en fin de période). Demandes extra hors quota : 25 € HT (Essentiel) / 15 € HT (Pro), 0 € (Premium). Stripe envoie le reçu si **Settings → Customer emails** (Successful payments / Failed payments) est coché. Webhook : `checkout.session.completed`, `invoice.paid`, `invoice.payment_failed`, `customer.subscription.updated`, `customer.subscription.deleted`.
 
-Santé : `GET /api/health`.
+Santé : `GET /api/health` (`production`, `db`, `stripe.chargesEnabled`).
+
+## Passer en production (à faire une fois)
+
+Le site tourne déjà en `NODE_ENV=production` sur Render. Pour encaisser vraiment et rester allumé :
+
+1. **Stripe — activer les cartes** : [dashboard.stripe.com/settings/update](https://dashboard.stripe.com/settings/update) — e-mail professionnel, téléphone, code MCC (activité, ex. logiciel 5734). Tant que `charges_enabled` est false, Checkout refuse les cartes.
+2. **Stripe — e-mails reçus** : Settings → Customer emails → Successful / Failed payments.
+3. **Render — plan payant** : le web `free` s’endort ; le Postgres free expire le 15/11/2026. Passez le service en Starter et la base en Basic dans le dashboard Render (carte bancaire).
+4. **Domaine** : brancher `fr.urgad.app` (ou autre) en Custom Domain Render + `PUBLIC_URL`.
+5. **CGU / confidentialité** : remplacer `[RAISON SOCIALE]` / SIRET, faire relire un avocat.
 
 ## App iOS / Android (Capacitor)
 

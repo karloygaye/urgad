@@ -11,6 +11,53 @@ export function stripeEnabled(): boolean {
   return !!(process.env.STRIPE_SECRET_KEY || '').trim();
 }
 
+export type StripeLiveStatus = {
+  configured: boolean;
+  livemode: boolean;
+  chargesEnabled: boolean;
+  payoutsEnabled: boolean;
+  missing: string[];
+  message: string | null;
+};
+
+let liveCache: { at: number; status: StripeLiveStatus } | null = null;
+
+export async function stripeLiveStatus(force = false): Promise<StripeLiveStatus> {
+  if (!stripeEnabled()) {
+    return {
+      configured: false,
+      livemode: false,
+      chargesEnabled: false,
+      payoutsEnabled: false,
+      missing: [],
+      message: 'STRIPE_SECRET_KEY absente.',
+    };
+  }
+  if (!force && liveCache && Date.now() - liveCache.at < 60_000) return liveCache.status;
+  const stripe = getStripe()!;
+  const acc = await stripe.accounts.retrieveCurrent();
+  let missing: string[] = [];
+  try {
+    const cap = await stripe.accounts.retrieveCapability(acc.id, 'card_payments');
+    missing = [...(cap.requirements?.currently_due || []), ...(cap.requirements?.past_due || [])];
+    missing = [...new Set(missing)];
+  } catch {
+    missing = [];
+  }
+  const status: StripeLiveStatus = {
+    configured: true,
+    livemode: !!(process.env.STRIPE_SECRET_KEY || '').trim().startsWith('sk_live'),
+    chargesEnabled: !!acc.charges_enabled,
+    payoutsEnabled: !!acc.payouts_enabled,
+    missing,
+    message: acc.charges_enabled
+      ? null
+      : 'Compte Stripe live incomplet : ouvrez https://dashboard.stripe.com/settings/update et renseignez l’e-mail professionnel, le téléphone et le code MCC (activité). Tant que les cartes sont inactives, Checkout ne peut pas encaisser.',
+  };
+  liveCache = { at: Date.now(), status };
+  return status;
+}
+
 export function getStripe(): Stripe | null {
   const key = (process.env.STRIPE_SECRET_KEY || '').trim();
   if (!key) {
@@ -70,9 +117,11 @@ export async function createCheckoutSession(opts: {
   email: string;
   existingCustomerId?: string | null;
   req?: { protocol?: string; get?: (h: string) => string | undefined };
-}): Promise<{ url: string | null; reason: 'missing_key' | 'ok'; checkoutId?: string; customerId?: string }> {
+}): Promise<{ url: string | null; reason: 'missing_key' | 'ok' | 'charges_disabled'; checkoutId?: string; customerId?: string }> {
   const stripe = getStripe();
   if (!stripe) return { url: null, reason: 'missing_key' };
+  const live = await stripeLiveStatus();
+  if (!live.chargesEnabled) return { url: null, reason: 'charges_disabled' };
   const priceId = await ensurePriceId(stripe, opts.plan);
   const base = publicUrl(opts.req);
   const success = base + '/urgad-etab.html?billing=success&session_id={CHECKOUT_SESSION_ID}';
@@ -123,9 +172,11 @@ export async function createExtraMissionCheckout(opts: {
   email: string;
   existingCustomerId?: string | null;
   req?: { protocol?: string; get?: (h: string) => string | undefined };
-}): Promise<{ url: string | null; reason: 'missing_key' | 'ok' | 'not_priced'; checkoutId?: string }> {
+}): Promise<{ url: string | null; reason: 'missing_key' | 'ok' | 'not_priced' | 'charges_disabled'; checkoutId?: string }> {
   const stripe = getStripe();
   if (!stripe) return { url: null, reason: 'missing_key' };
+  const live = await stripeLiveStatus();
+  if (!live.chargesEnabled) return { url: null, reason: 'charges_disabled' };
   const amount = opts.plan.extraMissionHt;
   if (amount == null || amount <= 0) return { url: null, reason: 'not_priced' };
   const base = publicUrl(opts.req);

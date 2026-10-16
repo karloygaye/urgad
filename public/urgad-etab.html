@@ -1211,7 +1211,9 @@ function renderEtabPlans(){
       ? trial.remaining+' demande(s) offerte(s) restante(s) sur '+trial.limit+' — abonnement optionnel'
       : 'Essai de 5 demandes épuisé — un abonnement est nécessaire pour continuer');
   const stripeOn = !!(cat.stripeEnabled || (sub && sub.stripeEnabled));
+  const chargesOn = cat.stripeChargesEnabled !== false;
   return `<div class="etab-topbar"><h1>Abonnement</h1></div>
+    ${stripeOn && !chargesOn ? `<div class="bo-card" style="margin-bottom:16px;border-color:rgba(239,68,68,0.45)"><strong>Paiement live pas encore ouvert</strong><p style="color:var(--text-muted);font-size:13px;margin-top:6px;line-height:1.5">${escHtml(cat.stripeMessage || 'Le compte Stripe doit être activé (e-mail, téléphone, code MCC) sur dashboard.stripe.com/settings/update.')}</p></div>` : ''}
     <div class="bo-card" style="margin-bottom:18px">
       <h3 style="font-family:'Playfair Display',serif;margin-bottom:8px">5 demandes offertes</h3>
       <p style="color:var(--text-muted);font-size:13px;line-height:1.55;margin-bottom:10px">${escHtml(model.trialNote || '5 demandes sans carte. L’abonnement peut être pris tout de suite ou après.')}</p>

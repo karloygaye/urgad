@@ -2,7 +2,7 @@ import { Router } from 'express';
 import jwt from 'jsonwebtoken';
 import { dbRun, dbGet, dbAll } from '../db.js';
 import { config } from '../config.js';
-import { confirmCheckoutSession, createCheckoutSession, createExtraMissionCheckout, createPortalSession, stripeEnabled, subscriptionIsPaid } from '../billing.js';
+import { confirmCheckoutSession, createCheckoutSession, createExtraMissionCheckout, createPortalSession, stripeEnabled, stripeLiveStatus, subscriptionIsPaid } from '../billing.js';
 import { planById, planByName, publicCatalog, trialInfo, usageThisMonth } from '../plans.js';
 import { saveBase64File } from '../uploads.js';
 import { geocodeEstablishment } from '../geo.js';
@@ -178,12 +178,20 @@ router.get('/me/subscription', authMiddleware, async (req: any, res: any, next: 
     const usage = await usageThisMonth(Number(estab.id));
     const paid = row ? subscriptionIsPaid(row.status) : false;
     const trial = await trialInfo(Number(estab.id), paid);
+    const live = await stripeLiveStatus();
     return res.json({
       subscription: row ? publicSubscription(row, undefined, { usage }) : null,
-      catalog: { ...publicCatalog(), stripeEnabled: stripeEnabled() },
+      catalog: {
+        ...publicCatalog(),
+        stripeEnabled: stripeEnabled(),
+        stripeChargesEnabled: live.chargesEnabled,
+        stripeLivemode: live.livemode,
+        stripeMessage: live.message,
+      },
       usage,
       trial,
       stripeEnabled: stripeEnabled(),
+      stripeChargesEnabled: live.chargesEnabled,
     });
   } catch (err) { next(err); }
 });
@@ -216,7 +224,7 @@ router.post('/me/subscription', authMiddleware, async (req: any, res: any, next:
     if (id == null) return res.status(500).json({ message: 'Abonnement non enregistré.' });
     const user = await dbGet<{ email: string }>('SELECT email FROM users WHERE id = ?', [req.user.id]);
     let checkoutUrl: string | null = null;
-    let reason: 'missing_key' | 'ok' | 'already_paid' = 'missing_key';
+    let reason: 'missing_key' | 'ok' | 'already_paid' | 'charges_disabled' = 'missing_key';
     if (keepPaid) {
       reason = 'already_paid';
     } else if (stripeEnabled()) {
@@ -234,11 +242,14 @@ router.post('/me/subscription', authMiddleware, async (req: any, res: any, next:
         await dbRun('UPDATE establishment_subscriptions SET stripe_customer_id = ? WHERE id = ?', [checkout.customerId, id]);
       }
     }
+    const live = reason === 'charges_disabled' ? await stripeLiveStatus() : null;
     const message = reason === 'already_paid'
       ? 'Cette formule est déjà active.'
       : reason === 'ok'
         ? 'Redirection vers Stripe pour le paiement de l’abonnement.'
-        : 'Abonnement enregistré en attente. STRIPE_SECRET_KEY absente : aucun débit.';
+        : reason === 'charges_disabled'
+          ? (live?.message || 'Stripe live n’encaisse pas encore les cartes. Complétez l’activation du compte.')
+          : 'Abonnement enregistré en attente. STRIPE_SECRET_KEY absente : aucun débit.';
     return res.status(existing ? 200 : 201).json({
       subscription: publicSubscription({ id, establishment_id: estab.id, name, status, price, created_at: null }, {
         charged: keepPaid, paid: keepPaid, providerCalled: reason === 'ok', reason, checkoutUrl,
@@ -300,7 +311,10 @@ router.post('/me/subscription/extra', authMiddleware, async (req: any, res: any,
       existingCustomerId: row.stripe_customer_id || null,
       req,
     });
-    if (!checkout.url) return res.status(503).json({ message: 'Paiement extra indisponible.' });
+    if (!checkout.url) {
+      const live = await stripeLiveStatus();
+      return res.status(503).json({ message: checkout.reason === 'charges_disabled' ? (live.message || 'Stripe n’encaisse pas encore.') : 'Paiement extra indisponible.' });
+    }
     return res.json({
       checkoutUrl: checkout.url,
       extraHt: plan.extraMissionHt,

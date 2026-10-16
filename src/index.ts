@@ -27,7 +27,7 @@ import { backfillCoordinates } from './geo.js';
 import { pushStatus } from './notify.js';
 import { assertProductionConfig } from './runtime.js';
 import { publicCatalog } from './plans.js';
-import { applyStripeEvent, getStripe, stripeEnabled } from './billing.js';
+import { applyStripeEvent, getStripe, stripeEnabled, stripeLiveStatus } from './billing.js';
 
 dotenv.config();
 assertProductionConfig();
@@ -104,7 +104,12 @@ dbReady.then(async () => {
   setInterval(purge, 12 * 3600 * 1000).unref();
   const ps = pushStatus();
   console.log('[PUSH] ' + (ps.configured ? 'FIREBASE_SERVICE_ACCOUNT défini' : 'FIREBASE_SERVICE_ACCOUNT absent : notifications in-app uniquement, push ignoré'));
-  console.log('[STRIPE] ' + (stripeEnabled() ? 'Checkout abonnements activé' : 'STRIPE_SECRET_KEY absente : plans enregistrés sans débit'));
+  try {
+    const st = await stripeLiveStatus(true);
+    if (!st.configured) console.log('[STRIPE] STRIPE_SECRET_KEY absente : plans enregistrés sans débit');
+    else if (!st.chargesEnabled) console.warn('[STRIPE] Cartes live inactives — ' + (st.message || 'dashboard Stripe à compléter'));
+    else console.log('[STRIPE] Encaissement live OK (charges_enabled)');
+  } catch (e: any) { console.error('[STRIPE] statut compte', e?.message || e); }
 }).catch(() => {});
 app.use((req, res, next) => {
   dbReady.then(() => next()).catch((e) => {
@@ -127,13 +132,35 @@ app.use('/api/me', meRoutes);
 app.use('/api/requests', requestRoutes);
 app.use('/api/verification', verificationRoutes);
 
-app.get('/api/billing/plans', (_req, res) => {
-  res.json({ ...publicCatalog(), stripeEnabled: stripeEnabled() });
+app.get('/api/billing/plans', async (_req, res) => {
+  const stripe = await stripeLiveStatus();
+  res.json({
+    ...publicCatalog(),
+    stripeEnabled: stripeEnabled(),
+    stripeChargesEnabled: stripe.chargesEnabled,
+    stripeLivemode: stripe.livemode,
+    stripeMessage: stripe.message,
+  });
 });
 
 // Health
-app.get('/api/health', (_req, res) => {
-  res.json({ status: 'ok', service: 'URGAD API', version: '1.2.0', timestamp: new Date().toISOString(), push: pushStatus().configured ? 'fcm' : 'disabled' });
+app.get('/api/health', async (_req, res) => {
+  const stripe = await stripeLiveStatus();
+  res.json({
+    status: 'ok',
+    service: 'URGAD API',
+    version: '1.3.0',
+    env: process.env.NODE_ENV || 'development',
+    production: (process.env.NODE_ENV || '') === 'production',
+    db: (process.env.DATABASE_URL || '').trim() ? 'postgres' : 'sqlite',
+    timestamp: new Date().toISOString(),
+    push: pushStatus().configured ? 'fcm' : 'disabled',
+    stripe: {
+      configured: stripe.configured,
+      livemode: stripe.livemode,
+      chargesEnabled: stripe.chargesEnabled,
+    },
+  });
 });
 
 // Fronts produit : public/ (déploiement) puis sibling urgad-preview (dev local)
