@@ -413,6 +413,8 @@
     billingCatalog: function(){ return request(null, 'GET', '/api/billing/plans'); },
     saveEstablishmentSubscription: function(body){ return request('establishment', 'POST', '/api/establishments/me/subscription', { id: body.id, name: body.name }); },
     confirmEstablishmentSubscription: function(sessionId){ return request('establishment', 'POST', '/api/establishments/me/subscription/confirm', { sessionId: sessionId }); },
+    establishmentBillingPortal: function(){ return request('establishment', 'POST', '/api/establishments/me/subscription/portal', {}); },
+    buyExtraMission: function(){ return request('establishment', 'POST', '/api/establishments/me/subscription/extra', {}); },
     notifications: function(role){ return request(role, 'GET', '/api/notifications'); },
     unreadCount: function(role){ return request(role, 'GET', '/api/notifications/unread-count'); },
     markNotificationRead: function(role, id){ return request(role, 'POST', '/api/notifications/' + encodeURIComponent(id) + '/read', {}); },

@@ -1,4 +1,4 @@
-import { dbGet } from './db.js';
+import { dbGet, dbRun } from './db.js';
 
 /** Modèle économique URGAD : les soignants sont gratuits ; les établissements paient un abonnement mensuel HT.
  *  Pas de commission sur le salaire du professionnel (différenciation vs intérim).
@@ -148,7 +148,7 @@ export async function trialInfo(establishmentId: number, paid: boolean): Promise
 }
 
 export async function assertEstablishmentPublish(establishmentId: number, opts: { urgent?: boolean } = {}): Promise<Plan | null> {
-  const row = await dbGet<{ name: string; status: string }>('SELECT name, status FROM establishment_subscriptions WHERE establishment_id = ? ORDER BY id DESC LIMIT 1', [establishmentId]);
+  const row = await dbGet<{ id: number; name: string; status: string; extra_credits: number | null }>('SELECT id, name, status, extra_credits FROM establishment_subscriptions WHERE establishment_id = ? ORDER BY id DESC LIMIT 1', [establishmentId]);
   const plan = row?.name ? planByName(row.name) : undefined;
   const stripeOn = !!(process.env.STRIPE_SECRET_KEY || '').trim();
   const paid = ['paid', 'active', 'trialing'].includes(String(row?.status || '').toLowerCase());
@@ -172,10 +172,16 @@ export async function assertEstablishmentPublish(establishmentId: number, opts: 
 
   if (subscribed && plan) {
     if (plan.missionsPerMonth != null && usedMonth.missions >= plan.missionsPerMonth) {
+      const credits = Number(row?.extra_credits || 0);
+      if (credits > 0 && row?.id) {
+        await dbRun('UPDATE establishment_subscriptions SET extra_credits = COALESCE(extra_credits, 0) - 1 WHERE id = ? AND COALESCE(extra_credits, 0) > 0', [row.id]);
+        return plan;
+      }
       const extra = plan.extraMissionHt != null ? ` Demande supplémentaire : ${plan.extraMissionHt} € HT.` : '';
       const err: any = new Error(`Quota du plan ${plan.name} atteint (${plan.missionsPerMonth} demandes ce mois).${extra}`);
       err.status = 402;
       err.code = 'mission_quota';
+      err.extraHt = plan.extraMissionHt;
       throw err;
     }
     return plan;

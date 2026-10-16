@@ -2,7 +2,7 @@ import { Router } from 'express';
 import jwt from 'jsonwebtoken';
 import { dbRun, dbGet, dbAll } from '../db.js';
 import { config } from '../config.js';
-import { confirmCheckoutSession, createCheckoutSession, stripeEnabled, subscriptionIsPaid } from '../billing.js';
+import { confirmCheckoutSession, createCheckoutSession, createExtraMissionCheckout, createPortalSession, stripeEnabled, subscriptionIsPaid } from '../billing.js';
 import { planById, planByName, publicCatalog, trialInfo, usageThisMonth } from '../plans.js';
 import { saveBase64File } from '../uploads.js';
 import { geocodeEstablishment } from '../geo.js';
@@ -109,6 +109,9 @@ function publicSubscription(row: any, payment?: { charged?: boolean; paid?: bool
     reason: payment?.reason,
     plan: plan || null,
     usage: extras?.usage || null,
+    extraCredits: Number(row.extra_credits || 0),
+    extraMissionHt: plan?.extraMissionHt ?? null,
+    portalAvailable: !!(row.stripe_customer_id && stripeEnabled() && (paid || String(row.status || '').toLowerCase() === 'past_due')),
   };
 }
 
@@ -263,6 +266,45 @@ router.post('/me/subscription/confirm', authMiddleware, async (req: any, res: an
       subscription: row ? publicSubscription(row) : null,
       confirmation,
       message,
+    });
+  } catch (err) { next(err); }
+});
+
+router.post('/me/subscription/portal', authMiddleware, async (req: any, res: any, next: any) => {
+  try {
+    const estab = await ownEstablishment(req.user.id);
+    if (!estab) return res.status(404).json({ message: 'Établissement non trouvé.' });
+    const row = await dbGet('SELECT * FROM establishment_subscriptions WHERE establishment_id = ? ORDER BY id DESC LIMIT 1', [estab.id]) as any;
+    if (!row?.stripe_customer_id) return res.status(422).json({ message: 'Aucun client Stripe : payez d’abord un abonnement.' });
+    const portal = await createPortalSession({ customerId: String(row.stripe_customer_id), req });
+    if (!portal.url) return res.status(503).json({ message: 'Portail Stripe indisponible.' });
+    return res.json({ url: portal.url, message: 'Ouverture du portail facturation Stripe (factures, carte, résiliation).' });
+  } catch (err) { next(err); }
+});
+
+router.post('/me/subscription/extra', authMiddleware, async (req: any, res: any, next: any) => {
+  try {
+    const estab = await ownEstablishment(req.user.id);
+    if (!estab) return res.status(404).json({ message: 'Établissement non trouvé.' });
+    const row = await dbGet('SELECT * FROM establishment_subscriptions WHERE establishment_id = ? ORDER BY id DESC LIMIT 1', [estab.id]) as any;
+    if (!row || !subscriptionIsPaid(row.status)) return res.status(402).json({ message: 'Un abonnement payé est requis pour acheter une demande extra.', code: 'trial_exhausted' });
+    const plan = planByName(row.name);
+    if (!plan || plan.extraMissionHt == null) return res.status(422).json({ message: 'Cette formule n’a pas de tarif extra.' });
+    if (plan.extraMissionHt === 0) return res.status(422).json({ message: 'Le plan Premium inclut les demandes illimitées : pas de extra à payer.' });
+    const user = await dbGet<{ email: string }>('SELECT email FROM users WHERE id = ?', [req.user.id]);
+    const checkout = await createExtraMissionCheckout({
+      plan,
+      establishmentId: Number(estab.id),
+      subscriptionRowId: Number(row.id),
+      email: String(user?.email || ''),
+      existingCustomerId: row.stripe_customer_id || null,
+      req,
+    });
+    if (!checkout.url) return res.status(503).json({ message: 'Paiement extra indisponible.' });
+    return res.json({
+      checkoutUrl: checkout.url,
+      extraHt: plan.extraMissionHt,
+      message: 'Redirection vers Stripe pour 1 demande supplémentaire (' + plan.extraMissionHt + ' € HT).',
     });
   } catch (err) { next(err); }
 });

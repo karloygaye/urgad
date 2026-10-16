@@ -17,7 +17,7 @@ const DATE_RE = /^\d{4}-\d{2}-\d{2}$/;
 const HOUR_RE = /^\d{1,2}[:h]\d{2}$/;
 
 function fail(res: any, err: any) {
-  return res.status(err.status || 500).json({ message: err.message || 'Erreur.', code: err.code, identity: err.identity, diploma: err.diploma });
+  return res.status(err.status || 500).json({ message: err.message || 'Erreur.', code: err.code, identity: err.identity, diploma: err.diploma, extraHt: err.extraHt });
 }
 function actorOf(req: any) { return { id: Number(req.user.id), role: req.user.isAdmin ? 'admin' : req.user.role }; }
 function readSlot(b: any) {

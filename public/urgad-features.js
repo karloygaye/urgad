@@ -21,7 +21,7 @@
   var ICONS = { new_mission: '📍', application_received: '👤', application_accepted: '✅', application_rejected: '❌', new_message: '💬',
     verification_approved: '✅', verification_rejected: '⚠️', establishment_approved: '✅', establishment_rejected: '⚠️',
     document_approved: '📄', document_rejected: '📄', admin_new_pro: '🆕', admin_new_establishment: '🏢', admin_document: '📄',
-    subscription_paid: '💳', subscription_renewed: '💳', subscription_past_due: '⚠️', subscription_canceled: '🛑',
+    subscription_paid: '💳', subscription_renewed: '💳', subscription_past_due: '⚠️', subscription_canceled: '🛑', subscription_extra: '➕',
     admin_subscription_paid: '💰', admin_subscription_renewed: '💰', admin_subscription_past_due: '⚠️', admin_subscription_canceled: '🛑' };
   function iconFor(type){ return ICONS[type] || '🔔'; }
 

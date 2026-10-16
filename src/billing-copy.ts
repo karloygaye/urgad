@@ -1,6 +1,6 @@
 import { type Plan } from './plans.js';
 
-export type BillingNoticeKind = 'paid' | 'renewed' | 'past_due' | 'canceled' | 'checkout_cancel';
+export type BillingNoticeKind = 'paid' | 'renewed' | 'past_due' | 'canceled' | 'checkout_cancel' | 'extra';
 
 export type BillingConfirmation = {
   kind: BillingNoticeKind;
@@ -84,6 +84,18 @@ export function billingConfirmation(kind: BillingNoticeKind, ctx: BillingCopyCon
       invoiceUrl: ctx.invoiceUrl || null,
     };
   }
+  if (kind === 'extra') {
+    return {
+      kind,
+      title: 'Demande supplémentaire achetée',
+      body: `${etab} : une demande hors quota est créditée (${priceHt != null ? priceHt + ' € HT' : 'paiement unique'}). Publiez-la depuis Nouvelle demande. ${receiptNote}`,
+      planName,
+      priceHt,
+      receiptNote,
+      email,
+      invoiceUrl: ctx.invoiceUrl || null,
+    };
+  }
   return {
     kind: 'checkout_cancel',
     title: 'Paiement non finalisé',
@@ -105,5 +117,6 @@ export function adminBillingCopy(kind: BillingNoticeKind, ctx: BillingCopyContex
   if (kind === 'renewed') return { title: 'Abonnement renouvelé', body: `${etab} : prélèvement ${planName} abouti${priceBit ? ' (' + priceBit + ')' : ''}.` };
   if (kind === 'past_due') return { title: 'Impayé abonnement', body: `${etab} : échec de paiement ${planName}. Relance Stripe + notification établissement envoyées.` };
   if (kind === 'canceled') return { title: 'Abonnement résilié', body: `${etab} a perdu ${planName}.` };
+  if (kind === 'extra') return { title: 'Demande extra payée', body: `${etab} a acheté une demande hors quota${priceBit ? ' · ' + priceBit : ''}.` };
   return { title: 'Checkout abandonné', body: `${etab} a quitté Stripe sans payer.` };
 }
