@@ -37,11 +37,22 @@ const PORT = process.env.PORT || 3001;
 
 app.use(helmet({ contentSecurityPolicy: false }));
 app.use(cors({ origin: true, credentials: true }));
+function billingWebhookInfo(_req: any, res: any) {
+  res.status(200).json({
+    ok: true,
+    method: 'POST',
+    message: 'Endpoint Stripe. N’ouvrez pas cette URL dans le navigateur : Stripe envoie un POST signé. Dans le dashboard Stripe → Webhooks → Add endpoint, collez cette URL et choisissez les événements checkout.session.completed, customer.subscription.updated, customer.subscription.deleted, invoice.payment_failed.',
+    stripeKey: stripeEnabled(),
+    webhookSecret: !!(process.env.STRIPE_WEBHOOK_SECRET || '').trim(),
+  });
+}
+app.get('/api/billing/webhook', billingWebhookInfo);
+app.head('/api/billing/webhook', (_req, res) => res.status(200).end());
 app.post('/api/billing/webhook', express.raw({ type: 'application/json' }), (req, res) => {
   const stripe = getStripe();
   const secret = (process.env.STRIPE_WEBHOOK_SECRET || '').trim();
   if (!stripe || !secret) {
-    res.status(503).json({ message: 'Webhook Stripe non configuré.' });
+    res.status(503).json({ message: 'Webhook Stripe non configuré (STRIPE_WEBHOOK_SECRET manquant). Le paiement Checkout fonctionne déjà via le retour session_id.' });
     return;
   }
   const sig = req.headers['stripe-signature'];
