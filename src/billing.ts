@@ -1,6 +1,9 @@
 import Stripe from 'stripe';
+import { v4 as uuidv4 } from 'uuid';
 import { dbGet, dbRun } from './db.js';
-import { type Plan, planById } from './plans.js';
+import { type Plan, planById, planByName } from './plans.js';
+import { notifyAdmins, notifySafe } from './notify.js';
+import { adminBillingCopy, billingConfirmation, type BillingConfirmation, type BillingNoticeKind } from './billing-copy.js';
 
 let client: Stripe | null | undefined;
 
@@ -92,6 +95,15 @@ export async function createCheckoutSession(opts: {
     tax_id_collection: { enabled: true },
     metadata: meta,
     subscription_data: { metadata: meta },
+    custom_text: {
+      submit: {
+        message:
+          'Abonnement mensuel HT URGAD, reconduction tacite, résiliable pour la fin de période. Stripe envoie le reçu à cette adresse e-mail. URGAD confirme aussi dans Notifications (pas d’e-mail URGAD séparé).',
+      },
+      after_submit: {
+        message: 'Vous revenez ensuite sur l’espace établissement. L’abonnement s’active dès confirmation du paiement.',
+      },
+    },
   });
   if (session.id) {
     await dbRun('UPDATE establishment_subscriptions SET stripe_checkout_id = ? WHERE id = ?', [session.id, opts.subscriptionRowId]);
@@ -102,6 +114,112 @@ export async function createCheckoutSession(opts: {
     checkoutId: session.id,
     customerId: typeof session.customer === 'string' ? session.customer : undefined,
   };
+}
+
+type SubRow = {
+  id: number;
+  establishment_id: number;
+  name: string;
+  status: string;
+  price: number;
+  billing_notice: string | null;
+  stripe_customer_id: string | null;
+  stripe_subscription_id: string | null;
+  stripe_checkout_id: string | null;
+  establishment_name: string;
+  user_id: number;
+  email: string | null;
+};
+
+async function loadSubRow(rowId: number): Promise<SubRow | undefined> {
+  return dbGet<SubRow>(
+    `SELECT s.*, e.name AS establishment_name, e.user_id, u.email
+     FROM establishment_subscriptions s
+     JOIN establishments e ON e.id = s.establishment_id
+     JOIN users u ON u.id = e.user_id
+     WHERE s.id = ?`,
+    [rowId]
+  );
+}
+
+async function findRowId(opts: { rowId?: number; subscriptionId?: string | null; customerId?: string | null; checkoutId?: string | null }): Promise<number | null> {
+  if (opts.rowId) return opts.rowId;
+  if (opts.subscriptionId) {
+    const bySub = await dbGet<{ id: number }>('SELECT id FROM establishment_subscriptions WHERE stripe_subscription_id = ?', [opts.subscriptionId]);
+    if (bySub?.id) return Number(bySub.id);
+  }
+  if (opts.checkoutId) {
+    const byCk = await dbGet<{ id: number }>('SELECT id FROM establishment_subscriptions WHERE stripe_checkout_id = ?', [opts.checkoutId]);
+    if (byCk?.id) return Number(byCk.id);
+  }
+  if (opts.customerId) {
+    const byCust = await dbGet<{ id: number }>('SELECT id FROM establishment_subscriptions WHERE stripe_customer_id = ? ORDER BY id DESC LIMIT 1', [opts.customerId]);
+    if (byCust?.id) return Number(byCust.id);
+  }
+  return null;
+}
+
+async function claimNotice(rowId: number, token: string): Promise<boolean> {
+  const row = await dbGet<{ billing_notice: string | null }>('SELECT billing_notice FROM establishment_subscriptions WHERE id = ?', [rowId]);
+  if (!row) return false;
+  if (String(row.billing_notice || '') === token) return false;
+  await dbRun('UPDATE establishment_subscriptions SET billing_notice = ? WHERE id = ?', [token, rowId]);
+  return true;
+}
+
+async function recordSubscriptionFinance(row: SubRow, ref: string, amount: number): Promise<void> {
+  if (!ref) return;
+  const existing = await dbGet<{ id: number }>('SELECT id FROM finance_records WHERE reference = ?', [ref]);
+  if (existing?.id) return;
+  const uuid = uuidv4();
+  const today = new Date().toISOString().slice(0, 10);
+  await dbRun(
+    'INSERT INTO finance_records (uuid, reference, establishment, kind, missions, amount, commission, record_date, status) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)',
+    [uuid, ref, row.establishment_name, 'Abonnement Stripe', 0, amount, amount, today, 'paid']
+  );
+}
+
+async function announce(
+  rowId: number,
+  kind: BillingNoticeKind,
+  noticeToken: string,
+  extras?: { invoiceUrl?: string | null; email?: string | null }
+): Promise<BillingConfirmation | null> {
+  const row = await loadSubRow(rowId);
+  if (!row) return null;
+  const plan = planByName(row.name) || planById(String(row.name || '').toLowerCase());
+  const copy = billingConfirmation(kind, {
+    establishmentName: row.establishment_name,
+    plan,
+    planName: row.name,
+    priceHt: plan?.priceHt ?? Number(row.price),
+    email: extras?.email || row.email,
+    invoiceUrl: extras?.invoiceUrl || null,
+  });
+  if (!(await claimNotice(rowId, noticeToken))) return copy;
+  await notifySafe(Number(row.user_id), copy.title, copy.body, {
+    establishmentId: row.establishment_id,
+    subscriptionId: row.id,
+    planId: plan?.id || '',
+    screen: 'subscription',
+    invoiceUrl: copy.invoiceUrl || '',
+  }, 'subscription_' + kind);
+  const admin = adminBillingCopy(kind, {
+    establishmentName: row.establishment_name,
+    plan,
+    planName: row.name,
+    priceHt: plan?.priceHt ?? Number(row.price),
+  });
+  await notifyAdmins(admin.title, admin.body, {
+    establishmentId: row.establishment_id,
+    subscriptionId: row.id,
+    screen: 'finance',
+  }, 'admin_subscription_' + kind);
+  if (kind === 'paid' || kind === 'renewed') {
+    const amount = (plan?.priceHt ?? Number(row.price)) || 0;
+    await recordSubscriptionFinance(row, noticeToken, amount);
+  }
+  return copy;
 }
 
 export async function markSubscriptionPaid(rowId: number, extra: { customerId?: string | null; subscriptionId?: string | null; checkoutId?: string | null }): Promise<void> {
@@ -123,18 +241,88 @@ export async function markSubscriptionPaid(rowId: number, extra: { customerId?: 
   await dbRun('UPDATE establishment_subscriptions SET ' + sets.join(', ') + ' WHERE id = ?', params);
 }
 
+function invoiceUrlFrom(inv: Stripe.Invoice | string | null | undefined): string | null {
+  if (!inv || typeof inv === 'string') return null;
+  return inv.hosted_invoice_url || inv.invoice_pdf || null;
+}
+
+function invoiceSubscriptionId(invoice: Stripe.Invoice): string | null {
+  const nested = invoice.parent?.subscription_details?.subscription;
+  if (typeof nested === 'string') return nested;
+  if (nested && typeof nested === 'object' && 'id' in nested) return String(nested.id);
+  const legacy = (invoice as unknown as { subscription?: string | Stripe.Subscription }).subscription;
+  if (typeof legacy === 'string') return legacy;
+  if (legacy && typeof legacy === 'object' && 'id' in legacy) return String(legacy.id);
+  return null;
+}
+
+function invoiceRowMeta(invoice: Stripe.Invoice): number {
+  const fromParent = Number(invoice.parent?.subscription_details?.metadata?.rowId || 0);
+  if (fromParent) return fromParent;
+  return Number(invoice.metadata?.rowId || 0);
+}
+
 export async function applyStripeEvent(event: Stripe.Event): Promise<void> {
   if (event.type === 'checkout.session.completed') {
     const session = event.data.object as Stripe.Checkout.Session;
-    const rowId = Number(session.metadata?.rowId || 0);
+    const rowId = await findRowId({
+      rowId: Number(session.metadata?.rowId || 0) || undefined,
+      checkoutId: session.id,
+      customerId: typeof session.customer === 'string' ? session.customer : null,
+      subscriptionId: typeof session.subscription === 'string' ? session.subscription : null,
+    });
     const customerId = typeof session.customer === 'string' ? session.customer : null;
     const subId = typeof session.subscription === 'string' ? session.subscription : null;
-    if (rowId) await markSubscriptionPaid(rowId, { customerId, subscriptionId: subId, checkoutId: session.id });
+    if (rowId) {
+      await markSubscriptionPaid(rowId, { customerId, subscriptionId: subId, checkoutId: session.id });
+      const planId = session.metadata?.planId;
+      const plan = planId ? planById(planId) : undefined;
+      if (plan) {
+        await dbRun('UPDATE establishment_subscriptions SET name = ?, price = ? WHERE id = ?', [plan.name, plan.priceHt, rowId]);
+      }
+      const email = session.customer_details?.email || session.customer_email || null;
+      await announce(rowId, 'paid', 'paid:first', {
+        invoiceUrl: invoiceUrlFrom(session.invoice as Stripe.Invoice | string | null | undefined),
+        email,
+      });
+    }
+    return;
+  }
+  if (event.type === 'invoice.paid' || event.type === 'invoice.payment_failed') {
+    const invoice = event.data.object as Stripe.Invoice;
+    const subId = invoiceSubscriptionId(invoice);
+    const customerId = typeof invoice.customer === 'string' ? invoice.customer : null;
+    const rowId = await findRowId({
+      rowId: invoiceRowMeta(invoice) || undefined,
+      subscriptionId: subId,
+      customerId,
+    });
+    if (!rowId) return;
+    if (event.type === 'invoice.paid') {
+      await dbRun('UPDATE establishment_subscriptions SET status = ? WHERE id = ?', ['paid', rowId]);
+      const billingReason = String(invoice.billing_reason || '');
+      const first = billingReason === 'subscription_create' || billingReason === 'subscription';
+      const kind: BillingNoticeKind = first ? 'paid' : 'renewed';
+      await announce(rowId, kind, first ? 'paid:first' : 'paid:' + invoice.id, {
+        invoiceUrl: invoice.hosted_invoice_url || invoice.invoice_pdf || null,
+        email: invoice.customer_email,
+      });
+    } else {
+      await dbRun('UPDATE establishment_subscriptions SET status = ? WHERE id = ?', ['past_due', rowId]);
+      await announce(rowId, 'past_due', 'past_due:' + invoice.id, {
+        invoiceUrl: invoice.hosted_invoice_url || null,
+        email: invoice.customer_email,
+      });
+    }
     return;
   }
   if (event.type === 'customer.subscription.updated' || event.type === 'customer.subscription.deleted') {
     const sub = event.data.object as Stripe.Subscription;
-    const rowId = Number(sub.metadata?.rowId || 0);
+    const rowId = await findRowId({
+      rowId: Number(sub.metadata?.rowId || 0) || undefined,
+      subscriptionId: sub.id,
+      customerId: typeof sub.customer === 'string' ? sub.customer : null,
+    });
     const statusMap: Record<string, string> = {
       active: 'paid',
       trialing: 'paid',
@@ -146,25 +334,28 @@ export async function applyStripeEvent(event: Stripe.Event): Promise<void> {
       paused: 'pending',
     };
     const status = event.type === 'customer.subscription.deleted' ? 'canceled' : (statusMap[sub.status] || 'pending');
-    if (rowId) {
-      await dbRun('UPDATE establishment_subscriptions SET status = ?, stripe_subscription_id = ? WHERE id = ?', [status, sub.id, rowId]);
-      return;
-    }
-    const row = await dbGet<{ id: number }>('SELECT id FROM establishment_subscriptions WHERE stripe_subscription_id = ?', [sub.id]);
-    if (row?.id) await dbRun('UPDATE establishment_subscriptions SET status = ? WHERE id = ?', [status, row.id]);
+    if (!rowId) return;
+    await dbRun('UPDATE establishment_subscriptions SET status = ?, stripe_subscription_id = ? WHERE id = ?', [status, sub.id, rowId]);
+    if (status === 'canceled') await announce(rowId, 'canceled', 'canceled:' + sub.id);
+    if (status === 'past_due') await announce(rowId, 'past_due', 'past_due:' + sub.id);
   }
 }
 
-export async function confirmCheckoutSession(sessionId: string, establishmentId: number): Promise<boolean> {
+export type ConfirmCheckoutResult = {
+  ok: boolean;
+  confirmation: BillingConfirmation | null;
+};
+
+export async function confirmCheckoutSession(sessionId: string, establishmentId: number): Promise<ConfirmCheckoutResult> {
   const stripe = getStripe();
-  if (!stripe || !sessionId) return false;
-  const session = await stripe.checkout.sessions.retrieve(sessionId);
+  if (!stripe || !sessionId) return { ok: false, confirmation: null };
+  const session = await stripe.checkout.sessions.retrieve(sessionId, { expand: ['invoice', 'customer'] });
   const rowId = Number(session.metadata?.rowId || 0);
   const metaEst = Number(session.metadata?.establishmentId || 0);
-  if (metaEst && metaEst !== establishmentId) return false;
+  if (metaEst && metaEst !== establishmentId) return { ok: false, confirmation: null };
   const paid = session.status === 'complete' || session.payment_status === 'paid' || session.payment_status === 'no_payment_required';
-  if (!paid || !rowId) return false;
-  const customerId = typeof session.customer === 'string' ? session.customer : null;
+  if (!paid || !rowId) return { ok: false, confirmation: null };
+  const customerId = typeof session.customer === 'string' ? session.customer : (session.customer && typeof session.customer === 'object' ? session.customer.id : null);
   const subId = typeof session.subscription === 'string' ? session.subscription : null;
   await markSubscriptionPaid(rowId, { customerId, subscriptionId: subId, checkoutId: session.id });
   const planId = session.metadata?.planId;
@@ -172,10 +363,20 @@ export async function confirmCheckoutSession(sessionId: string, establishmentId:
   if (plan) {
     await dbRun('UPDATE establishment_subscriptions SET name = ?, price = ? WHERE id = ?', [plan.name, plan.priceHt, rowId]);
   }
-  return true;
+  const email =
+    session.customer_details?.email ||
+    session.customer_email ||
+    (session.customer && typeof session.customer === 'object' && 'email' in session.customer ? String(session.customer.email || '') : null);
+  const confirmation = await announce(rowId, 'paid', 'paid:first', {
+    invoiceUrl: invoiceUrlFrom(session.invoice as Stripe.Invoice | string | null | undefined),
+    email,
+  });
+  return { ok: true, confirmation };
 }
 
 export function subscriptionIsPaid(status: string | null | undefined): boolean {
   const s = String(status || '').toLowerCase();
   return s === 'paid' || s === 'active' || s === 'trialing';
 }
+
+export { billingConfirmation };

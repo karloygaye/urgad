@@ -763,7 +763,7 @@ async function openEtabNotif(id){
   const screen = n && n.data && n.data.screen;
   if(screen==='candidatures' || screen==='requests'){ await refreshEtab(); showEtabScreen(etabRequests.some(function(r){ return r.requestStatus==='profil_propose'; }) ? 'candidatures' : 'missions'); return; }
   if(screen && screen.indexOf('chat-')===0){ await refreshEtab(); openEtabChat(parseInt(screen.slice(5),10)); return; }
-  if(screen==='documents' || screen==='profile' || screen==='missions'){ await refreshEtab(); showEtabScreen(screen); return; }
+  if(screen==='documents' || screen==='profile' || screen==='missions' || screen==='subscription'){ await refreshEtab(); showEtabScreen(screen); return; }
   showEtabScreen('notifications');
 }
 async function etabMarkAllRead(){ await UrgadFeatures.markAllRead('establishment'); showEtabScreen('notifications'); }
@@ -1218,8 +1218,9 @@ function renderEtabPlans(){
       <p style="color:var(--text-muted);font-size:13px;line-height:1.55">${escHtml(model.positioning || '')} Professionnels : <strong>0 €</strong> · Prix <strong>HT / mois</strong>.</p>
       <div style="margin-top:14px;padding:12px 14px;border-radius:12px;border:1px solid var(--border);background:var(--surface)">
         ${sub && sub.paid?`<strong>${escHtml(sub.name)}</strong> · ${escHtml(String((currentPlan && currentPlan.priceHt) || sub.price))} € HT / mois
-          <div style="margin-top:6px"><span class="bo-badge verified">Payé</span> <span style="font-size:12px;color:var(--text-muted)">Abonnement actif</span></div>
+          <div style="margin-top:6px"><span class="bo-badge verified">Payé</span> <span style="font-size:12px;color:var(--text-muted)">Abonnement actif · confirmation dans Notifications · reçu Stripe par e-mail</span></div>
           <div style="margin-top:8px;font-size:13px;color:var(--text-muted)">${escHtml(quota)}</div>`
+        : sub && String(sub.status||'')==='past_due' ? `<strong>Paiement en échec</strong><div style="margin-top:6px"><span class="bo-badge rejected">Impayé</span></div><div style="margin-top:8px;font-size:13px;color:var(--text-muted)">Le prélèvement de ${escHtml(sub.name||'la formule')} n’a pas abouti. Relancez le paiement ci-dessous. Stripe envoie aussi un e-mail d’échec si les reçus clients sont activés.</div>`
         :`<strong>Essai en cours</strong><div style="margin-top:6px;font-size:13px;color:var(--text-muted)">${escHtml(quota)}</div>${sub && !sub.paid?`<div style="margin-top:8px;font-size:12px;color:var(--text-dim)">Formule visée : ${escHtml(sub.name)} · ${escHtml(String((currentPlan && currentPlan.priceHt) || 199))} € HT / mois — à régler seulement si vous cliquez sur Payer.</div>`:''}`}
       </div>
     </div>
@@ -1253,6 +1254,24 @@ async function chooseEtabPlan(id){
     toast('info','Abonnement', (row && row.message) ? row.message : 'Formule enregistrée.');
     showEtabScreen('subscription');
   } catch(e) { toast('error','Abonnement', e.message||'Échec'); }
+}
+function showBillingModal(kind, conf, fallback){
+  const title = (conf && conf.title) || (kind==='cancel' ? 'Paiement non finalisé' : 'Abonnement');
+  const body = (conf && conf.body) || fallback || '';
+  const invoice = conf && conf.invoiceUrl;
+  const receipt = conf && conf.receiptNote;
+  document.getElementById('modalContent').innerHTML = `
+<div class="modal-header"><h2>${escHtml(title)}</h2><button class="modal-close" onclick="closeModal()">✕</button></div>
+<div class="modal-body">
+  <p style="color:var(--text-muted);font-size:14px;line-height:1.55">${escHtml(body)}</p>
+  ${receipt && kind!=='cancel'?`<p style="margin-top:12px;font-size:12px;color:var(--text-dim);line-height:1.5">${escHtml(receipt)}</p>`:''}
+  <p style="margin-top:12px;font-size:13px;color:var(--text-muted)">La même confirmation est dans l’onglet Notifications. URGAD n’envoie pas d’e-mail ni de SMS : le reçu PDF vient de Stripe.</p>
+</div>
+<div class="modal-footer">
+  ${invoice?`<button class="btn btn-ghost" onclick="window.open(${JSON.stringify(invoice)},'_blank')">Voir la facture Stripe</button>`:''}
+  <button class="btn btn-primary" onclick="closeModal();showEtabScreen('subscription')">Voir l’abonnement</button>
+</div>`;
+  document.getElementById('modal').classList.add('active');
 }
 function toast(type,title,message){
   const container = document.getElementById('toastContainer');
@@ -1371,10 +1390,17 @@ document.getElementById('modal').classList.add('active');
     if (sessionId) {
       try {
         const conf = await UrgadApi.confirmEstablishmentSubscription(sessionId);
-        toast(conf && conf.confirmed ? 'success' : 'info', 'Paiement', (conf && conf.message) || 'Retour Stripe');
+        if (conf && conf.confirmed) {
+          toast('success', 'Abonnement', (conf.confirmation && conf.confirmation.title) || 'Paiement confirmé');
+          showBillingModal('paid', conf.confirmation, conf.message);
+        } else {
+          toast('info','Paiement', (conf && conf.message) || 'Retour Stripe');
+          showBillingModal('pending', conf && conf.confirmation, (conf && conf.message) || 'Paiement en cours de confirmation.');
+        }
       } catch(e) { toast('error','Paiement', e.message||'Confirmation impossible'); }
     } else if (billing === 'cancel') {
-      toast('info','Paiement','Paiement Stripe annulé. Votre formule n’est pas active.');
+      toast('info','Paiement','Paiement non finalisé. Aucun débit.');
+      showBillingModal('cancel', null, 'Aucun débit. Vous pouvez relancer le paiement depuis Abonnement. Les 5 demandes offertes restent disponibles si vous ne les avez pas toutes utilisées.');
     }
     if (billing || sessionId) {
       try { history.replaceState({}, '', 'urgad-etab.html'); } catch(e2) {}

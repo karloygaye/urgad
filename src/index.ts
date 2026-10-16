@@ -41,7 +41,7 @@ function billingWebhookInfo(_req: any, res: any) {
   res.status(200).json({
     ok: true,
     method: 'POST',
-    message: 'Endpoint Stripe. N’ouvrez pas cette URL dans le navigateur : Stripe envoie un POST signé. Dans le dashboard Stripe → Webhooks → Add endpoint, collez cette URL et choisissez les événements checkout.session.completed, customer.subscription.updated, customer.subscription.deleted, invoice.payment_failed.',
+    message: 'Endpoint Stripe. N’ouvrez pas cette URL dans le navigateur : Stripe envoie un POST signé. Dans le dashboard Stripe → Webhooks → Add endpoint, collez cette URL et choisissez checkout.session.completed, customer.subscription.updated, customer.subscription.deleted, invoice.paid, invoice.payment_failed.',
     stripeKey: stripeEnabled(),
     webhookSecret: !!(process.env.STRIPE_WEBHOOK_SECRET || '').trim(),
   });

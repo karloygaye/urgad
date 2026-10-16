@@ -159,7 +159,7 @@ router.post('/me/documents', authMiddleware, async (req: any, res: any, next: an
   } catch (err) { next(err); }
 });
 
-/** Abonnement : fiche name / status / price. Pas de paiement. */
+/** Abonnement : fiche, essai, Checkout Stripe et confirmation. */
 router.get('/me/subscription', authMiddleware, async (req: any, res: any, next: any) => {
   try {
     const estab = await ownEstablishment(req.user.id);
@@ -252,12 +252,17 @@ router.post('/me/subscription/confirm', authMiddleware, async (req: any, res: an
     if (!estab) return res.status(404).json({ message: 'Établissement non trouvé.' });
     const sessionId = String(req.body?.sessionId || req.body?.session_id || '').trim();
     if (!sessionId) return res.status(422).json({ message: 'sessionId requis.' });
-    const ok = await confirmCheckoutSession(sessionId, Number(estab.id));
+    const result = await confirmCheckoutSession(sessionId, Number(estab.id));
     const row = await dbGet('SELECT * FROM establishment_subscriptions WHERE establishment_id = ? ORDER BY id DESC LIMIT 1', [estab.id]) as any;
+    const confirmation = result.confirmation;
+    const message = result.ok
+      ? (confirmation?.title || 'Paiement confirmé') + '. ' + (confirmation?.body || 'Abonnement actif.')
+      : 'Paiement non confirmé. Si vous avez payé, patientez quelques secondes : le webhook Stripe active aussi la formule. Sinon contactez URGAD.';
     return res.json({
-      confirmed: ok,
+      confirmed: result.ok,
       subscription: row ? publicSubscription(row) : null,
-      message: ok ? 'Paiement confirmé. Abonnement actif.' : 'Paiement non confirmé. Si vous avez payé, patientez quelques secondes ou contactez URGAD.',
+      confirmation,
+      message,
     });
   } catch (err) { next(err); }
 });

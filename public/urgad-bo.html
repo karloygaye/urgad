@@ -2868,7 +2868,7 @@ ${[['Temps moyen matching','4.2 min','emerald'],['Taux conversion','68%','gold']
 }
 function renderNotifications(){
 const rows = systemNotifications || [];
-return `<div class="bo-card" style="margin-bottom:16px"><strong>Envoi groupé</strong><p style="color:var(--text-muted);margin-top:6px;font-size:13px">Une ligne est enregistrée par destinataire (table notifications). Aucun SMS, e-mail ou push n'est envoyé.</p></div>
+return `<div class="bo-card" style="margin-bottom:16px"><strong>Envoi groupé</strong><p style="color:var(--text-muted);margin-top:6px;font-size:13px">Une ligne est enregistrée par destinataire (table notifications). Aucun SMS ni e-mail URGAD. Les confirmations d’abonnement partent automatiquement (in-app + admin) ; le reçu PDF est envoyé par Stripe.</p></div>
 <div class="bo-stat-grid">
 <div class="bo-stat"><div class="bo-stat-header"><div class="stat-label">Notifications en base</div><div class="stat-icon gold">📤</div></div><div class="stat-value">${rows.length}</div></div>
 <div class="bo-stat"><div class="bo-stat-header"><div class="stat-label">Professionnels</div><div class="stat-icon emerald">👥</div></div><div class="stat-value">${professionals.length}</div></div>
@@ -3438,7 +3438,7 @@ async function openBoNotif(id){
   renderNotifPanel();
   const screen = n && n.data && n.data.screen;
   if(screen==='requests' && n.data.missionId){ document.getElementById('notifPanel').classList.remove('active'); try { await refreshAdmin(); } catch(e) {} await openRequestDetail(n.data.missionId); return; }
-  if(screen){ document.getElementById('notifPanel').classList.remove('active'); try { await refreshAdmin(); } catch(e) {} if(screen==='requests') boReqDetail = null; showBoScreen(screen==='establishments'||screen==='professionals'||screen==='verification'||screen==='missions'||screen==='requests'?screen:'dashboard'); }
+  if(screen){ document.getElementById('notifPanel').classList.remove('active'); try { await refreshAdmin(); } catch(e) {} if(screen==='requests') boReqDetail = null; showBoScreen(screen==='establishments'||screen==='professionals'||screen==='verification'||screen==='missions'||screen==='requests'||screen==='finance'?screen:'dashboard'); }
 }
 async function markAllRead(){ await UrgadFeatures.markAllRead('admin'); renderNotifPanel(); toast('success','Notifications','Toutes marquées comme lues'); }
 function toast(type,title,message){
@@ -3636,7 +3636,8 @@ function renderFinance(){
   const rows = window.urgadFinance || [];
   const an = (window.urgadAnalytics && window.urgadAnalytics.finance) || {};
   const today = new Date().toISOString().slice(0,10);
-  return `<div class="bo-stat-grid">
+  return `<div class="bo-card" style="margin-bottom:16px"><strong>Abonnements Stripe</strong><p style="color:var(--text-muted);font-size:13px;margin-top:6px;line-height:1.5">Chaque paiement ou renouvellement confirmé crée une écriture « Abonnement Stripe » (référence <code>paid:…</code>) et une notification admin. Le reçu PDF part de Stripe vers l’e-mail du paiement — pas d’e-mail URGAD.</p></div>
+<div class="bo-stat-grid">
 <div class="bo-stat"><div class="bo-stat-header"><div class="stat-label">Montant du jour</div><div class="stat-icon gold">💰</div></div><div class="stat-value">${euro(an.todayAmount||0)}</div><div class="stat-trend neutral">Écritures du ${today}</div></div>
 <div class="bo-stat"><div class="bo-stat-header"><div class="stat-label">Montant du mois</div><div class="stat-icon emerald">💳</div></div><div class="stat-value">${euro(an.monthAmount||0)}</div></div>
 <div class="bo-stat"><div class="bo-stat-header"><div class="stat-label">En attente</div><div class="stat-icon amber">📄</div></div><div class="stat-value" style="color:var(--amber)">${an.pendingCount||0}</div><div class="stat-trend neutral">${euro(an.pendingAmount||0)}</div></div>
