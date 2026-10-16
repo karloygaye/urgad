@@ -3124,7 +3124,7 @@ return `<div class="tabs">
 <div class="bo-card-header"><div><h3>💰 Tarification</h3></div></div>
 <div class="form-group"><label>Commission plateforme (%)</label><input type="number" value="15"></div>
 <div class="form-group"><label>Frais service FLASH</label><input type="text" value="25€"></div>
-<div class="form-group"><label>Abonnement établissement Premium</label><input type="text" value="299€/mois"></div>
+<div class="form-group"><label>Essentiel / Pro / Premium</label><input type="text" value="199 / 249 / 299 € HT/mois" disabled></div>
 <div class="form-group"><label>Frais professionnel</label><input type="text" value="0€ (gratuit)" disabled></div>
 <button class="btn btn-primary" onclick="toast('success','Enregistré','Tarification mise à jour')">💾 Enregistrer</button>
 </div>
@@ -3788,9 +3788,11 @@ function renderSettings(){
 <div class="grid-2">
 <div class="bo-card">
 <div class="bo-card-header"><div><h3>Tarification affichée</h3><div class="bo-card-subtitle">Texte enregistré. Aucun encaissement.</div></div></div>
-<div class="form-group"><label>Commission plateforme</label><input id="set-commission" type="text" value="${escAttr(settingVal('commission_percent','15'))}"></div>
-<div class="form-group"><label>Frais FLASH</label><input id="set-flashfee" type="text" value="${escAttr(settingVal('flash_fee','25€'))}"></div>
-<div class="form-group"><label>Abonnement établissement</label><input id="set-premium" type="text" value="${escAttr(settingVal('premium_price','299€/mois'))}"></div>
+<div class="form-group"><label>Commission sur le salaire du soignant</label><input id="set-commission" type="text" value="${escAttr(settingVal('commission_percent','0'))}"></div>
+<div class="form-group"><label>Flash</label><input id="set-flashfee" type="text" value="${escAttr(settingVal('flash_fee','inclus Pro / Premium'))}"></div>
+<div class="form-group"><label>Essentiel</label><input id="set-essentiel" type="text" value="${escAttr(settingVal('essentiel_price','199€ HT/mois'))}"></div>
+<div class="form-group"><label>Pro</label><input id="set-pro-plan" type="text" value="${escAttr(settingVal('pro_plan_price','249€ HT/mois'))}"></div>
+<div class="form-group"><label>Premium</label><input id="set-premium" type="text" value="${escAttr(settingVal('premium_price','299€ HT/mois'))}"></div>
 <div class="form-group"><label>Frais professionnel</label><input id="set-profee" type="text" value="${escAttr(settingVal('pro_fee','0€ (gratuit)'))}"></div>
 <button class="btn btn-primary" onclick="savePricingSettings()">Enregistrer</button>
 </div>
@@ -3839,6 +3841,8 @@ async function savePricingSettings(){
     await saveSettings({
       commission_percent: document.getElementById('set-commission').value,
       flash_fee: document.getElementById('set-flashfee').value,
+      essentiel_price: document.getElementById('set-essentiel').value,
+      pro_plan_price: document.getElementById('set-pro-plan').value,
       premium_price: document.getElementById('set-premium').value,
       pro_fee: document.getElementById('set-profee').value
     });

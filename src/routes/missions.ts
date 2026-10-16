@@ -6,6 +6,7 @@ import { config } from '../config.js';
 import { geocodeMission, haversineKm, num } from '../geo.js';
 import { defaultRadiusKm, notifyProsForMission } from '../matching.js';
 import { logEvent, normPoste } from '../requests.js';
+import { assertEstablishmentPublish } from '../plans.js';
 
 const router = Router();
 
@@ -33,6 +34,8 @@ router.post('/', authMiddleware, async (req: any, res: any, next: any) => {
     if (req.user.role === 'establishment') {
       const est = await dbGet('SELECT id, email FROM establishments WHERE user_id = ?', [req.user.id]) as any;
       if (!est) return res.status(422).json({ message: 'Établissement non trouvé.' });
+      try { await assertEstablishmentPublish(Number(est.id), { urgent: !!urgent }); }
+      catch (e: any) { if (e?.status) return res.status(e.status).json({ message: e.message, code: e.code }); throw e; }
       const estEmail = establishmentEmail || est.email || '';
       const { lastInsertRowid } = await dbRun('INSERT INTO missions (uuid, establishment_id, establishment_name, establishment_email, type, title, description, conditions, location, start_date, end_date, start_hour, end_hour, urgent, visible) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)',
         [uuidv4(), est.id, establishmentName, estEmail, type, title, description || '', conditions || '', location || '', startDate, endDate || null, startHour, endHour, urgent ? 1 : 0, 1]);

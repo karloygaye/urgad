@@ -1,0 +1,163 @@
+import { dbGet } from './db.js';
+
+/** Modèle économique URGAD : les soignants sont gratuits ; les établissements paient un SaaS mensuel HT.
+ *  Pas de commission sur le salaire du professionnel (différenciation vs intérim).
+ *  Stripe n'est pas débité tant que le prestataire n'est pas branché. */
+
+export type PlanId = 'essentiel' | 'pro' | 'premium';
+
+export type Plan = {
+  id: PlanId;
+  name: string;
+  priceHt: number;
+  period: 'month';
+  currency: 'EUR';
+  highlight: boolean;
+  badge: string | null;
+  tagline: string;
+  audience: string;
+  missionsPerMonth: number | null;
+  flashPerMonth: number | null;
+  extraMissionHt: number | null;
+  perks: string[];
+};
+
+export const BILLING_MODEL = {
+  whoPays: 'establishment' as const,
+  professionals: { priceHt: 0, note: 'Inscription, candidatures et messagerie gratuites. Jamais de paiement in-app côté soignant.' },
+  tax: 'HT' as const,
+  renewal: 'Mensuel, reconduction tacite, résiliable à tout moment pour la fin de période.',
+  commissionOnWages: 0,
+  positioning: 'Abonnement logiciel d’intermédiaire : l’établissement rémunère le soignant selon sa convention. URGAD ne prend pas de marge sur l’heure travaillée.',
+  payment: 'Carte via Stripe (non débité tant que STRIPE_SECRET_KEY n’appelle pas le prestataire).',
+};
+
+export const PLANS: Plan[] = [
+  {
+    id: 'essentiel',
+    name: 'Essentiel',
+    priceHt: 199,
+    period: 'month',
+    currency: 'EUR',
+    highlight: false,
+    badge: null,
+    tagline: 'Remplacements ponctuels, un site',
+    audience: 'EHPAD ou clinique qui publie quelques besoins par mois',
+    missionsPerMonth: 12,
+    flashPerMonth: 0,
+    extraMissionHt: 25,
+    perks: [
+      '12 demandes de mission par mois calendaire',
+      'Matching sur rayon et disponibilités',
+      'Profils à valider (identité / diplôme côté URGAD)',
+      'Messagerie une fois le match fait',
+      'Dépôt KBIS et documents établissement',
+      '1 établissement, support e-mail',
+    ],
+  },
+  {
+    id: 'pro',
+    name: 'Pro',
+    priceHt: 249,
+    period: 'month',
+    currency: 'EUR',
+    highlight: true,
+    badge: 'Le plus choisi',
+    tagline: 'Volume + urgences de nuit',
+    audience: 'Établissement qui recourt souvent aux vacations et au Flash',
+    missionsPerMonth: 30,
+    flashPerMonth: null,
+    extraMissionHt: 15,
+    perks: [
+      '30 demandes de mission par mois',
+      'Missions Flash (urgence) illimitées',
+      'Visibilité prioritaire auprès des soignants proches',
+      'Messagerie et documents inclus',
+      'Suivi des profils proposés sans plafond quotidien',
+      'Support prioritaire (réponse sous 1 jour ouvré)',
+    ],
+  },
+  {
+    id: 'premium',
+    name: 'Premium',
+    priceHt: 299,
+    period: 'month',
+    currency: 'EUR',
+    highlight: false,
+    badge: 'Volume illimité',
+    tagline: 'Groupe ou gros besoin, zéro friction',
+    audience: 'Plusieurs services, week-ends chargés, besoin d’un volume ouvert',
+    missionsPerMonth: null,
+    flashPerMonth: null,
+    extraMissionHt: 0,
+    perks: [
+      'Demandes de mission illimitées',
+      'Flash illimité',
+      'Matching prioritaire + multi-besoins le même jour',
+      'Tableau de bord et historique complets',
+      'Interlocuteur dédié URGAD',
+      'Demandes supplémentaires : 0 €',
+    ],
+  },
+];
+
+export function planById(id: string): Plan | undefined {
+  return PLANS.find((p) => p.id === String(id || '').trim().toLowerCase());
+}
+
+export function planByName(name: string): Plan | undefined {
+  const n = String(name || '').trim().toLowerCase();
+  return PLANS.find((p) => p.name.toLowerCase() === n || p.id === n);
+}
+
+export function publicCatalog() {
+  return {
+    model: BILLING_MODEL,
+    plans: PLANS,
+  };
+}
+
+function monthStartIso(): string {
+  const d = new Date();
+  const m = String(d.getUTCMonth() + 1).padStart(2, '0');
+  return `${d.getUTCFullYear()}-${m}-01`;
+}
+
+export async function usageThisMonth(establishmentId: number): Promise<{ missions: number; flash: number; since: string }> {
+  const since = monthStartIso();
+  const all = await dbGet<{ c: number }>('SELECT COUNT(*) as c FROM missions WHERE establishment_id = ? AND created_at >= ?', [establishmentId, since]);
+  const flash = await dbGet<{ c: number }>('SELECT COUNT(*) as c FROM missions WHERE establishment_id = ? AND created_at >= ? AND urgent = 1', [establishmentId, since]);
+  return { missions: Number(all?.c ?? 0), flash: Number(flash?.c ?? 0), since };
+}
+
+export async function assertEstablishmentPublish(establishmentId: number, opts: { urgent?: boolean } = {}): Promise<Plan> {
+  const row = await dbGet<{ name: string }>('SELECT name FROM establishment_subscriptions WHERE establishment_id = ? ORDER BY id DESC LIMIT 1', [establishmentId]);
+  const plan = row?.name ? planByName(row.name) : undefined;
+  if (!plan) {
+    const err: any = new Error('Choisissez un abonnement (Essentiel 199 €, Pro 249 € ou Premium 299 € HT / mois) avant de publier une demande.');
+    err.status = 402;
+    err.code = 'plan_required';
+    throw err;
+  }
+  const used = await usageThisMonth(establishmentId);
+  if (opts.urgent && plan.flashPerMonth === 0) {
+    const err: any = new Error('Les missions Flash (urgence) sont incluses à partir du plan Pro (249 € HT / mois).');
+    err.status = 402;
+    err.code = 'flash_plan';
+    throw err;
+  }
+  if (opts.urgent && plan.flashPerMonth != null && used.flash >= plan.flashPerMonth) {
+    const err: any = new Error('Quota Flash du mois atteint.');
+    err.status = 402;
+    err.code = 'flash_quota';
+    throw err;
+  }
+  if (plan.missionsPerMonth != null && used.missions >= plan.missionsPerMonth) {
+    const extra = plan.extraMissionHt != null ? ` Demande supplémentaire : ${plan.extraMissionHt} € HT (facturation Stripe à brancher).` : '';
+    const err: any = new Error(`Quota du plan ${plan.name} atteint (${plan.missionsPerMonth} demandes ce mois).${extra}`);
+    err.status = 402;
+    err.code = 'mission_quota';
+    throw err;
+  }
+  return plan;
+}

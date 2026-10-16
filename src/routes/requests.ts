@@ -9,6 +9,7 @@ import {
   profileCard, proposeProfile, refuseProposal, requestForEstablishment, setStatus, validateProposal,
 } from '../requests.js';
 import { notifySafe } from '../notify.js';
+import { assertEstablishmentPublish } from '../plans.js';
 
 const router = Router();
 const MISSION_SELECT = 'SELECT m.*, c.latitude, c.longitude, c.geocode_precision FROM missions m LEFT JOIN mission_coordinates c ON c.mission_id = m.id';
@@ -119,6 +120,8 @@ router.post('/quick', authMiddleware, async (req: any, res: any, next: any) => {
     if ('error' in slot) return res.status(422).json({ message: slot.error });
     if (!normPoste(b.poste)) return res.status(422).json({ message: 'Poste requis.' });
     if (slot.date < new Date().toISOString().slice(0, 10)) return res.status(422).json({ message: 'La date doit être aujourd\'hui ou plus tard.' });
+    try { await assertEstablishmentPublish(Number(est.id), { urgent: !!b.urgent }); }
+    catch (e: any) { if (e?.status) return fail(res, e); throw e; }
     const out = await createRequest({ establishmentId: est.id, poste: String(b.poste), date: slot.date, startHour: slot.startHour, endHour: slot.endHour,
       notes: String(b.comment || b.notes || '').slice(0, 2000), source: 'formulaire', urgent: !!b.urgent, createdBy: actorOf(req) });
     return res.status(201).json({ message: 'Demande envoyée. Nous vous proposons un profil vérifié rapidement.', ...out });

@@ -3,6 +3,7 @@ import jwt from 'jsonwebtoken';
 import { dbRun, dbGet, dbAll } from '../db.js';
 import { config } from '../config.js';
 import { prepareSubscriptionPayment } from '../billing.js';
+import { planById, planByName, publicCatalog, usageThisMonth } from '../plans.js';
 import { saveBase64File } from '../uploads.js';
 import { geocodeEstablishment } from '../geo.js';
 import { notifyAdmins } from '../notify.js';
@@ -89,18 +90,22 @@ async function publicDocument(row: any) {
   };
 }
 
-function publicSubscription(row: any, payment?: { charged: false; paid: false; providerCalled: false; reason: string }) {
+function publicSubscription(row: any, payment?: { charged: false; paid: false; providerCalled: false; reason: string }, extras?: { usage?: { missions: number; flash: number; since: string } }) {
+  const plan = planByName(row.name);
   return {
     id: row.id,
     establishmentId: row.establishment_id,
     name: row.name,
+    planId: plan?.id || null,
     status: row.status,
     price: row.price,
     createdAt: row.created_at || null,
     charged: false,
     paid: false,
     providerCalled: payment ? payment.providerCalled : false,
-    reason: payment ? payment.reason : undefined
+    reason: payment ? payment.reason : undefined,
+    plan: plan || null,
+    usage: extras?.usage || null,
   };
 }
 
@@ -157,7 +162,12 @@ router.get('/me/subscription', authMiddleware, async (req: any, res: any, next: 
     const estab = await ownEstablishment(req.user.id);
     if (!estab) return res.status(404).json({ message: 'Établissement non trouvé.' });
     const row = await dbGet('SELECT * FROM establishment_subscriptions WHERE establishment_id = ? ORDER BY id DESC LIMIT 1', [estab.id]) as any;
-    return res.json({ subscription: row ? publicSubscription(row) : null });
+    const usage = await usageThisMonth(Number(estab.id));
+    return res.json({
+      subscription: row ? publicSubscription(row, undefined, { usage }) : null,
+      catalog: publicCatalog(),
+      usage,
+    });
   } catch (err) { next(err); }
 });
 
@@ -165,10 +175,10 @@ router.post('/me/subscription', authMiddleware, async (req: any, res: any, next:
   try {
     const estab = await ownEstablishment(req.user.id);
     if (!estab) return res.status(404).json({ message: 'Établissement non trouvé.' });
-    const name = String(req.body?.name || '').trim().slice(0, 80);
-    const price = Number(req.body?.price);
-    if (!name) return res.status(422).json({ message: 'Nom du plan requis.' });
-    if (!Number.isFinite(price) || price < 0) return res.status(422).json({ message: 'Prix invalide.' });
+    const plan = planById(String(req.body?.id || '')) || planByName(String(req.body?.name || ''));
+    if (!plan) return res.status(422).json({ message: 'Plan inconnu. Essentiel, Pro ou Premium.' });
+    const name = plan.name;
+    const price = plan.priceHt;
     const payment = prepareSubscriptionPayment({ name, price, establishmentId: estab.id });
     const status = payment.status;
     const existing = await dbGet('SELECT id FROM establishment_subscriptions WHERE establishment_id = ? ORDER BY id DESC LIMIT 1', [estab.id]) as any;

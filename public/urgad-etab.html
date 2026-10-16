@@ -564,6 +564,19 @@ input,select,textarea{font-family:inherit}
 .gate-card h2{font-family:'Playfair Display',serif;font-size:28px;margin-bottom:8px}
 .gate-home{display:inline-flex;margin-bottom:18px;font-size:12px;color:var(--text-muted);text-decoration:none}
 .gate-home:hover{color:var(--gold-soft)}
+.plan-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:16px;align-items:stretch}
+.plan-card{margin:0;padding:20px 18px;border-radius:18px;border:1px solid var(--border);background:var(--surface);display:flex;flex-direction:column;min-height:100%}
+.plan-card.featured{border-color:rgba(212,175,55,0.55);box-shadow:0 0 0 1px rgba(212,175,55,0.25);background:linear-gradient(180deg,rgba(212,175,55,0.08),transparent 40%)}
+.plan-card .plan-badge{display:inline-block;font-size:10px;letter-spacing:0.12em;text-transform:uppercase;font-weight:700;color:#0A0E1A;background:var(--gradient-gold);padding:4px 8px;border-radius:999px;margin-bottom:10px}
+.plan-card h3{font-family:'Playfair Display',serif;font-size:26px;margin:0 0 4px}
+.plan-card .plan-price{font-size:34px;font-weight:700;margin:8px 0 2px}
+.plan-card .plan-price span{font-size:13px;font-weight:500;color:var(--text-muted)}
+.plan-card .plan-tagline{color:var(--text-muted);font-size:13px;line-height:1.45;margin-bottom:14px;min-height:2.6em}
+.plan-card ul{list-style:none;padding:0;margin:0 0 16px;flex:1}
+.plan-card li{font-size:13px;color:var(--text);padding:7px 0 7px 22px;position:relative;line-height:1.4;border-bottom:1px solid var(--border)}
+.plan-card li:before{content:'✓';position:absolute;left:0;color:var(--gold-soft);font-weight:700}
+.plan-card .btn{margin-top:auto}
+@media(max-width:900px){.plan-grid{grid-template-columns:1fr}}
 @media(max-width:900px){
 .gate-shell{grid-template-columns:1fr}
 .gate-aside{padding:36px 22px 12px}
@@ -590,6 +603,7 @@ input,select,textarea{font-family:inherit}
       <div class="welcome-point"><div class="welcome-point-ico">📝</div><div><strong>Une demande, pas un tableau Excel</strong><span>Poste, horaires, urgence : le besoin est cadré. Les professionnels adaptés le voient.</span></div></div>
       <div class="welcome-point"><div class="welcome-point-ico">✅</div><div><strong>Profils à valider, pas un CV brut</strong><span>Identité et diplôme passent par le back-office avant que vous ayez à décider.</span></div></div>
       <div class="welcome-point"><div class="welcome-point-ico">💬</div><div><strong>Échange une fois le match fait</strong><span>La messagerie sert à organiser la mission, pas à trier 40 candidatures à l’aveugle.</span></div></div>
+      <div class="welcome-point"><div class="welcome-point-ico">💳</div><div><strong>199 €, 249 € ou 299 € HT / mois</strong><span>Vous payez URGAD, pas une commission sur le salaire du soignant. Plans Essentiel, Pro, Premium.</span></div></div>
     </div>
   </aside>
   <div class="gate-panel">
@@ -688,6 +702,8 @@ let etabRequests = [];
 let etab = null;
 let etabDocs = [];
 let etabSub = null;
+let etabCatalog = null;
+let etabUsage = null;
 const userLocation = {lat:48.8566,lng:2.3522};
 let currentRouteMission = null;
 let mapRoute = null;
@@ -724,6 +740,9 @@ async function refreshEtab(){
   etabDocs = await UrgadApi.establishmentDocuments() || [];
   const subRes = await UrgadApi.establishmentSubscription();
   etabSub = subRes && subRes.subscription ? subRes.subscription : null;
+  etabCatalog = subRes && subRes.catalog ? subRes.catalog : etabCatalog;
+  etabUsage = (subRes && subRes.usage) || (etabSub && etabSub.usage) || etabUsage;
+  if(!etabCatalog){ try { etabCatalog = await UrgadApi.billingCatalog(); } catch(e) { etabCatalog = null; } }
   startEtabNotifications();
 }
 let etabNotifs = [], etabNotifStarted = false, etabCurrentScreen = 'dashboard';
@@ -946,16 +965,7 @@ function showEtabScreen(screen, el){
       </div>
     </div>`;
   } else if(screen==='subscription'){
-    const sub = etabSub;
-    const plans = [{name:'Essentiel',price:49},{name:'Pro',price:99},{name:'Premium',price:199}];
-    html = `<div class="etab-topbar"><h1>Abonnement</h1></div>
-    <div class="bo-card" style="max-width:720px">
-      <p style="color:var(--text-muted);font-size:13px;margin-bottom:16px">Le plan, le statut et le prix sont enregistrés sur le serveur. Aucune carte n'est demandée. Sans STRIPE_SECRET_KEY, le statut reste <strong>pending</strong> et le plan n'est pas payé.</p>
-      ${sub?`<div style="padding:14px;border:1px solid var(--border);border-radius:12px;margin-bottom:16px"><strong>${escHtml(sub.name)}</strong> · ${escHtml(String(sub.price))} €<div style="margin-top:6px"><span class="bo-badge pending">${escHtml(sub.status||'pending')}</span> <span style="font-size:12px;color:var(--text-muted)">non payé</span></div></div>`:'<p style="margin-bottom:16px">Aucun abonnement enregistré.</p>'}
-      <div class="stat-grid">
-        ${plans.map(pl=>`<div class="bo-card" style="margin:0"><h3>${pl.name}</h3><div class="stat-value" style="font-size:28px">${pl.price} €</div><p style="color:var(--text-muted);font-size:12px;margin:8px 0 12px">Prix enregistré, pas un débit.</p><button class="btn btn-primary btn-block" onclick="chooseEtabPlan('${pl.name}',${pl.price})">Choisir ce plan</button></div>`).join('')}
-      </div>
-    </div>`;
+    html = renderEtabPlans();
   } else if(screen==='notifications'){
     const unread = etabNotifs.filter(n=>!n.read).length;
     html = `<div class="etab-topbar"><div><h1>Notifications</h1><p style="color:var(--text-muted);margin-top:4px;font-size:13px">${unread} non lue(s) · actualisé toutes les 30 s</p></div>
@@ -1163,11 +1173,57 @@ async function saveEtabDocument(){
     showEtabScreen('documents');
   } catch(e) { toast('error','Document', e.message||'Échec'); }
 }
-async function chooseEtabPlan(name, price){
+function defaultEtabCatalog(){
+  return { model: { professionals: { priceHt: 0 }, tax: 'HT', commissionOnWages: 0, positioning: 'Abonnement logiciel : pas de commission sur le salaire du soignant.', payment: 'Stripe non débité pour l’instant.', renewal: 'Mensuel, reconduction tacite.' }, plans: [
+    { id:'essentiel', name:'Essentiel', priceHt:199, highlight:false, badge:null, tagline:'Remplacements ponctuels, un site', missionsPerMonth:12, flashPerMonth:0, extraMissionHt:25, perks:['12 demandes / mois','Matching rayon et disponibilités','Messagerie après match','Pas de Flash','Demande extra 25 € HT'] },
+    { id:'pro', name:'Pro', priceHt:249, highlight:true, badge:'Le plus choisi', tagline:'Volume + urgences de nuit', missionsPerMonth:30, flashPerMonth:null, extraMissionHt:15, perks:['30 demandes / mois','Flash illimité','Matching prioritaire','Support sous 1 jour ouvré','Demande extra 15 € HT'] },
+    { id:'premium', name:'Premium', priceHt:299, highlight:false, badge:'Volume illimité', tagline:'Gros besoin, zéro friction', missionsPerMonth:null, flashPerMonth:null, extraMissionHt:0, perks:['Demandes illimitées','Flash illimité','Matching prioritaire','Interlocuteur dédié','Extra 0 €'] }
+  ]};
+}
+function renderEtabPlans(){
+  const cat = etabCatalog || defaultEtabCatalog();
+  const plans = cat.plans || [];
+  const model = cat.model || {};
+  const sub = etabSub;
+  const used = etabUsage || (sub && sub.usage) || { missions: 0, flash: 0 };
+  const currentId = sub && (sub.planId || (sub.plan && sub.plan.id) || String(sub.name||'').toLowerCase());
+  const currentPlan = plans.find(function(p){ return p.id === currentId || p.name === (sub && sub.name); });
+  const quota = currentPlan && currentPlan.missionsPerMonth != null ? (used.missions||0)+' / '+currentPlan.missionsPerMonth+' demandes ce mois' : (currentPlan ? (used.missions||0)+' demandes ce mois · illimité' : 'Aucune formule choisie — obligatoire pour publier');
+  return `<div class="etab-topbar"><h1>Abonnement</h1></div>
+    <div class="bo-card" style="margin-bottom:18px">
+      <h3 style="font-family:'Playfair Display',serif;margin-bottom:8px">Modèle : SaaS établissement, soignants gratuits</h3>
+      <p style="color:var(--text-muted);font-size:13px;line-height:1.55;margin-bottom:10px">${escHtml(model.positioning || '')}</p>
+      <p style="color:var(--text-muted);font-size:13px;line-height:1.55">Professionnels : <strong>0 €</strong> · Commission sur l’heure travaillée : <strong>0 %</strong> · Prix <strong>HT / mois</strong>, ${escHtml(model.renewal || 'reconduction tacite')}. ${escHtml(model.payment || '')}</p>
+      <div style="margin-top:14px;padding:12px 14px;border-radius:12px;border:1px solid var(--border);background:var(--surface)">
+        ${sub?`<strong>${escHtml(sub.name)}</strong> · ${escHtml(String(sub.price))} € HT / mois
+          <div style="margin-top:6px"><span class="bo-badge pending">${escHtml(sub.status||'pending')}</span> <span style="font-size:12px;color:var(--text-muted)">enregistré, non débité</span></div>
+          <div style="margin-top:8px;font-size:13px;color:var(--text-muted)">${escHtml(quota)}</div>`
+        :`<strong>Aucun plan</strong><div style="margin-top:6px;font-size:13px;color:var(--text-muted)">${escHtml(quota)}</div>`}
+      </div>
+    </div>
+    <div class="plan-grid">
+      ${plans.map(function(pl){
+        const selected = currentId && (pl.id === currentId || pl.name === (sub && sub.name));
+        const quotaM = pl.missionsPerMonth == null ? 'Illimitées' : pl.missionsPerMonth+' / mois';
+        const flash = pl.flashPerMonth === 0 ? 'Flash non inclus' : (pl.flashPerMonth == null ? 'Flash illimité' : pl.flashPerMonth+' Flash / mois');
+        const extra = pl.extraMissionHt === 0 ? 'Extra : 0 €' : (pl.extraMissionHt != null ? 'Extra : '+pl.extraMissionHt+' € HT' : '');
+        return `<div class="plan-card ${pl.highlight?'featured':''}">
+          ${pl.badge?`<span class="plan-badge">${escHtml(pl.badge)}</span>`:''}
+          <h3>${escHtml(pl.name)}</h3>
+          <div class="plan-price">${pl.priceHt} € <span>HT / mois</span></div>
+          <p class="plan-tagline">${escHtml(pl.tagline||'')}</p>
+          <p style="font-size:12px;color:var(--gold-soft);margin-bottom:10px">${escHtml(quotaM)} · ${escHtml(flash)}${extra?' · '+escHtml(extra):''}</p>
+          <ul>${(pl.perks||[]).map(function(x){ return '<li>'+escHtml(x)+'</li>'; }).join('')}</ul>
+          <button class="btn ${selected?'btn-ghost':'btn-primary'} btn-block" onclick="chooseEtabPlan('${pl.id}')">${selected?'Formule actuelle':'Choisir '+escHtml(pl.name)}</button>
+        </div>`;
+      }).join('')}
+    </div>`;
+}
+async function chooseEtabPlan(id){
   try {
-    const row = await UrgadApi.saveEstablishmentSubscription({ name, price });
+    const row = await UrgadApi.saveEstablishmentSubscription({ id: id });
     await refreshEtab();
-    toast('info','Abonnement', (row && row.message) ? row.message : 'Enregistré en attente, non payé.');
+    toast('info','Abonnement', (row && row.message) ? row.message : 'Formule enregistrée. Paiement carte non débité tant que Stripe n’est pas branché.');
     showEtabScreen('subscription');
   } catch(e) { toast('error','Abonnement', e.message||'Échec'); }
 }

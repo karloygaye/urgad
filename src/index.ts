@@ -26,6 +26,7 @@ import { purgeVerifiedIdentityFiles } from './verification.js';
 import { backfillCoordinates } from './geo.js';
 import { pushStatus } from './notify.js';
 import { assertProductionConfig } from './runtime.js';
+import { publicCatalog } from './plans.js';
 
 dotenv.config();
 assertProductionConfig();
@@ -86,6 +87,10 @@ app.use('/api/devices', deviceRoutes);
 app.use('/api/me', meRoutes);
 app.use('/api/requests', requestRoutes);
 app.use('/api/verification', verificationRoutes);
+
+app.get('/api/billing/plans', (_req, res) => {
+  res.json(publicCatalog());
+});
 
 // Health
 app.get('/api/health', (_req, res) => {
