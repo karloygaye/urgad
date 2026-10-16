@@ -99,7 +99,7 @@ function publicSubscription(row: any, payment?: { charged?: boolean; paid?: bool
     name: row.name,
     planId: plan?.id || null,
     status: row.status,
-    price: row.price,
+    price: plan?.priceHt ?? row.price,
     createdAt: row.created_at || null,
     charged: paid,
     paid,
@@ -164,7 +164,14 @@ router.get('/me/subscription', authMiddleware, async (req: any, res: any, next: 
   try {
     const estab = await ownEstablishment(req.user.id);
     if (!estab) return res.status(404).json({ message: 'Établissement non trouvé.' });
-    const row = await dbGet('SELECT * FROM establishment_subscriptions WHERE establishment_id = ? ORDER BY id DESC LIMIT 1', [estab.id]) as any;
+    let row = await dbGet('SELECT * FROM establishment_subscriptions WHERE establishment_id = ? ORDER BY id DESC LIMIT 1', [estab.id]) as any;
+    if (row) {
+      const catalogPlan = planByName(row.name);
+      if (catalogPlan && Number(row.price) !== catalogPlan.priceHt) {
+        await dbRun('UPDATE establishment_subscriptions SET price = ? WHERE id = ?', [catalogPlan.priceHt, row.id]);
+        row = { ...row, price: catalogPlan.priceHt };
+      }
+    }
     const usage = await usageThisMonth(Number(estab.id));
     const paid = row ? subscriptionIsPaid(row.status) : false;
     const trial = await trialInfo(Number(estab.id), paid);

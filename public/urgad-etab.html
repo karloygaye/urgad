@@ -1213,14 +1213,14 @@ function renderEtabPlans(){
   const stripeOn = !!(cat.stripeEnabled || (sub && sub.stripeEnabled));
   return `<div class="etab-topbar"><h1>Abonnement</h1></div>
     <div class="bo-card" style="margin-bottom:18px">
-      <h3 style="font-family:'Playfair Display',serif;margin-bottom:8px">Modèle : 5 demandes offertes, puis SaaS</h3>
+      <h3 style="font-family:'Playfair Display',serif;margin-bottom:8px">5 demandes offertes</h3>
       <p style="color:var(--text-muted);font-size:13px;line-height:1.55;margin-bottom:10px">${escHtml(model.trialNote || '5 demandes sans carte. L’abonnement peut être pris tout de suite ou après.')}</p>
       <p style="color:var(--text-muted);font-size:13px;line-height:1.55">${escHtml(model.positioning || '')} Professionnels : <strong>0 €</strong> · Prix <strong>HT / mois</strong>.</p>
       <div style="margin-top:14px;padding:12px 14px;border-radius:12px;border:1px solid var(--border);background:var(--surface)">
-        ${sub?`<strong>${escHtml(sub.name)}</strong> · ${escHtml(String(sub.price))} € HT / mois
-          <div style="margin-top:6px"><span class="bo-badge ${sub.paid?'verified':'pending'}">${sub.paid?'Payé':'En attente de paiement'}</span> <span style="font-size:12px;color:var(--text-muted)">${stripeOn?(sub.paid?'Abonnement Stripe actif':'Paiement par carte via Stripe'):'Stripe non configuré — plan enregistré sans débit'}</span></div>
+        ${sub && sub.paid?`<strong>${escHtml(sub.name)}</strong> · ${escHtml(String((currentPlan && currentPlan.priceHt) || sub.price))} € HT / mois
+          <div style="margin-top:6px"><span class="bo-badge verified">Payé</span> <span style="font-size:12px;color:var(--text-muted)">Abonnement actif</span></div>
           <div style="margin-top:8px;font-size:13px;color:var(--text-muted)">${escHtml(quota)}</div>`
-        :`<strong>Aucun plan</strong><div style="margin-top:6px;font-size:13px;color:var(--text-muted)">${escHtml(quota)}</div>`}
+        :`<strong>Essai en cours</strong><div style="margin-top:6px;font-size:13px;color:var(--text-muted)">${escHtml(quota)}</div>${sub && !sub.paid?`<div style="margin-top:8px;font-size:12px;color:var(--text-dim)">Formule visée : ${escHtml(sub.name)} · ${escHtml(String((currentPlan && currentPlan.priceHt) || 199))} € HT / mois — à régler seulement si vous cliquez sur Payer.</div>`:''}`}
       </div>
     </div>
     <div class="plan-grid">

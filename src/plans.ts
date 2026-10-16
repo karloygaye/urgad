@@ -1,6 +1,6 @@
 import { dbGet } from './db.js';
 
-/** Modèle économique URGAD : les soignants sont gratuits ; les établissements paient un SaaS mensuel HT.
+/** Modèle économique URGAD : les soignants sont gratuits ; les établissements paient un abonnement mensuel HT.
  *  Pas de commission sur le salaire du professionnel (différenciation vs intérim).
  *  Stripe Checkout mensuel si STRIPE_SECRET_KEY est défini. */
 
