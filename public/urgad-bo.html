@@ -28,7 +28,7 @@
 --gradient-emerald:linear-gradient(135deg,#10B981 0%,#34D399 100%);
 --shadow:0 20px 60px rgba(0,0,0,0.4);--shadow-soft:0 8px 24px rgba(0,0,0,0.2);
 }
-body{background:var(--bg);color:var(--text);overflow-x:hidden;min-height:100vh}
+body{background:var(--bg);color:var(--text);overflow-x:hidden;min-height:100vh;max-width:100%}
 button{cursor:pointer;border:none;font-family:inherit;background:none;color:inherit}
 input,select,textarea{font-family:inherit}
 .splash{position:fixed;inset:0;background:radial-gradient(ellipse at top,#1a1f35 0%,#0A0E1A 70%);display:flex;align-items:center;justify-content:center;z-index:9999;flex-direction:column;overflow:hidden}
@@ -372,7 +372,7 @@ input,select,textarea{font-family:inherit}
 .stat-card .stat-sub.up{color:var(--emerald-soft)}
 .stat-card .stat-sub.pending{color:var(--amber)}
 .stat-card .stat-sub.down{color:var(--red)}
-.bo-layout{min-height:100vh;background:var(--bg);display:flex}
+.bo-layout{min-height:100vh;background:var(--bg);display:flex;min-width:0;max-width:100%;overflow-x:hidden}
 .bo-sidebar{width:280px;background:var(--bg-soft);padding:0;position:fixed;height:100vh;overflow-y:auto;border-right:1px solid var(--border);display:flex;flex-direction:column;z-index:20}
 .bo-sidebar::-webkit-scrollbar{width:6px}
 .bo-sidebar::-webkit-scrollbar-thumb{background:var(--border-strong);border-radius:3px}
@@ -397,10 +397,13 @@ input,select,textarea{font-family:inherit}
 .bo-admin-info span{font-size:11px;color:var(--text-muted)}
 .bo-logout{width:100%;padding:10px;border-radius:10px;background:rgba(239,68,68,0.08);border:1px solid rgba(239,68,68,0.2);color:var(--red);font-size:12px;font-weight:600;cursor:pointer;transition:all 0.2s;display:flex;align-items:center;justify-content:center;gap:8px}
 .bo-logout:hover{background:rgba(239,68,68,0.15)}
-.bo-main{margin-left:280px;flex:1;padding:0;min-height:100vh}
+.bo-main{margin-left:280px;flex:1;padding:0;min-height:100vh;min-width:0;max-width:100%;overflow-x:hidden}
 .bo-topbar{background:rgba(17,24,39,0.6);backdrop-filter:blur(20px);padding:18px 32px;border-bottom:1px solid var(--border);display:flex;justify-content:space-between;align-items:center;position:sticky;top:0;z-index:15;gap:16px;flex-wrap:wrap}
+.bo-topbar-left{display:flex;align-items:flex-start;gap:12px;min-width:0;flex:1}
 .bo-topbar-left h1{font-family:'Playfair Display',serif;font-size:26px;font-weight:700;letter-spacing:-0.5px}
 .bo-topbar-left p{color:var(--text-muted);font-size:12px;margin-top:2px}
+.bo-menu-btn{display:none;flex-shrink:0}
+.bo-nav-overlay{display:none;position:fixed;inset:0;background:rgba(10,14,26,0.55);z-index:40}
 .bo-topbar-right{display:flex;gap:10px;align-items:center;flex-wrap:wrap}
 .bo-search{background:var(--bg-card);border:1px solid var(--border);border-radius:10px;padding:10px 14px;color:var(--text);width:260px;font-size:13px;transition:all 0.2s}
 .bo-search:focus{outline:none;border-color:var(--gold);box-shadow:0 0 0 3px rgba(212,175,55,0.1)}
@@ -408,7 +411,7 @@ input,select,textarea{font-family:inherit}
 .icon-btn{width:40px;height:40px;border-radius:10px;background:var(--bg-card);border:1px solid var(--border);display:flex;align-items:center;justify-content:center;font-size:16px;cursor:pointer;transition:all 0.2s;position:relative}
 .icon-btn:hover{background:var(--surface-hover);border-color:var(--border-strong)}
 .icon-btn .notif-dot{position:absolute;top:8px;right:8px;width:8px;height:8px;border-radius:50%;background:var(--red);border:2px solid var(--bg-soft)}
-.bo-content{padding:28px 32px}
+.bo-content{padding:28px 32px;min-width:0;max-width:100%}
 .bo-stat-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:16px;margin-bottom:28px}
 .bo-stat{background:var(--bg-card);border:1px solid var(--border);border-radius:18px;padding:22px;position:relative;overflow:hidden;transition:all 0.3s;cursor:pointer}
 .bo-stat:hover{border-color:var(--border-strong);transform:translateY(-2px)}
@@ -427,13 +430,14 @@ input,select,textarea{font-family:inherit}
 .bo-stat .stat-trend.up{color:var(--emerald-soft)}
 .bo-stat .stat-trend.down{color:var(--red)}
 .bo-stat .stat-trend.neutral{color:var(--text-muted)}
-.bo-card{background:var(--bg-card);border:1px solid var(--border);border-radius:18px;padding:22px;margin-bottom:18px}
+.bo-card{background:var(--bg-card);border:1px solid var(--border);border-radius:18px;padding:22px;margin-bottom:18px;min-width:0;max-width:100%}
 .bo-card-header{display:flex;justify-content:space-between;align-items:center;margin-bottom:18px;flex-wrap:wrap;gap:12px}
 .bo-card h3{font-family:'Playfair Display',serif;font-size:17px;font-weight:700;letter-spacing:-0.3px}
 .bo-card-subtitle{font-size:12px;color:var(--text-muted);margin-top:2px}
+.bo-table-wrap{width:100%;max-width:100%;overflow-x:auto;-webkit-overflow-scrolling:touch;margin:0 -4px;padding-bottom:4px}
 .bo-table{width:100%;border-collapse:collapse}
 .bo-table th{text-align:left;padding:12px;font-size:10px;color:var(--text-muted);text-transform:uppercase;letter-spacing:1.5px;border-bottom:1px solid var(--border);font-weight:700}
-.bo-table td{padding:14px 12px;font-size:13px;border-bottom:1px solid var(--border);vertical-align:middle}
+.bo-table td{padding:14px 12px;font-size:13px;border-bottom:1px solid var(--border);vertical-align:middle;word-break:break-word}
 .bo-table tr:hover td{background:var(--surface)}
 .bo-table tr:last-child td{border:none}
 .bo-user-cell{display:flex;align-items:center;gap:10px}
@@ -458,7 +462,15 @@ input,select,textarea{font-family:inherit}
 .filter-chip.active{background:rgba(212,175,55,0.1);border-color:var(--gold);color:var(--gold-soft)}
 .filter-select{padding:8px 12px;border-radius:10px;background:var(--bg-card);border:1px solid var(--border);font-size:12px;font-weight:600;color:var(--text);cursor:pointer}
 .filter-select:focus{outline:none;border-color:var(--gold)}
-.tabs{display:flex;gap:4px;margin-bottom:20px;border-bottom:1px solid var(--border);overflow-x:auto}
+.req-card-list{display:none;flex-direction:column;gap:12px}
+.req-card{background:var(--surface);border:1px solid var(--border);border-radius:14px;padding:14px 16px}
+.req-card-top{display:flex;justify-content:space-between;align-items:flex-start;gap:10px;margin-bottom:10px}
+.req-card-id{font-size:11px;color:var(--text-dim);font-weight:700;letter-spacing:0.4px;margin-bottom:4px}
+.req-card-meta{font-size:12px;color:var(--text-muted);margin-top:4px;line-height:1.45}
+.req-card-foot{display:flex;flex-wrap:wrap;align-items:center;gap:8px 12px;font-size:12px;color:var(--text-muted)}
+.req-card-foot .bo-action-btn{margin-left:auto}
+.req-actions{display:flex;gap:8px;flex-wrap:wrap;margin-top:14px}
+.tabs{display:flex;gap:4px;margin-bottom:20px;border-bottom:1px solid var(--border);overflow-x:auto;-webkit-overflow-scrolling:touch;scrollbar-width:thin}
 .tab{padding:10px 18px;font-size:13px;font-weight:600;color:var(--text-muted);cursor:pointer;border-bottom:2px solid transparent;transition:all 0.2s;white-space:nowrap}
 .tab:hover{color:var(--text)}
 .tab.active{color:var(--gold-soft);border-bottom-color:var(--gold)}
@@ -536,6 +548,10 @@ input,select,textarea{font-family:inherit}
 .grid-3{display:grid;grid-template-columns:repeat(3,1fr);gap:18px}
 .grid-4{display:grid;grid-template-columns:repeat(2,1fr);gap:12px}
 @media(max-width:1100px){.grid-2,.grid-3{grid-template-columns:1fr}}
+@media(max-width:1200px){
+.req-table-desktop{display:none}
+.req-card-list{display:flex}
+}
 .interface-switcher{position:fixed;top:20px;right:20px;background:rgba(10,14,26,0.9);backdrop-filter:blur(20px);border:1px solid var(--border);border-radius:14px;padding:6px;display:flex;gap:4px;z-index:100;box-shadow:var(--shadow-soft)}
 .switch-btn{padding:8px 14px;border-radius:10px;background:transparent;color:var(--text-muted);font-size:12px;font-weight:600;transition:all 0.2s;letter-spacing:0.3px}
 .switch-btn:hover{color:var(--text)}
@@ -543,7 +559,23 @@ input,select,textarea{font-family:inherit}
 @media(max-width:900px){
 .etab-sidebar,.bo-sidebar{transform:translateX(-100%);transition:transform 0.3s;z-index:50}
 .etab-sidebar.open,.bo-sidebar.open{transform:translateX(0)}
-.etab-main,.bo-main{margin-left:0;padding:20px}
+.etab-main,.bo-main{margin-left:0;padding:0}
+.bo-menu-btn{display:flex}
+.bo-nav-overlay.open{display:block}
+.bo-topbar{padding:14px 16px}
+.bo-topbar-left h1{font-size:20px}
+.bo-content{padding:16px}
+.bo-search{width:min(100%,180px)}
+.bo-card{padding:16px}
+.form-row{grid-template-columns:1fr}
+.modal{max-height:92vh}
+.modal-footer{flex-wrap:wrap}
+.bo-table-stack thead{display:none}
+.bo-table-stack,.bo-table-stack tbody,.bo-table-stack tr,.bo-table-stack td{display:block;width:100%}
+.bo-table-stack tr{border:1px solid var(--border);border-radius:12px;margin-bottom:10px;padding:8px 12px;background:var(--surface)}
+.bo-table-stack tr:hover td{background:transparent}
+.bo-table-stack td{display:flex;justify-content:space-between;align-items:flex-start;gap:12px;border:none;padding:8px 0;text-align:right}
+.bo-table-stack td::before{content:attr(data-label);font-size:10px;text-transform:uppercase;letter-spacing:0.8px;color:var(--text-muted);font-weight:700;text-align:left;flex-shrink:0;padding-top:2px}
 .interface-switcher{top:10px;right:10px}
 .switch-btn{padding:6px 10px;font-size:11px}
 .landing-title{font-size:40px}
@@ -615,11 +647,15 @@ input,select,textarea{font-family:inherit}
 <div class="urgad-legal-footer" style="font-size:11px;color:var(--text-dim);margin-top:10px;text-align:center"><a href="cgu.html" target="_blank" rel="noopener">CGU</a> · <a href="confidentialite.html" target="_blank" rel="noopener">Confidentialité</a></div>
 </div>
 </aside>
+<div class="bo-nav-overlay" id="boNavOverlay" onclick="toggleBoNav(false)"></div>
 <main class="bo-main">
 <div class="bo-topbar">
 <div class="bo-topbar-left">
+<button class="icon-btn bo-menu-btn" type="button" onclick="toggleBoNav()" aria-label="Ouvrir le menu">☰</button>
+<div>
 <h1 id="boPageTitle">Tableau de bord</h1>
 <p id="boPageSubtitle">Vue d'ensemble de la plateforme URGAD</p>
+</div>
 </div>
 <div class="bo-topbar-right">
 <input type="text" class="bo-search" placeholder="🔍 Rechercher... (Ctrl+K)" id="globalSearch" onkeyup="handleGlobalSearch(event)">
@@ -2181,8 +2217,17 @@ toast('info','Aperçu local','Ce formulaire du back-office n\'appelle pas POST /
 function launchFlash(){
 toast('info','Aperçu local',"Pas d'envoi FLASH. Aucun professionnel n'est notifié depuis cet écran.");
 }
+function toggleBoNav(force){
+  const sb = document.getElementById('boSidebar');
+  const ov = document.getElementById('boNavOverlay');
+  if(!sb) return;
+  const open = force===true ? true : force===false ? false : !sb.classList.contains('open');
+  sb.classList.toggle('open', open);
+  if(ov) ov.classList.toggle('open', open);
+}
 function showBoScreen(screen,el){
 currentBoScreen = screen;
+toggleBoNav(false);
 document.querySelectorAll('.bo-nav-item').forEach(n=>n.classList.remove('active'));
 if(el) el.classList.add('active');
 else document.querySelector(`.bo-nav-item[data-screen="${screen}"]`)?.classList.add('active');
@@ -2225,16 +2270,22 @@ let boReqDetail = null;
 function escB(v){ return String(v==null?'':v).replace(/[&<>"']/g, function(c){ return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]; }); }
 function reqBadge(st, label){ return '<span class="bo-badge '+(REQ_CLASS[st]||'pending')+'">'+escB(label||st)+'</span>'; }
 function verifTag(st){ const c = st==='verifie'?'verified':st==='refuse'?'rejected':'pending'; return '<span class="bo-badge '+c+'">'+(VERIF_TXT[st]||'En attente')+'</span>'; }
+function reqCard(r){
+  const poste = escB((POSTE_OPTS.find(p=>p[0]===r.poste)||[0,r.title])[1]);
+  return `<article class="req-card"><div class="req-card-top"><div><div class="req-card-id">#${r.id}${r.urgent?' · Urgent 🚨':''}</div><strong>${escB(r.establishmentName||'')}</strong><div class="req-card-meta">${poste} · ${escB(r.date||'')} · ${escB(r.startHour||'')} → ${escB(r.endHour||'')}</div></div>${reqBadge(r.requestStatus, r.requestStatusLabel)}</div><div class="req-card-foot"><span>${SRC_LABEL[r.source]||escB(r.source)}</span><span>${r.applications||0} candidat${(r.applications||0)>1?'s':''}${r.pendingApplications?` · ${r.pendingApplications} en attente`:''}</span>${r.proposedName?`<span>👤 ${escB(r.proposedName)}</span>`:''}<button class="bo-action-btn view" onclick="openRequestDetail(${r.id})">Ouvrir</button></div></article>`;
+}
 function renderRequests(){
   if(boReqDetail) return renderRequestDetail(boReqDetail);
   const data = window.urgadRequests || { statuses:[], requests:[] };
   const all = data.requests || [];
   const rows = boReqFilter ? all.filter(r=>r.requestStatus===boReqFilter) : all;
   const chips = '<div class="tabs">'+['<div class="tab '+(boReqFilter?'':'active')+'" onclick="boReqFilter=\'\';showBoScreen(\'requests\')">Toutes ('+all.length+')</div>'].concat((data.statuses||[]).map(s=>'<div class="tab '+(boReqFilter===s.code?'active':'')+'" onclick="boReqFilter=\''+s.code+'\';showBoScreen(\'requests\')">'+escB(s.label)+' ('+all.filter(r=>r.requestStatus===s.code).length+')</div>')).join('')+'</div>';
+  const empty = !rows.length;
   return chips+`<div class="bo-card"><div class="bo-card-header"><div><h3>📥 Demandes des établissements</h3><p style="color:var(--text-muted);font-size:12px;margin-top:4px">Saisies par l'équipe (téléphone, e-mail) ou envoyées via le formulaire rapide. Pipeline : nouvelle → en recherche → profil proposé → validée / refusée → réalisée / annulée.</p></div><button class="btn btn-primary btn-sm" onclick="openNewRequest()">➕ Nouvelle demande</button></div>
-  <table class="bo-table"><thead><tr><th>#</th><th>Établissement</th><th>Poste</th><th>Date</th><th>Source</th><th>Statut</th><th>Candidats</th><th>Actions</th></tr></thead><tbody>
-  ${rows.map(r=>`<tr><td>${r.id}</td><td><strong>${escB(r.establishmentName||'')}</strong>${r.urgent?' 🚨':''}</td><td>${escB((POSTE_OPTS.find(p=>p[0]===r.poste)||[0,r.title])[1])}</td><td>${escB(r.date||'')}<div style="font-size:11px;color:var(--text-dim)">${escB(r.startHour||'')} → ${escB(r.endHour||'')}</div></td><td>${SRC_LABEL[r.source]||escB(r.source)}</td><td>${reqBadge(r.requestStatus, r.requestStatusLabel)}${r.proposedName?`<div style="font-size:11px;color:var(--text-dim)">👤 ${escB(r.proposedName)}</div>`:''}</td><td>${r.applications}${r.pendingApplications?` <span style="font-size:11px;color:var(--amber)">(${r.pendingApplications} en attente)</span>`:''}</td><td><button class="bo-action-btn view" onclick="openRequestDetail(${r.id})">Ouvrir</button></td></tr>`).join('') || '<tr><td colspan="8" style="color:var(--text-muted)">Aucune demande.</td></tr>'}
-  </tbody></table></div>`;
+  <div class="bo-table-wrap req-table-desktop"><table class="bo-table"><thead><tr><th>#</th><th>Établissement</th><th>Poste</th><th>Date</th><th>Source</th><th>Statut</th><th>Candidats</th><th>Actions</th></tr></thead><tbody>
+  ${empty ? '<tr><td colspan="8" style="color:var(--text-muted)">Aucune demande.</td></tr>' : rows.map(r=>`<tr><td>${r.id}</td><td><strong>${escB(r.establishmentName||'')}</strong>${r.urgent?' 🚨':''}</td><td>${escB((POSTE_OPTS.find(p=>p[0]===r.poste)||[0,r.title])[1])}</td><td>${escB(r.date||'')}<div style="font-size:11px;color:var(--text-dim)">${escB(r.startHour||'')} → ${escB(r.endHour||'')}</div></td><td>${SRC_LABEL[r.source]||escB(r.source)}</td><td>${reqBadge(r.requestStatus, r.requestStatusLabel)}${r.proposedName?`<div style="font-size:11px;color:var(--text-dim)">👤 ${escB(r.proposedName)}</div>`:''}</td><td>${r.applications}${r.pendingApplications?` <span style="font-size:11px;color:var(--amber)">(${r.pendingApplications} en attente)</span>`:''}</td><td><button class="bo-action-btn view" onclick="openRequestDetail(${r.id})">Ouvrir</button></td></tr>`).join('')}
+  </tbody></table></div>
+  <div class="req-card-list">${empty ? '<p style="color:var(--text-muted);padding:8px 0">Aucune demande.</p>' : rows.map(reqCard).join('')}</div></div>`;
 }
 function candRow(c, d, isApp){
   const blocked = !c.proposable;
@@ -2243,7 +2294,7 @@ function candRow(c, d, isApp){
   const qual = escB(c.profession||'—')+(c.qualificationMatch===false?' <span style="color:var(--red)">≠ poste</span>':'');
   const appSt = isApp ? `<div style="font-size:11px;color:var(--text-dim)">${escB(c.origin==='suggestion'?'Suggestion':'Candidature')} · ${escB(c.status)}${c.isProposed?' · <strong style="color:var(--gold-soft)">proposé</strong>':''}${c.isBackup?' · secours':''}</div>` : '';
   const canAct = !['validee','realisee','annulee'].includes(d.requestStatus) && !(isApp && ['rejected','withdrawn'].includes(c.status) );
-  return `<tr><td><strong>${escB(c.name||'')}</strong>${appSt}<div style="font-size:11px;color:var(--text-dim)">${escB(c.phone||'')} ${escB(c.email||'')}</div></td><td>${qual}${c.experienceYears!=null?`<div style="font-size:11px;color:var(--text-dim)">${c.experienceYears} an(s)</div>`:''}</td><td>${dist}</td><td>🆔 ${verifTag(c.identityStatus)}<br>🎓 ${verifTag(c.diplomaStatus)}</td><td>${canAct?(blocked?'<span style="font-size:11px;color:var(--text-dim)">Identité et diplôme à vérifier</span>':`<button class="bo-action-btn accept" onclick="boPropose(${d.id},'${key}')">Proposer ce profil</button> <button class="bo-action-btn" onclick="boSetBackup(${d.id},'${key}')">Secours</button>`):''}</td></tr>`;
+  return `<tr><td data-label="Professionnel"><strong>${escB(c.name||'')}</strong>${appSt}<div style="font-size:11px;color:var(--text-dim)">${escB(c.phone||'')} ${escB(c.email||'')}</div></td><td data-label="Qualification">${qual}${c.experienceYears!=null?`<div style="font-size:11px;color:var(--text-dim)">${c.experienceYears} an(s)</div>`:''}</td><td data-label="Distance">${dist}</td><td data-label="Vérification">🆔 ${verifTag(c.identityStatus)}<br>🎓 ${verifTag(c.diplomaStatus)}</td><td data-label="Action">${canAct?(blocked?'<span style="font-size:11px;color:var(--text-dim)">Identité et diplôme à vérifier</span>':`<button class="bo-action-btn accept" onclick="boPropose(${d.id},'${key}')">Proposer ce profil</button> <button class="bo-action-btn" onclick="boSetBackup(${d.id},'${key}')">Secours</button>`):'—'}</td></tr>`;
 }
 function renderRequestDetail(d){
   const e = d.establishment || {};
@@ -2258,10 +2309,10 @@ function renderRequestDetail(d){
   <div class="bo-card"><div class="bo-card-header"><div><h3>Demande #${d.id} · ${escB(d.posteLabel)} ${d.urgent?'🚨':''}</h3><p style="color:var(--text-muted);font-size:13px;margin-top:4px">${escB(d.date)} · ${escB(d.startHour)} → ${escB(d.endHour)} · ${SRC_LABEL[d.source]||escB(d.source)}</p></div><div>${reqBadge(st, d.requestStatusLabel)}</div></div>
     <div style="display:flex;gap:20px;flex-wrap:wrap;font-size:13px"><div style="flex:1;min-width:240px"><strong>${escB(e.name||'')}</strong> ${e.status==='prospect'?'<span class="bo-badge pending">Prospect</span>':''}<div style="color:var(--text-muted)">${escB([e.address,e.postal_code,e.city].filter(Boolean).join(', '))}</div><div style="color:var(--text-muted)">${escB(e.responsible||'')} ${escB(e.phone||'')} ${escB(e.email&&!/\.invalid$/.test(e.email)?e.email:'')}</div>${d.latitude==null?'<div style="color:var(--amber)">⚠️ Adresse non localisée : pas de filtre par distance</div>':''}</div>
     <div style="flex:1;min-width:240px"><div style="color:var(--text-dim);font-size:11px;text-transform:uppercase">Notes</div>${escB(d.notes||'—')}${d.refusalReason?`<div style="margin-top:8px;color:var(--red)">Motif du dernier refus : ${escB(d.refusalReason)}</div>`:''}</div></div>
-    <div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:14px">${actions.join('')}</div></div>
+    <div class="req-actions">${actions.join('')}</div></div>
   ${(d.proposed||d.backup)?`<div style="display:flex;gap:14px;flex-wrap:wrap;margin-bottom:18px">${card(d.proposed, st==='validee'||st==='realisee'?'Profil confirmé':'Profil proposé')}${card(d.backup,'Profil de secours')}</div>`:''}
-  <div class="bo-card"><h3>Candidatures (${(d.applications||[]).length})</h3><table class="bo-table"><thead><tr><th>Professionnel</th><th>Qualification</th><th>Distance</th><th>Vérification</th><th>Action</th></tr></thead><tbody>${(d.applications||[]).map(c=>candRow(c,d,true)).join('')||'<tr><td colspan="5" style="color:var(--text-muted)">Aucune candidature.</td></tr>'}</tbody></table></div>
-  <div class="bo-card"><h3>Suggestions (${(d.suggestions||[]).length})</h3><p style="color:var(--text-muted);font-size:12px;margin:4px 0 10px">${d.distanceFilter?'Pros dans leur rayon de mobilité, qualification compatible, vérifiés en premier puis par distance.':'Demande non localisée : tous les pros compatibles sont listés.'}</p><table class="bo-table"><thead><tr><th>Professionnel</th><th>Qualification</th><th>Distance</th><th>Vérification</th><th>Action</th></tr></thead><tbody>${(d.suggestions||[]).map(c=>candRow(c,d,false)).join('')||'<tr><td colspan="5" style="color:var(--text-muted)">Aucune suggestion.</td></tr>'}</tbody></table></div>
+  <div class="bo-card"><h3>Candidatures (${(d.applications||[]).length})</h3><div class="bo-table-wrap"><table class="bo-table bo-table-stack"><thead><tr><th>Professionnel</th><th>Qualification</th><th>Distance</th><th>Vérification</th><th>Action</th></tr></thead><tbody>${(d.applications||[]).map(c=>candRow(c,d,true)).join('')||'<tr><td colspan="5" style="color:var(--text-muted)">Aucune candidature.</td></tr>'}</tbody></table></div></div>
+  <div class="bo-card"><h3>Suggestions (${(d.suggestions||[]).length})</h3><p style="color:var(--text-muted);font-size:12px;margin:4px 0 10px">${d.distanceFilter?'Pros dans leur rayon de mobilité, qualification compatible, vérifiés en premier puis par distance.':'Demande non localisée : tous les pros compatibles sont listés.'}</p><div class="bo-table-wrap"><table class="bo-table bo-table-stack"><thead><tr><th>Professionnel</th><th>Qualification</th><th>Distance</th><th>Vérification</th><th>Action</th></tr></thead><tbody>${(d.suggestions||[]).map(c=>candRow(c,d,false)).join('')||'<tr><td colspan="5" style="color:var(--text-muted)">Aucune suggestion.</td></tr>'}</tbody></table></div></div>
   <div class="bo-card"><h3>Historique</h3>${(d.events||[]).map(ev=>`<div style="padding:8px 0;border-bottom:1px solid var(--border);font-size:13px"><span style="color:var(--text-dim)">${escB(ev.at)}</span> · <strong>${escB(ev.event)}</strong> ${ev.from||ev.to?`(${escB(ev.from||'—')} → ${escB(ev.to||'—')})`:''} · ${escB(ev.actor||'')}${ev.details?` — ${escB(ev.details)}`:''}</div>`).join('')||'<p style="color:var(--text-muted)">—</p>'}</div>`;
 }
 async function openRequestDetail(id){
