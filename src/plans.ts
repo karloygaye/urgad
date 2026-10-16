@@ -30,7 +30,11 @@ export const BILLING_MODEL = {
   commissionOnWages: 0,
   positioning: 'Abonnement logiciel d’intermédiaire : l’établissement rémunère le soignant selon sa convention. URGAD ne prend pas de marge sur l’heure travaillée.',
   payment: 'Carte via Stripe Checkout (abonnement mensuel HT). Sans clé Stripe, le plan est seulement enregistré.',
+  trialMissions: 5,
+  trialNote: '5 demandes offertes à l’inscription, sans carte. L’abonnement peut être pris tout de suite ou après ces 5 essais. Le Flash (urgence) reste réservé au Pro et au Premium payés.',
 };
+
+export const FREE_TRIAL_MISSIONS = BILLING_MODEL.trialMissions;
 
 export const PLANS: Plan[] = [
   {
@@ -130,42 +134,59 @@ export async function usageThisMonth(establishmentId: number): Promise<{ mission
   return { missions: Number(all?.c ?? 0), flash: Number(flash?.c ?? 0), since };
 }
 
-export async function assertEstablishmentPublish(establishmentId: number, opts: { urgent?: boolean } = {}): Promise<Plan> {
+export async function lifetimeMissions(establishmentId: number): Promise<number> {
+  const all = await dbGet<{ c: number }>('SELECT COUNT(*) as c FROM missions WHERE establishment_id = ?', [establishmentId]);
+  return Number(all?.c ?? 0);
+}
+
+export type TrialInfo = { limit: number; used: number; remaining: number; active: boolean };
+
+export async function trialInfo(establishmentId: number, paid: boolean): Promise<TrialInfo> {
+  const used = await lifetimeMissions(establishmentId);
+  const remaining = Math.max(0, FREE_TRIAL_MISSIONS - used);
+  return { limit: FREE_TRIAL_MISSIONS, used, remaining, active: !paid && remaining > 0 };
+}
+
+export async function assertEstablishmentPublish(establishmentId: number, opts: { urgent?: boolean } = {}): Promise<Plan | null> {
   const row = await dbGet<{ name: string; status: string }>('SELECT name, status FROM establishment_subscriptions WHERE establishment_id = ? ORDER BY id DESC LIMIT 1', [establishmentId]);
   const plan = row?.name ? planByName(row.name) : undefined;
-  if (!plan) {
-    const err: any = new Error('Choisissez un abonnement (Essentiel 199 €, Pro 249 € ou Premium 299 € HT / mois) avant de publier une demande.');
-    err.status = 402;
-    err.code = 'plan_required';
-    throw err;
-  }
   const stripeOn = !!(process.env.STRIPE_SECRET_KEY || '').trim();
   const paid = ['paid', 'active', 'trialing'].includes(String(row?.status || '').toLowerCase());
-  if (stripeOn && !paid) {
-    const err: any = new Error('Réglez l’abonnement par carte (Stripe) avant de publier une demande.');
+  const subscribed = !!plan && (!stripeOn || paid);
+  const usedMonth = await usageThisMonth(establishmentId);
+
+  if (opts.urgent) {
+    if (!subscribed || !plan || plan.flashPerMonth === 0) {
+      const err: any = new Error('Les missions Flash (urgence) sont incluses à partir du plan Pro (249 € HT / mois) payé. Les 5 demandes offertes sont des demandes standard.');
+      err.status = 402;
+      err.code = 'flash_plan';
+      throw err;
+    }
+    if (plan.flashPerMonth != null && usedMonth.flash >= plan.flashPerMonth) {
+      const err: any = new Error('Quota Flash du mois atteint.');
+      err.status = 402;
+      err.code = 'flash_quota';
+      throw err;
+    }
+  }
+
+  if (subscribed && plan) {
+    if (plan.missionsPerMonth != null && usedMonth.missions >= plan.missionsPerMonth) {
+      const extra = plan.extraMissionHt != null ? ` Demande supplémentaire : ${plan.extraMissionHt} € HT.` : '';
+      const err: any = new Error(`Quota du plan ${plan.name} atteint (${plan.missionsPerMonth} demandes ce mois).${extra}`);
+      err.status = 402;
+      err.code = 'mission_quota';
+      throw err;
+    }
+    return plan;
+  }
+
+  const life = await lifetimeMissions(establishmentId);
+  if (life >= FREE_TRIAL_MISSIONS) {
+    const err: any = new Error('Les 5 demandes offertes sont utilisées. Choisissez un abonnement (Essentiel, Pro ou Premium) pour continuer. Vous pouviez vous abonner dès la première demande.');
     err.status = 402;
-    err.code = 'payment_required';
+    err.code = 'trial_exhausted';
     throw err;
   }
-  const used = await usageThisMonth(establishmentId);
-  if (opts.urgent && plan.flashPerMonth === 0) {
-    const err: any = new Error('Les missions Flash (urgence) sont incluses à partir du plan Pro (249 € HT / mois).');
-    err.status = 402;
-    err.code = 'flash_plan';
-    throw err;
-  }
-  if (opts.urgent && plan.flashPerMonth != null && used.flash >= plan.flashPerMonth) {
-    const err: any = new Error('Quota Flash du mois atteint.');
-    err.status = 402;
-    err.code = 'flash_quota';
-    throw err;
-  }
-  if (plan.missionsPerMonth != null && used.missions >= plan.missionsPerMonth) {
-    const extra = plan.extraMissionHt != null ? ` Demande supplémentaire : ${plan.extraMissionHt} € HT.` : '';
-    const err: any = new Error(`Quota du plan ${plan.name} atteint (${plan.missionsPerMonth} demandes ce mois).${extra}`);
-    err.status = 402;
-    err.code = 'mission_quota';
-    throw err;
-  }
-  return plan;
+  return null;
 }

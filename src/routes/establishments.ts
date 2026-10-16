@@ -3,7 +3,7 @@ import jwt from 'jsonwebtoken';
 import { dbRun, dbGet, dbAll } from '../db.js';
 import { config } from '../config.js';
 import { confirmCheckoutSession, createCheckoutSession, stripeEnabled, subscriptionIsPaid } from '../billing.js';
-import { planById, planByName, publicCatalog, usageThisMonth } from '../plans.js';
+import { planById, planByName, publicCatalog, trialInfo, usageThisMonth } from '../plans.js';
 import { saveBase64File } from '../uploads.js';
 import { geocodeEstablishment } from '../geo.js';
 import { notifyAdmins } from '../notify.js';
@@ -166,10 +166,13 @@ router.get('/me/subscription', authMiddleware, async (req: any, res: any, next: 
     if (!estab) return res.status(404).json({ message: 'Établissement non trouvé.' });
     const row = await dbGet('SELECT * FROM establishment_subscriptions WHERE establishment_id = ? ORDER BY id DESC LIMIT 1', [estab.id]) as any;
     const usage = await usageThisMonth(Number(estab.id));
+    const paid = row ? subscriptionIsPaid(row.status) : false;
+    const trial = await trialInfo(Number(estab.id), paid);
     return res.json({
       subscription: row ? publicSubscription(row, undefined, { usage }) : null,
       catalog: { ...publicCatalog(), stripeEnabled: stripeEnabled() },
       usage,
+      trial,
       stripeEnabled: stripeEnabled(),
     });
   } catch (err) { next(err); }
