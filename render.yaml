@@ -33,7 +33,7 @@ services:
       - key: STRIPE_WEBHOOK_SECRET
         sync: false
       - key: PUBLIC_URL
-        value: https://urgad-api.onrender.com
+        value: https://urgad.fr
 
 databases:
   - name: urgad-db

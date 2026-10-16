@@ -37,6 +37,13 @@ const PORT = process.env.PORT || 3001;
 
 app.use(helmet({ contentSecurityPolicy: false }));
 app.use(cors({ origin: true, credentials: true }));
+app.use((req, res, next) => {
+  const host = (req.get('x-forwarded-host') || req.get('host') || '').split(',')[0].trim().toLowerCase().replace(/:\d+$/, '');
+  if (host === 'www.urgad.fr' || host === 'urgad.com' || host === 'www.urgad.com') {
+    return res.redirect(301, 'https://urgad.fr' + (req.originalUrl || '/'));
+  }
+  next();
+});
 function billingWebhookInfo(_req: any, res: any) {
   res.status(200).json({
     ok: true,

@@ -78,7 +78,7 @@ export function publicUrl(req?: { protocol?: string; get?: (h: string) => string
       return proto + '://' + host;
     }
   }
-  return 'https://urgad-api.onrender.com';
+  return 'https://urgad.fr';
 }
 
 async function ensurePriceId(stripe: Stripe, plan: Plan): Promise<string> {

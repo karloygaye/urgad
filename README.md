@@ -1,6 +1,6 @@
 # URGAD
 
-Mise en relation établissements de soin et professionnels. API Node + aperçu HTML, déjà en ligne : [https://urgad-api.onrender.com](https://urgad-api.onrender.com).
+Mise en relation établissements de soin et professionnels. Prod : [https://urgad.fr](https://urgad.fr) (alias [https://urgad.com](https://urgad.com), encore `https://urgad-api.onrender.com` le temps du DNS).
 
 ## Ordre réaliste (prod + stores)
 
@@ -46,12 +46,12 @@ Le site tourne déjà en `NODE_ENV=production` sur Render. Pour encaisser vraime
 1. **Stripe — activer les cartes** : [dashboard.stripe.com/settings/update](https://dashboard.stripe.com/settings/update) — e-mail professionnel, téléphone, code MCC (activité, ex. logiciel 5734). Tant que `charges_enabled` est false, Checkout refuse les cartes.
 2. **Stripe — e-mails reçus** : Settings → Customer emails → Successful / Failed payments.
 3. **Render — plan payant** : le web `free` s’endort ; le Postgres free expire le 15/11/2026. Passez le service en Starter et la base en Basic dans le dashboard Render (carte bancaire).
-4. **Domaine** : brancher `fr.urgad.app` (ou autre) en Custom Domain Render + `PUBLIC_URL`.
+4. **Domaine** : `urgad.fr` + `urgad.com` chez OVH, Custom Domain Render, `PUBLIC_URL=https://urgad.fr`. DNS : A `@` → `216.24.57.1`, CNAME `www` → `urgad-api.onrender.com`. Pas d’enregistrement AAAA.
 5. **CGU / confidentialité** : remplacer `[RAISON SOCIALE]` / SIRET, faire relire un avocat.
 
 ## App iOS / Android (Capacitor)
 
-App unique `fr.urgad.app`. Le HTML de `public/` est empaqueté ; l’API appelée est `https://urgad-api.onrender.com` (voir `public/native-config.js`).
+App unique `fr.urgad.app`. Le HTML de `public/` est empaqueté ; l’API appelée est `https://urgad.fr` (voir `public/native-config.js`).
 
 ```bash
 npm ci

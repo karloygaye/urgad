@@ -6,6 +6,6 @@
     native = !!(window.Capacitor && window.Capacitor.isNativePlatform && window.Capacitor.isNativePlatform());
   } catch (e) {}
   if (!native) return;
-  if (!window.URGAD_API) window.URGAD_API = 'https://urgad-api.onrender.com';
+  if (!window.URGAD_API) window.URGAD_API = 'https://urgad.fr';
   if (typeof window.URGAD_NATIVE_PUSH === 'undefined') window.URGAD_NATIVE_PUSH = false;
 })();
