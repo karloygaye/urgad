@@ -1,0 +1,14 @@
+{
+  "appId": "fr.urgad.app",
+  "appName": "URGAD",
+  "webDir": "public",
+  "server": {
+    "androidScheme": "https",
+    "iosScheme": "https"
+  },
+  "plugins": {
+    "PushNotifications": {
+      "presentationOptions": ["badge", "sound", "alert"]
+    }
+  }
+}

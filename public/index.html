@@ -51,7 +51,7 @@ input,select,textarea{font-family:inherit}
 .landing-title{font-family:'Playfair Display',serif;font-size:64px;font-weight:700;line-height:1.1;margin-bottom:24px;letter-spacing:-2px}
 .landing-title .accent{background:var(--gradient-gold);-webkit-background-clip:text;background-clip:text;-webkit-text-fill-color:transparent;font-style:italic}
 .landing-sub{color:var(--text-muted);font-size:18px;line-height:1.6;max-width:600px;margin:0 auto}
-.landing-cards{display:grid;grid-template-columns:minmax(280px,420px);justify-content:center;gap:24px;max-width:1200px;width:100%;position:relative;z-index:2}
+.landing-cards{display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));justify-content:center;gap:24px;max-width:880px;width:100%;position:relative;z-index:2;margin:0 auto}
 .landing-card{display:block;text-decoration:none;color:inherit;background:linear-gradient(135deg,rgba(255,255,255,0.04),rgba(255,255,255,0.01));backdrop-filter:blur(20px);border:1px solid var(--border);border-radius:24px;padding:40px 36px;cursor:pointer;transition:all 0.4s cubic-bezier(0.16,1,0.3,1);position:relative;overflow:hidden}
 .landing-card::before{content:'';position:absolute;top:0;left:0;right:0;height:1px;background:linear-gradient(90deg,transparent,rgba(212,175,55,0.3),transparent);opacity:0;transition:opacity 0.4s}
 .landing-card:hover{transform:translateY(-8px);border-color:rgba(212,175,55,0.3);background:linear-gradient(135deg,rgba(255,255,255,0.06),rgba(255,255,255,0.02))}
@@ -88,12 +88,12 @@ input,select,textarea{font-family:inherit}
 .btn-sm{padding:10px 18px;font-size:13px;border-radius:10px}
 .welcome{padding:40px 28px;display:flex;flex-direction:column;min-height:100%}
 .welcome-logo{font-family:'Playfair Display',serif;font-size:44px;font-weight:700;background:var(--gradient-gold);-webkit-background-clip:text;background-clip:text;-webkit-text-fill-color:transparent;letter-spacing:-1.5px;margin-bottom:4px}
-.welcome-tag{color:var(--text-muted);font-size:12px;letter-spacing:2px;text-transform:uppercase;margin-bottom:36px;font-weight:500}
+.welcome-tag{color:var(--text-muted);font-size:12px;letter-spacing:2px;text-transform:uppercase;margin-bottom:10px;font-weight:500}
 .welcome-illustration{width:100%;height:240px;background:linear-gradient(135deg,#1a1f35,#0A0E1A);border-radius:28px;margin-bottom:36px;display:flex;align-items:center;justify-content:center;font-size:80px;position:relative;overflow:hidden;border:1px solid var(--border)}
 .welcome-illustration::before{content:'';position:absolute;inset:0;background:radial-gradient(circle at 30% 30%,rgba(212,175,55,0.2),transparent 60%)}
 .welcome-illustration::after{content:'';position:absolute;inset:0;background:radial-gradient(circle at 70% 70%,rgba(16,185,129,0.15),transparent 60%)}
 .welcome h1{font-family:'Playfair Display',serif;font-size:32px;font-weight:700;margin-bottom:12px;line-height:1.2;letter-spacing:-0.5px}
-.welcome p{color:var(--text-muted);margin-bottom:32px;line-height:1.6;font-size:14px}
+.welcome p{color:var(--text-muted);margin-bottom:16px;line-height:1.6;font-size:14px}
 .welcome-buttons{display:flex;flex-direction:column;gap:12px;margin-top:auto}
 .form-screen{padding:28px 24px}
 .form-screen h1{font-family:'Playfair Display',serif;font-size:28px;font-weight:700;margin-bottom:8px;letter-spacing:-0.5px}
@@ -549,6 +549,17 @@ input,select,textarea{font-family:inherit}
 .landing-title{font-size:40px}
 .landing{padding:30px 20px}
 }
+.welcome-points{display:flex;flex-direction:column;gap:10px;margin:0 0 24px}
+.welcome-point{display:flex;gap:12px;align-items:flex-start;padding:12px 14px;background:var(--surface);border:1px solid var(--border);border-radius:14px}
+.welcome-point strong{display:block;font-size:13px;margin-bottom:2px}
+.welcome-point span{font-size:12px;color:var(--text-muted);line-height:1.45}
+.welcome-point-ico{width:36px;height:36px;border-radius:10px;background:rgba(212,175,55,0.12);border:1px solid rgba(212,175,55,0.22);display:flex;align-items:center;justify-content:center;flex-shrink:0;font-size:15px}
+.auth-kicker{font-size:11px;color:var(--gold-soft);letter-spacing:1.6px;text-transform:uppercase;font-weight:600;margin:8px 0 6px}
+.landing-stats{display:flex;gap:32px;justify-content:center;margin-top:40px;flex-wrap:wrap}
+.landing-stat{text-align:center}
+.landing-stat strong{display:block;font-family:'Playfair Display',serif;font-size:22px;color:var(--gold-soft)}
+.landing-stat span{font-size:12px;color:var(--text-muted)}
+a.landing-card{text-decoration:none;color:inherit;display:block}
 .hidden{display:none !important}
 .fade-in{animation:fadeIn 0.4s cubic-bezier(0.16,1,0.3,1)}
 @keyframes fadeIn{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:translateY(0)}}
@@ -566,20 +577,31 @@ button.landing-card{width:100%;text-align:left}
 <div class="landing hidden" id="landing">
 <div class="landing-header">
 <div class="landing-brand">URGAD</div>
-<div class="landing-badge">MVP 1.0 • France</div>
+<div class="landing-badge">France · médico-social</div>
 </div>
 <div class="landing-hero">
-<div class="landing-eyebrow">Plateforme de mise en relation</div>
+<div class="landing-eyebrow">Mise en relation soignants ↔ établissements</div>
 <h1 class="landing-title">Le soin <span class="accent">au bon endroit</span>, au bon moment.</h1>
-<p class="landing-sub">URGAD connecte les établissements de santé avec les professionnels disponibles, instantanément. Une plateforme premium pour le secteur médico-social.</p>
+<p class="landing-sub">URGAD rapproche les EHPAD, cliniques et maisons de retraite des professionnels disponibles près d’eux — missions, documents vérifiés, réponses dans la journée.</p>
+<div class="landing-stats">
+<div class="landing-stat"><strong>1 compte</strong><span>pro ou établissement</span></div>
+<div class="landing-stat"><strong>Près de vous</strong><span>missions selon votre rayon</span></div>
+<div class="landing-stat"><strong>Vérifié</strong><span>identité et diplôme avant mission</span></div>
+</div>
 </div>
 <div class="landing-cards">
 <button type="button" class="landing-card" onclick="enterPro()">
-<div class="landing-card-icon">📱</div>
-<h3>Application Professionnel</h3>
-<p>Espace dédié aux aides-soignants et professionnels de santé. Trouvez des missions premium près de chez vous.</p>
-<div class="arrow">Accéder à l'espace →</div>
+<div class="landing-card-icon">🩺</div>
+<h3>Je suis professionnel</h3>
+<p>Aide-soignant, infirmier, AES : créez votre profil, déposez vos justificatifs et postulez aux missions autour de vous.</p>
+<div class="arrow">Se connecter / s’inscrire →</div>
 </button>
+<a class="landing-card" href="urgad-etab.html">
+<div class="landing-card-icon">🏛️</div>
+<h3>Je gère un établissement</h3>
+<p>Publiez une demande de remplacement, recevez des profils proposés, validez le soignant en quelques clics.</p>
+<div class="arrow">Espace établissement →</div>
+</a>
 </div>
 <div class="urgad-legal-footer" style="position:relative;z-index:2;margin-top:60px;text-align:center;font-size:12px;color:var(--text-dim)">© 2026 URGAD · <a href="cgu.html">Conditions générales d'utilisation</a> · <a href="confidentialite.html">Politique de confidentialité</a></div>
 </div>
@@ -636,6 +658,7 @@ document.getElementById('landing').classList.remove('hidden');
 <div class="modal" id="modalContent"></div>
 </div>
 <div class="toast-container" id="toastContainer"></div>
+<script src="native-config.js"></script>
 <script src="urgad-store.js"></script>
 <script src="urgad-features.js"></script>
 <script>
@@ -1131,13 +1154,18 @@ case 'welcome':
 showNav=false;
 html=`<div class="welcome fade-in">
 <div class="welcome-logo">URGAD</div>
-<div class="welcome-tag">Plateforme Premium</div>
-<div class="welcome-illustration">🏥</div>
-<h1>Bienvenue sur URGAD</h1>
-<p>La plateforme qui met en relation les établissements de santé avec les professionnels disponibles, instantanément.</p>
+<div class="welcome-tag">Espace professionnel</div>
+<p class="auth-kicker">Aide-soignant · infirmier · AES</p>
+<h1>Trouvez votre prochaine mission</h1>
+<p>Les établissements publient leurs besoins. Vous voyez celles qui sont dans votre rayon, postulez, et échangez une fois le profil validé.</p>
+<div class="welcome-points">
+<div class="welcome-point"><div class="welcome-point-ico">📍</div><div><strong>Missions autour de vous</strong><span>Filtrées par adresse et mobilité, pas un listing national.</span></div></div>
+<div class="welcome-point"><div class="welcome-point-ico">🪪</div><div><strong>Profil vérifié</strong><span>Pièce d’identité et diplôme : indispensables avant d’être proposé à un établissement.</span></div></div>
+<div class="welcome-point"><div class="welcome-point-ico">⚡</div><div><strong>Réponse claire</strong><span>Accepté, en attente ou refusé — vous le voyez dans l’app, sans appels dans le vide.</span></div></div>
+</div>
 <div class="welcome-buttons">
 <button class="btn btn-primary btn-lg btn-block" onclick="showProScreen('register')">Créer mon compte</button>
-<button class="btn btn-ghost btn-lg btn-block" onclick="showProScreen('login')">Se connecter</button>
+<button class="btn btn-ghost btn-lg btn-block" onclick="showProScreen('login')">J’ai déjà un compte</button>
 </div>
 </div>`;
 break;
@@ -1170,13 +1198,14 @@ case 'login':
 showNav=false;
 html=`<div class="form-screen fade-in">
 <button class="back-btn" onclick="showProScreen('welcome')">←</button>
-<h1 style="margin-top:16px">Connexion</h1>
-<p class="sub">Compte professionnel via l'API. Le jeton reste dans cette session navigateur.</p>
-<div class="form-group"><label>E-mail</label><input id="login-id" type="email" placeholder="marie.dupont@email.fr"></div>
-<div class="form-group"><label>Mot de passe</label><input id="login-pass" type="password" placeholder="••••••••"></div>
-<p style="font-size:12px;color:var(--text-muted);margin-top:8px">Compte seed : marie.dupont@email.fr / pro123. Le téléphone n'est pas un identifiant API.</p>
-<button class="btn btn-primary btn-block btn-lg" style="margin-top:20px" onclick="tryProLogin()">Se connecter</button>
-<p style="text-align:center;margin-top:16px;font-size:13px;color:var(--text-muted)">Pas de compte ? <a style="color:var(--gold-soft);font-weight:600;cursor:pointer" onclick="showProScreen('register')">Créer un compte</a></p>
+<p class="auth-kicker">Professionnel</p>
+<h1 style="margin-top:4px">Bon retour</h1>
+<p class="sub">Connectez-vous pour voir les missions près de chez vous, vos candidatures et vos messages.</p>
+<div class="form-group"><label>E-mail</label><input id="login-id" type="email" autocomplete="username" placeholder="vous@email.fr"></div>
+<div class="form-group"><label>Mot de passe</label><input id="login-pass" type="password" autocomplete="current-password" placeholder="Votre mot de passe"></div>
+<button class="btn btn-primary btn-block btn-lg" style="margin-top:12px" onclick="tryProLogin()">Se connecter</button>
+<p style="text-align:center;margin-top:18px;font-size:13px;color:var(--text-muted)">Nouveau sur URGAD ? <a style="color:var(--gold-soft);font-weight:600;cursor:pointer" onclick="showProScreen('register')">Créer un compte gratuit</a></p>
+<p style="text-align:center;margin-top:10px;font-size:12px;color:var(--text-dim)">Établissement ? <a href="urgad-etab.html" style="color:var(--gold-soft)">Espace dédié</a></p>
 </div>`;
 break;
 case 'sms': {

@@ -7,3 +7,12 @@ uploads/*
 *.log
 .vite/
 .railway/
+android/.gradle/
+android/app/build/
+android/build/
+android/captures/
+android/local.properties
+ios/App/Pods/
+ios/App/build/
+ios/DerivedData/
+.DS_Store

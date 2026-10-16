@@ -25,8 +25,10 @@ import verificationRoutes from './routes/verification.js';
 import { purgeVerifiedIdentityFiles } from './verification.js';
 import { backfillCoordinates } from './geo.js';
 import { pushStatus } from './notify.js';
+import { assertProductionConfig } from './runtime.js';
 
 dotenv.config();
+assertProductionConfig();
 
 const app = express();
 const PORT = process.env.PORT || 3001;

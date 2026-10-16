@@ -7,6 +7,7 @@ import { config } from '../config.js';
 import { consumePhoneCode, storePhoneCode } from '../phoneCode.js';
 import { geocodeEstablishment, geocodeProfessionalByUser } from '../geo.js';
 import { notifyAdmins } from '../notify.js';
+import { exposeVerificationCodes } from '../runtime.js';
 
 /** Les CGU et la politique de confidentialité doivent être acceptées à l'inscription. */
 export const TERMS_VERSION = '2026-10-08';
@@ -60,12 +61,15 @@ router.post('/register/professional', async (req, res, next) => {
     }
     void notifyAdmins('Nouveau professionnel inscrit', `${firstName} ${lastName} (${email}) — documents à vérifier.`, { userId, screen: 'verification' }, 'admin_new_pro');
     const code = await storePhoneCode(Number(userId), String(phone));
-    return res.json({
-      message: 'Compte créé. Code stocké côté serveur. Aucun SMS envoyé.',
+    const body: Record<string, unknown> = {
+      message: exposeVerificationCodes()
+        ? 'Compte créé. Code stocké côté serveur. Aucun SMS envoyé.'
+        : 'Compte créé. Un code de vérification a été enregistré. Il n’est pas renvoyé par l’API.',
       userId,
-      verificationCode: code,
-      smsSent: false
-    });
+      smsSent: false,
+    };
+    if (exposeVerificationCodes()) body.verificationCode = code;
+    return res.json(body);
   } catch (err) { next(err); }
 });
 
@@ -250,13 +254,16 @@ router.post('/request-code', async (req, res, next) => {
     const user = await findUserForCode(req.body) as any;
     if (!user) return res.status(404).json({ message: 'Utilisateur non trouvé.' });
     const code = await storePhoneCode(Number(user.id), String(user.phone || req.body?.phone || ''));
-    return res.json({
-      message: 'Code stocké. Aucun SMS envoyé.',
+    const payload: Record<string, unknown> = {
+      message: exposeVerificationCodes()
+        ? 'Code stocké. Aucun SMS envoyé.'
+        : 'Code enregistré. Il n’est pas renvoyé par l’API (SMS à brancher).',
       userId: user.id,
-      verificationCode: code,
       smsSent: false,
-      provider: 'none'
-    });
+      provider: 'none',
+    };
+    if (exposeVerificationCodes()) payload.verificationCode = code;
+    return res.json(payload);
   } catch (err) { next(err); }
 });
 

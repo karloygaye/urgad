@@ -1,6 +1,7 @@
 import { initializeDb, dbRun, dbGet, dbExec, save } from './db.js';
 import bcrypt from 'bcryptjs';
 import { v4 as uuidv4 } from 'uuid';
+import { allowDemoSeed } from './runtime.js';
 
 export const runSeed = async () => {
   await initializeDb();
@@ -119,17 +120,46 @@ export const runSeed = async () => {
   console.log('   Est: contact@ehpad-jardins.fr / est123');
 };
 
-/** Premier boot prod : seed seulement si la base est vide. */
+async function bootstrapAdminIfRequested(): Promise<void> {
+  const email = (process.env.URGAD_ADMIN_EMAIL || '').trim().toLowerCase();
+  const password = process.env.URGAD_ADMIN_PASSWORD || '';
+  if (!email || !password) return;
+  if (password.length < 10) {
+    console.warn('[SEED] URGAD_ADMIN_PASSWORD trop court (10 caractères min) — admin non créé');
+    return;
+  }
+  const existing = await dbGet('SELECT id FROM users WHERE lower(email) = lower(?)', [email]) as { id?: number } | undefined;
+  if (existing?.id) {
+    console.log('[SEED] Admin déjà présent : ' + email);
+    return;
+  }
+  const hashed = await bcrypt.hash(password, 12);
+  const phone = (process.env.URGAD_ADMIN_PHONE || '').trim() || null;
+  await dbRun(
+    'INSERT INTO users (uuid, email, password, phone, first_name, last_name, role, is_admin, verified, verification_status) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)',
+    [uuidv4(), email, hashed, phone, 'URGAD', 'Admin', 'admin', 1, 1, 'approved']
+  );
+  save();
+  console.log('[SEED] Admin de production créé : ' + email);
+}
+
+/** Premier boot : démo seulement hors prod (ou URGAD_SEED=1). En prod, admin via URGAD_ADMIN_EMAIL. */
 export const seedIfEmpty = async () => {
   await initializeDb();
   const row = await dbGet<{ c: number }>('SELECT COUNT(*) as c FROM users');
   const count = Number(row?.c ?? 0);
   if (count > 0) {
     console.log(`[SEED] ${count} utilisateur(s) déjà présents — seed ignoré`);
+    await bootstrapAdminIfRequested();
     return;
   }
-  console.log('[SEED] Base vide — chargement des comptes de démo');
-  await runSeed();
+  if (allowDemoSeed()) {
+    console.log('[SEED] Base vide — chargement des comptes de démo');
+    await runSeed();
+    return;
+  }
+  console.log('[SEED] Production : pas de comptes démo. Définis URGAD_ADMIN_EMAIL + URGAD_ADMIN_PASSWORD (ou URGAD_SEED=1 le temps d’un boot).');
+  await bootstrapAdminIfRequested();
 };
 
 if (/[\\/]seed\.(ts|js)$/i.test(process.argv[1] || '')) {

@@ -1,0 +1,7 @@
+<?xml version='1.0' encoding='utf-8'?>
+<resources>
+    <string name="app_name">URGAD</string>
+    <string name="title_activity_main">URGAD</string>
+    <string name="package_name">fr.urgad.app</string>
+    <string name="custom_url_scheme">fr.urgad.app</string>
+</resources>

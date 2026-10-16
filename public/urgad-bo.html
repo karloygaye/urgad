@@ -554,6 +554,7 @@ input,select,textarea{font-family:inherit}
 @keyframes fadeIn{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:translateY(0)}}
 </style>
 
+<script src="native-config.js"></script>
 <script src="urgad-store.js"></script>
 <script src="urgad-features.js"></script>
 </head>
@@ -564,8 +565,8 @@ input,select,textarea{font-family:inherit}
     <p style="color:var(--text-muted);font-size:12px;letter-spacing:2px;text-transform:uppercase;margin:6px 0 18px">Back-office</p>
     <h2 style="font-family:'Playfair Display',serif;margin-bottom:8px">Connexion administrateur</h2>
     <p style="color:var(--text-muted);font-size:13px;margin-bottom:16px">Connexion HTTP. Le jeton admin reste dans sessionStorage. Les écrans sans endpoint restent marqués aperçu local.</p>
-    <div class="form-group"><label>E-mail</label><input id="bo-email" type="email" value="admin@urgad.fr"></div>
-    <div class="form-group"><label>Mot de passe</label><input id="bo-pass" type="password" value="admin123"></div>
+    <div class="form-group"><label>E-mail</label><input id="bo-email" type="email" autocomplete="username" placeholder="votre e-mail admin"></div>
+    <div class="form-group"><label>Mot de passe</label><input id="bo-pass" type="password" autocomplete="current-password" placeholder="mot de passe"></div>
     <button class="btn btn-primary btn-block btn-lg" onclick="loginBo()">Entrer dans le back-office</button>
     <div class="urgad-legal-footer" style="text-align:center;font-size:11px;color:var(--text-dim);margin-top:18px"><a href="cgu.html" target="_blank" rel="noopener">CGU</a> · <a href="confidentialite.html" target="_blank" rel="noopener">Politique de confidentialité</a></div>
   </div>
