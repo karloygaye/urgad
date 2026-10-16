@@ -33,7 +33,7 @@ Dans le dashboard, **avant** d’ouvrir au public :
 | `URGAD_ADMIN_EMAIL` | Ton email |
 | `URGAD_ADMIN_PASSWORD` | ≥ 10 caractères, une fois pour créer l’admin |
 
-Stripe et Firebase restent optionnels. Même avec `STRIPE_SECRET_KEY`, le code **ne débité pas** encore. Les codes SMS ne sont plus renvoyés dans le JSON en production.
+Stripe : `STRIPE_SECRET_KEY` active Checkout (199 / 249 / 299 € HT / mois). `STRIPE_WEBHOOK_SECRET` pour les renouvellements. Sans clé, le plan est enregistré sans débit. Les codes SMS ne sont plus renvoyés dans le JSON en production.
 
 Santé : `GET /api/health`.
 

@@ -2,7 +2,7 @@ import { Router } from 'express';
 import jwt from 'jsonwebtoken';
 import { dbRun, dbGet, dbAll } from '../db.js';
 import { config } from '../config.js';
-import { prepareSubscriptionPayment } from '../billing.js';
+import { confirmCheckoutSession, createCheckoutSession, stripeEnabled, subscriptionIsPaid } from '../billing.js';
 import { planById, planByName, publicCatalog, usageThisMonth } from '../plans.js';
 import { saveBase64File } from '../uploads.js';
 import { geocodeEstablishment } from '../geo.js';
@@ -90,8 +90,9 @@ async function publicDocument(row: any) {
   };
 }
 
-function publicSubscription(row: any, payment?: { charged: false; paid: false; providerCalled: false; reason: string }, extras?: { usage?: { missions: number; flash: number; since: string } }) {
+function publicSubscription(row: any, payment?: { charged?: boolean; paid?: boolean; providerCalled?: boolean; reason?: string; checkoutUrl?: string | null }, extras?: { usage?: { missions: number; flash: number; since: string } }) {
   const plan = planByName(row.name);
+  const paid = payment?.paid ?? subscriptionIsPaid(row.status);
   return {
     id: row.id,
     establishmentId: row.establishment_id,
@@ -100,10 +101,12 @@ function publicSubscription(row: any, payment?: { charged: false; paid: false; p
     status: row.status,
     price: row.price,
     createdAt: row.created_at || null,
-    charged: false,
-    paid: false,
-    providerCalled: payment ? payment.providerCalled : false,
-    reason: payment ? payment.reason : undefined,
+    charged: paid,
+    paid,
+    stripeEnabled: stripeEnabled(),
+    checkoutUrl: payment?.checkoutUrl || null,
+    providerCalled: payment?.providerCalled ?? false,
+    reason: payment?.reason,
     plan: plan || null,
     usage: extras?.usage || null,
   };
@@ -165,8 +168,9 @@ router.get('/me/subscription', authMiddleware, async (req: any, res: any, next: 
     const usage = await usageThisMonth(Number(estab.id));
     return res.json({
       subscription: row ? publicSubscription(row, undefined, { usage }) : null,
-      catalog: publicCatalog(),
+      catalog: { ...publicCatalog(), stripeEnabled: stripeEnabled() },
       usage,
+      stripeEnabled: stripeEnabled(),
     });
   } catch (err) { next(err); }
 });
@@ -179,10 +183,10 @@ router.post('/me/subscription', authMiddleware, async (req: any, res: any, next:
     if (!plan) return res.status(422).json({ message: 'Plan inconnu. Essentiel, Pro ou Premium.' });
     const name = plan.name;
     const price = plan.priceHt;
-    const payment = prepareSubscriptionPayment({ name, price, establishmentId: estab.id });
-    const status = payment.status;
-    const existing = await dbGet('SELECT id FROM establishment_subscriptions WHERE establishment_id = ? ORDER BY id DESC LIMIT 1', [estab.id]) as any;
+    const existing = await dbGet('SELECT * FROM establishment_subscriptions WHERE establishment_id = ? ORDER BY id DESC LIMIT 1', [estab.id]) as any;
     let id = existing?.id ?? null;
+    const keepPaid = existing && subscriptionIsPaid(existing.status) && String(existing.name) === name;
+    const status = keepPaid ? existing.status : 'pending';
     if (existing) {
       await dbRun('UPDATE establishment_subscriptions SET name = ?, status = ?, price = ? WHERE id = ?', [name, status, price, existing.id]);
     } else {
@@ -196,12 +200,54 @@ router.post('/me/subscription', authMiddleware, async (req: any, res: any, next:
         id = row?.id ?? null;
       }
     }
-    const message = payment.reason === 'missing_key'
-      ? 'Abonnement enregistré en attente. STRIPE_SECRET_KEY absente : aucun paiement, rien n\'est marqué payé.'
-      : 'Abonnement enregistré en attente. Le prestataire n\'est pas appelé : aucun paiement.';
+    if (id == null) return res.status(500).json({ message: 'Abonnement non enregistré.' });
+    const user = await dbGet<{ email: string }>('SELECT email FROM users WHERE id = ?', [req.user.id]);
+    let checkoutUrl: string | null = null;
+    let reason: 'missing_key' | 'ok' | 'already_paid' = 'missing_key';
+    if (keepPaid) {
+      reason = 'already_paid';
+    } else if (stripeEnabled()) {
+      const checkout = await createCheckoutSession({
+        plan,
+        establishmentId: Number(estab.id),
+        subscriptionRowId: Number(id),
+        email: String(user?.email || ''),
+        existingCustomerId: existing?.stripe_customer_id || null,
+        req,
+      });
+      checkoutUrl = checkout.url;
+      reason = checkout.reason;
+      if (checkout.customerId) {
+        await dbRun('UPDATE establishment_subscriptions SET stripe_customer_id = ? WHERE id = ?', [checkout.customerId, id]);
+      }
+    }
+    const message = reason === 'already_paid'
+      ? 'Cette formule est déjà active.'
+      : reason === 'ok'
+        ? 'Redirection vers Stripe pour le paiement de l’abonnement.'
+        : 'Abonnement enregistré en attente. STRIPE_SECRET_KEY absente : aucun débit.';
     return res.status(existing ? 200 : 201).json({
-      subscription: publicSubscription({ id, establishment_id: estab.id, name, status, price, created_at: null }, payment),
-      message
+      subscription: publicSubscription({ id, establishment_id: estab.id, name, status, price, created_at: null }, {
+        charged: keepPaid, paid: keepPaid, providerCalled: reason === 'ok', reason, checkoutUrl,
+      }),
+      checkoutUrl,
+      message,
+    });
+  } catch (err) { next(err); }
+});
+
+router.post('/me/subscription/confirm', authMiddleware, async (req: any, res: any, next: any) => {
+  try {
+    const estab = await ownEstablishment(req.user.id);
+    if (!estab) return res.status(404).json({ message: 'Établissement non trouvé.' });
+    const sessionId = String(req.body?.sessionId || req.body?.session_id || '').trim();
+    if (!sessionId) return res.status(422).json({ message: 'sessionId requis.' });
+    const ok = await confirmCheckoutSession(sessionId, Number(estab.id));
+    const row = await dbGet('SELECT * FROM establishment_subscriptions WHERE establishment_id = ? ORDER BY id DESC LIMIT 1', [estab.id]) as any;
+    return res.json({
+      confirmed: ok,
+      subscription: row ? publicSubscription(row) : null,
+      message: ok ? 'Paiement confirmé. Abonnement actif.' : 'Paiement non confirmé. Si vous avez payé, patientez quelques secondes ou contactez URGAD.',
     });
   } catch (err) { next(err); }
 });

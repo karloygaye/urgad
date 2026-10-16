@@ -337,6 +337,9 @@ const EXTRA_COLUMNS: Array<[string, string, string]> = [
   ['professional_documents', 'reviewed_by', 'TEXT'],
   ['professional_documents', 'reviewed_at', 'TEXT'],
   ['professional_documents', 'file_purged_at', 'TEXT'],
+  ['establishment_subscriptions', 'stripe_customer_id', 'TEXT'],
+  ['establishment_subscriptions', 'stripe_subscription_id', 'TEXT'],
+  ['establishment_subscriptions', 'stripe_checkout_id', 'TEXT'],
 ];
 
 async function ensureColumns(): Promise<void> {

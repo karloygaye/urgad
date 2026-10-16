@@ -27,6 +27,7 @@ import { backfillCoordinates } from './geo.js';
 import { pushStatus } from './notify.js';
 import { assertProductionConfig } from './runtime.js';
 import { publicCatalog } from './plans.js';
+import { applyStripeEvent, getStripe, stripeEnabled } from './billing.js';
 
 dotenv.config();
 assertProductionConfig();
@@ -36,6 +37,32 @@ const PORT = process.env.PORT || 3001;
 
 app.use(helmet({ contentSecurityPolicy: false }));
 app.use(cors({ origin: true, credentials: true }));
+app.post('/api/billing/webhook', express.raw({ type: 'application/json' }), (req, res) => {
+  const stripe = getStripe();
+  const secret = (process.env.STRIPE_WEBHOOK_SECRET || '').trim();
+  if (!stripe || !secret) {
+    res.status(503).json({ message: 'Webhook Stripe non configuré.' });
+    return;
+  }
+  const sig = req.headers['stripe-signature'];
+  if (!sig || typeof sig !== 'string') {
+    res.status(400).json({ message: 'Signature Stripe manquante.' });
+    return;
+  }
+  let event;
+  try {
+    event = stripe.webhooks.constructEvent(req.body, sig, secret);
+  } catch (e: any) {
+    res.status(400).json({ message: e?.message || 'Signature invalide.' });
+    return;
+  }
+  dbReady.then(() => applyStripeEvent(event)).then(() => {
+    res.json({ received: true });
+  }).catch((e) => {
+    console.error('[STRIPE] webhook', e);
+    if (!res.headersSent) res.status(500).json({ message: 'Webhook Stripe en erreur.' });
+  });
+});
 app.use(express.json({ limit: '10mb' }));
 app.use(express.urlencoded({ extended: true, limit: '10mb' }));
 
@@ -66,6 +93,7 @@ dbReady.then(async () => {
   setInterval(purge, 12 * 3600 * 1000).unref();
   const ps = pushStatus();
   console.log('[PUSH] ' + (ps.configured ? 'FIREBASE_SERVICE_ACCOUNT défini' : 'FIREBASE_SERVICE_ACCOUNT absent : notifications in-app uniquement, push ignoré'));
+  console.log('[STRIPE] ' + (stripeEnabled() ? 'Checkout abonnements activé' : 'STRIPE_SECRET_KEY absente : plans enregistrés sans débit'));
 }).catch(() => {});
 app.use((req, res, next) => {
   dbReady.then(() => next()).catch((e) => {
@@ -89,7 +117,7 @@ app.use('/api/requests', requestRoutes);
 app.use('/api/verification', verificationRoutes);
 
 app.get('/api/billing/plans', (_req, res) => {
-  res.json(publicCatalog());
+  res.json({ ...publicCatalog(), stripeEnabled: stripeEnabled() });
 });
 
 // Health

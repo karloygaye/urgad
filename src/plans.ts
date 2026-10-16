@@ -2,7 +2,7 @@ import { dbGet } from './db.js';
 
 /** Modèle économique URGAD : les soignants sont gratuits ; les établissements paient un SaaS mensuel HT.
  *  Pas de commission sur le salaire du professionnel (différenciation vs intérim).
- *  Stripe n'est pas débité tant que le prestataire n'est pas branché. */
+ *  Stripe Checkout mensuel si STRIPE_SECRET_KEY est défini. */
 
 export type PlanId = 'essentiel' | 'pro' | 'premium';
 
@@ -29,7 +29,7 @@ export const BILLING_MODEL = {
   renewal: 'Mensuel, reconduction tacite, résiliable à tout moment pour la fin de période.',
   commissionOnWages: 0,
   positioning: 'Abonnement logiciel d’intermédiaire : l’établissement rémunère le soignant selon sa convention. URGAD ne prend pas de marge sur l’heure travaillée.',
-  payment: 'Carte via Stripe (non débité tant que STRIPE_SECRET_KEY n’appelle pas le prestataire).',
+  payment: 'Carte via Stripe Checkout (abonnement mensuel HT). Sans clé Stripe, le plan est seulement enregistré.',
 };
 
 export const PLANS: Plan[] = [
@@ -131,12 +131,20 @@ export async function usageThisMonth(establishmentId: number): Promise<{ mission
 }
 
 export async function assertEstablishmentPublish(establishmentId: number, opts: { urgent?: boolean } = {}): Promise<Plan> {
-  const row = await dbGet<{ name: string }>('SELECT name FROM establishment_subscriptions WHERE establishment_id = ? ORDER BY id DESC LIMIT 1', [establishmentId]);
+  const row = await dbGet<{ name: string; status: string }>('SELECT name, status FROM establishment_subscriptions WHERE establishment_id = ? ORDER BY id DESC LIMIT 1', [establishmentId]);
   const plan = row?.name ? planByName(row.name) : undefined;
   if (!plan) {
     const err: any = new Error('Choisissez un abonnement (Essentiel 199 €, Pro 249 € ou Premium 299 € HT / mois) avant de publier une demande.');
     err.status = 402;
     err.code = 'plan_required';
+    throw err;
+  }
+  const stripeOn = !!(process.env.STRIPE_SECRET_KEY || '').trim();
+  const paid = ['paid', 'active', 'trialing'].includes(String(row?.status || '').toLowerCase());
+  if (stripeOn && !paid) {
+    const err: any = new Error('Réglez l’abonnement par carte (Stripe) avant de publier une demande.');
+    err.status = 402;
+    err.code = 'payment_required';
     throw err;
   }
   const used = await usageThisMonth(establishmentId);
@@ -153,7 +161,7 @@ export async function assertEstablishmentPublish(establishmentId: number, opts: 
     throw err;
   }
   if (plan.missionsPerMonth != null && used.missions >= plan.missionsPerMonth) {
-    const extra = plan.extraMissionHt != null ? ` Demande supplémentaire : ${plan.extraMissionHt} € HT (facturation Stripe à brancher).` : '';
+    const extra = plan.extraMissionHt != null ? ` Demande supplémentaire : ${plan.extraMissionHt} € HT.` : '';
     const err: any = new Error(`Quota du plan ${plan.name} atteint (${plan.missionsPerMonth} demandes ce mois).${extra}`);
     err.status = 402;
     err.code = 'mission_quota';

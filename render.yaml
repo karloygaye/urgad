@@ -28,6 +28,12 @@ services:
         sync: false
       - key: URGAD_ADMIN_PASSWORD
         sync: false
+      - key: STRIPE_SECRET_KEY
+        sync: false
+      - key: STRIPE_WEBHOOK_SECRET
+        sync: false
+      - key: PUBLIC_URL
+        value: https://urgad-api.onrender.com
 
 databases:
   - name: urgad-db

@@ -412,6 +412,7 @@
     establishmentSubscription: function(){ return request('establishment', 'GET', '/api/establishments/me/subscription'); },
     billingCatalog: function(){ return request(null, 'GET', '/api/billing/plans'); },
     saveEstablishmentSubscription: function(body){ return request('establishment', 'POST', '/api/establishments/me/subscription', { id: body.id, name: body.name }); },
+    confirmEstablishmentSubscription: function(sessionId){ return request('establishment', 'POST', '/api/establishments/me/subscription/confirm', { sessionId: sessionId }); },
     notifications: function(role){ return request(role, 'GET', '/api/notifications'); },
     unreadCount: function(role){ return request(role, 'GET', '/api/notifications/unread-count'); },
     markNotificationRead: function(role, id){ return request(role, 'POST', '/api/notifications/' + encodeURIComponent(id) + '/read', {}); },
