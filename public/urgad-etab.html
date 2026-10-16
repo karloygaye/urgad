@@ -346,8 +346,12 @@ input,select,textarea{font-family:inherit}
 .chat-input input{flex:1;padding:12px 16px;border:1px solid var(--border);border-radius:24px;font-size:14px;background:var(--bg-card);color:var(--text)}
 .chat-input input:focus{outline:none;border-color:var(--gold)}
 .chat-input button{width:42px;height:42px;border-radius:50%;background:var(--gradient-gold);color:#0A0E1A;font-size:16px;font-weight:700}
-.etab-layout{min-height:100vh;background:var(--bg);display:flex}
-.etab-sidebar{width:280px;background:var(--bg-soft);border-right:1px solid var(--border);padding:28px 0;position:fixed;height:100vh;overflow-y:auto;display:flex;flex-direction:column}
+.etab-layout{min-height:100vh;background:var(--bg);display:flex;min-width:0;max-width:100%;overflow-x:hidden}
+.etab-shell{margin-left:280px;flex:1;min-width:0;max-width:100%}
+.etab-mobile-bar{display:none;align-items:center;gap:12px;position:sticky;top:0;z-index:30;padding:12px 16px;background:rgba(17,24,39,0.92);backdrop-filter:blur(16px);border-bottom:1px solid var(--border)}
+.etab-mobile-bar strong{font-size:14px;letter-spacing:0.2px}
+.etab-nav-overlay{display:none;position:fixed;inset:0;background:rgba(10,14,26,0.55);z-index:40}
+.etab-sidebar{width:280px;background:var(--bg-soft);border-right:1px solid var(--border);padding:28px 0;position:fixed;height:100vh;overflow-y:auto;display:flex;flex-direction:column;z-index:50}
 .etab-brand{padding:0 28px 28px;border-bottom:1px solid var(--border);margin-bottom:20px;flex-shrink:0}
 .etab-brand h2{font-family:'Playfair Display',serif;font-size:28px;font-weight:700;background:var(--gradient-gold);-webkit-background-clip:text;background-clip:text;-webkit-text-fill-color:transparent;letter-spacing:-1px}
 .etab-brand p{font-size:11px;color:var(--text-muted);margin-top:4px;letter-spacing:2px;text-transform:uppercase;font-weight:500}
@@ -355,14 +359,20 @@ input,select,textarea{font-family:inherit}
 .etab-nav-item{padding:13px 18px;border-radius:12px;color:var(--text-muted);font-weight:500;font-size:14px;cursor:pointer;display:flex;align-items:center;gap:14px;margin-bottom:4px;transition:all 0.2s}
 .etab-nav-item:hover{background:var(--surface);color:var(--text)}
 .etab-nav-item.active{background:rgba(212,175,55,0.08);color:var(--gold-soft);border:1px solid rgba(212,175,55,0.15)}
-.etab-main{margin-left:280px;flex:1;padding:36px}
+.etab-main{margin-left:0;flex:1;padding:36px;min-width:0;max-width:100%}
 .etab-topbar{display:flex;justify-content:space-between;align-items:center;margin-bottom:36px;flex-wrap:wrap;gap:16px}
-.etab-topbar h1{font-family:'Playfair Display',serif;font-size:32px;font-weight:700;letter-spacing:-0.5px}
+.etab-topbar h1{font-family:'Playfair Display',serif;font-size:32px;font-weight:700;letter-spacing:-0.5px;word-break:break-word}
 .etab-user{display:flex;align-items:center;gap:14px}
 .etab-user-avatar{width:44px;height:44px;border-radius:50%;background:var(--gradient-gold);color:#0A0E1A;display:flex;align-items:center;justify-content:center;font-weight:700}
 .etab-logout{padding:10px 18px;border-radius:12px;background:rgba(239,68,68,0.08);border:1px solid rgba(239,68,68,0.2);color:var(--red);font-size:13px;font-weight:600;cursor:pointer;transition:all 0.2s;display:flex;align-items:center;gap:8px}
 .etab-logout:hover{background:rgba(239,68,68,0.15)}
-.stat-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:18px;margin-bottom:36px}
+.stat-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(220px,100%),1fr));gap:18px;margin-bottom:36px}
+.bo-table-wrap{width:100%;max-width:100%;overflow-x:auto;-webkit-overflow-scrolling:touch}
+.etab-req-cards{display:none;flex-direction:column;gap:12px}
+.etab-req-card{background:var(--surface);border:1px solid var(--border);border-radius:14px;padding:14px 16px}
+.etab-req-card strong{display:block;margin-bottom:4px}
+.etab-req-card .meta{font-size:12px;color:var(--text-muted);line-height:1.45;margin-bottom:10px}
+.etab-req-card .foot{display:flex;flex-wrap:wrap;align-items:center;gap:8px}
 .stat-card{background:var(--bg-card);border:1px solid var(--border);border-radius:20px;padding:24px;position:relative;overflow:hidden;transition:all 0.3s}
 .stat-card:hover{border-color:var(--border-strong);transform:translateY(-2px)}
 .stat-card::before{content:'';position:absolute;top:0;right:0;width:100px;height:100px;background:radial-gradient(circle,rgba(212,175,55,0.08),transparent 70%);filter:blur(20px)}
@@ -433,7 +443,7 @@ input,select,textarea{font-family:inherit}
 .bo-card-subtitle{font-size:12px;color:var(--text-muted);margin-top:2px}
 .bo-table{width:100%;border-collapse:collapse}
 .bo-table th{text-align:left;padding:12px;font-size:10px;color:var(--text-muted);text-transform:uppercase;letter-spacing:1.5px;border-bottom:1px solid var(--border);font-weight:700}
-.bo-table td{padding:14px 12px;font-size:13px;border-bottom:1px solid var(--border);vertical-align:middle}
+.bo-table td{padding:14px 12px;font-size:13px;border-bottom:1px solid var(--border);vertical-align:middle;word-break:break-word}
 .bo-table tr:hover td{background:var(--surface)}
 .bo-table tr:last-child td{border:none}
 .bo-user-cell{display:flex;align-items:center;gap:10px}
@@ -543,14 +553,26 @@ input,select,textarea{font-family:inherit}
 @media(max-width:900px){
 .etab-sidebar,.bo-sidebar{transform:translateX(-100%);transition:transform 0.3s;z-index:50}
 .etab-sidebar.open,.bo-sidebar.open{transform:translateX(0)}
-.etab-main,.bo-main{margin-left:0;padding:20px}
+.etab-shell,.etab-main,.bo-main{margin-left:0;padding:0}
+.etab-main{padding:16px}
+.etab-mobile-bar{display:flex}
+.etab-nav-overlay.open{display:block}
+.etab-topbar h1{font-size:22px}
+.form-row{grid-template-columns:1fr}
+.etab-table-desktop{display:none}
+.etab-req-cards{display:flex}
+.bo-table-stack thead{display:none}
+.bo-table-stack,.bo-table-stack tbody,.bo-table-stack tr,.bo-table-stack td{display:block;width:100%}
+.bo-table-stack tr{border:1px solid var(--border);border-radius:12px;margin-bottom:10px;padding:8px 12px;background:var(--surface)}
+.bo-table-stack td{display:flex;justify-content:space-between;align-items:flex-start;gap:12px;border:none;padding:8px 0;text-align:right}
+.bo-table-stack td::before{content:attr(data-label);font-size:10px;text-transform:uppercase;letter-spacing:0.8px;color:var(--text-muted);font-weight:700;text-align:left;flex-shrink:0}
 .interface-switcher{top:10px;right:10px}
 .switch-btn{padding:6px 10px;font-size:11px}
 .landing-title{font-size:40px}
 .landing{padding:30px 20px}
 }
-.gate-shell{min-height:100vh;display:grid;grid-template-columns:minmax(0,1.15fr) minmax(320px,0.95fr);background:radial-gradient(ellipse at top left,rgba(212,175,55,0.12),transparent 42%),radial-gradient(ellipse at bottom right,rgba(16,185,129,0.08),transparent 48%),var(--bg)}
-.gate-aside{padding:72px 64px;display:flex;flex-direction:column;justify-content:center;position:relative;z-index:1}
+.gate-shell{min-height:100vh;display:grid;grid-template-columns:minmax(0,1.15fr) minmax(0,0.95fr);background:radial-gradient(ellipse at top left,rgba(212,175,55,0.12),transparent 42%),radial-gradient(ellipse at bottom right,rgba(16,185,129,0.08),transparent 48%),var(--bg);min-width:0;max-width:100%;overflow-x:hidden}
+.gate-aside{padding:72px 64px;display:flex;flex-direction:column;justify-content:center;position:relative;z-index:1;min-width:0}
 .gate-brand{font-family:'Playfair Display',serif;font-size:28px;font-weight:700;background:var(--gradient-gold);-webkit-background-clip:text;background-clip:text;-webkit-text-fill-color:transparent;letter-spacing:-0.5px}
 .gate-aside h1{font-family:'Playfair Display',serif;font-size:44px;line-height:1.12;margin:18px 0 16px;letter-spacing:-1.2px}
 .gate-aside .lead{color:var(--text-muted);font-size:16px;line-height:1.6;max-width:460px;margin-bottom:28px}
@@ -559,8 +581,8 @@ input,select,textarea{font-family:inherit}
 .welcome-point strong{display:block;font-size:13px;margin-bottom:2px}
 .welcome-point span{font-size:12px;color:var(--text-muted);line-height:1.45}
 .welcome-point-ico{width:36px;height:36px;border-radius:10px;background:rgba(212,175,55,0.12);border:1px solid rgba(212,175,55,0.22);display:flex;align-items:center;justify-content:center;flex-shrink:0;font-size:15px}
-.gate-panel{display:flex;align-items:center;justify-content:center;padding:48px 36px;background:rgba(10,14,26,0.55);border-left:1px solid var(--border)}
-.gate-card{max-width:440px;width:100%;background:var(--bg-card);border:1px solid var(--border);border-radius:24px;padding:32px 28px;box-shadow:var(--shadow)}
+.gate-panel{display:flex;align-items:center;justify-content:center;padding:48px 36px;background:rgba(10,14,26,0.55);border-left:1px solid var(--border);min-width:0}
+.gate-card{max-width:440px;width:100%;background:var(--bg-card);border:1px solid var(--border);border-radius:24px;padding:32px 28px;box-shadow:var(--shadow);min-width:0}
 .gate-card h2{font-family:'Playfair Display',serif;font-size:28px;margin-bottom:8px}
 .gate-home{display:inline-flex;margin-bottom:18px;font-size:12px;color:var(--text-muted);text-decoration:none}
 .gate-home:hover{color:var(--gold-soft)}
@@ -576,12 +598,13 @@ input,select,textarea{font-family:inherit}
 .plan-card li{font-size:13px;color:var(--text);padding:7px 0 7px 22px;position:relative;line-height:1.4;border-bottom:1px solid var(--border)}
 .plan-card li:before{content:'✓';position:absolute;left:0;color:var(--gold-soft);font-weight:700}
 .plan-card .btn{margin-top:auto}
-@media(max-width:900px){.plan-grid{grid-template-columns:1fr}}
-@media(max-width:900px){
-.gate-shell{grid-template-columns:1fr}
-.gate-aside{padding:36px 22px 12px}
-.gate-aside h1{font-size:30px}
-.gate-panel{border-left:none;padding:8px 18px 40px;background:transparent}
+@media(max-width:1100px){.plan-grid{grid-template-columns:1fr}}
+@media(max-width:1024px){
+.gate-shell{grid-template-columns:1fr !important}
+.gate-aside{padding:28px 18px 8px}
+.gate-aside h1{font-size:28px}
+.gate-panel{border-left:none;padding:8px 16px 36px;background:transparent}
+.gate-card{padding:24px 18px}
 }
 .hidden{display:none !important}
 .fade-in{animation:fadeIn 0.4s cubic-bezier(0.16,1,0.3,1)}
@@ -641,6 +664,7 @@ input,select,textarea{font-family:inherit}
 </div>
 <div class="app" id="interface-etab">
 <div class="etab-layout">
+<div class="etab-nav-overlay" id="etabNavOverlay" onclick="toggleEtabNav(false)"></div>
 <aside class="etab-sidebar" id="etab-sidebar">
 <div class="etab-brand"><h2>URGAD</h2><p>Espace Établissement</p></div>
 <nav class="etab-nav">
@@ -660,7 +684,13 @@ input,select,textarea{font-family:inherit}
 <div class="urgad-legal-footer" style="font-size:11px;color:var(--text-dim);margin-top:12px;text-align:center"><a href="cgu.html" target="_blank" rel="noopener">CGU</a> · <a href="confidentialite.html" target="_blank" rel="noopener">Confidentialité</a></div>
 </div>
 </aside>
+<div class="etab-shell">
+<div class="etab-mobile-bar">
+<button class="icon-btn" type="button" onclick="toggleEtabNav()" aria-label="Ouvrir le menu">☰</button>
+<strong>Espace établissement</strong>
+</div>
 <main class="etab-main" id="etab-main"></main>
+</div>
 </div>
 </div>
 <div class="map-screen" id="mapScreen">
@@ -790,9 +820,19 @@ function etabDeleteAccount(){
     toast('success','Compte supprimé','Données effacées ou anonymisées ; missions futures annulées.');
   });
 }
+function toggleEtabNav(force){
+  const sb = document.getElementById('etab-sidebar');
+  const ov = document.getElementById('etabNavOverlay');
+  if(!sb) return;
+  const open = force===true ? true : force===false ? false : !sb.classList.contains('open');
+  sb.classList.toggle('open', open);
+  if(ov) ov.classList.toggle('open', open);
+}
 function showGate(on){
-  document.getElementById('role-gate').style.display = on ? 'flex' : 'none';
+  const g = document.getElementById('role-gate');
+  g.style.display = on ? 'grid' : 'none';
   document.getElementById('interface-etab').classList.toggle('active', !on);
+  if(on) toggleEtabNav(false);
 }
 async function loginEtab(){
   const email = document.getElementById('etab-email').value.trim().toLowerCase();
@@ -845,7 +885,11 @@ function confirmLogout(){
   </div>`;
   document.getElementById('modal').classList.add('active');
 }
+function etabReqCard(r){
+  return `<article class="etab-req-card"><strong>${escHtml(r.posteLabel||r.title)}${r.urgent?' 🚨':''}</strong><div class="meta">${escHtml(r.date||'')} · ${escHtml(r.startHour||'')} → ${escHtml(r.endHour||'')}<br>${r.confirmed?('✅ '+escHtml(r.confirmed.fullName||r.confirmed.displayName)):r.proposed?('👤 '+escHtml(r.proposed.displayName)):'Aucun profil pour le moment'}${r.requestStatus==='refusee'&&r.refusalReason?'<br>Motif : '+escHtml(r.refusalReason):''}</div><div class="foot">${requestBadge(r)}${r.proposed?`<button class="bo-action-btn view" onclick="showEtabScreen('candidatures')">Voir le profil</button>`:''}<button class="bo-action-btn" onclick="openRoute(${r.id})">🧭 Itinéraire</button></div></article>`;
+}
 function showEtabScreen(screen, el){
+  toggleEtabNav(false);
   const container = document.getElementById('etab-main');
   if(el){document.querySelectorAll('.etab-nav-item').forEach(n=>n.classList.remove('active')); el.classList.add('active')}
   else {
@@ -884,15 +928,16 @@ function showEtabScreen(screen, el){
       <div id="etabMap" style="height:300px;border-radius:14px;overflow:hidden;border:1px solid var(--border)"></div>
     </div>
     <div class="bo-card"><h3>Missions récentes</h3>
-      <table class="bo-table"><thead><tr><th>Mission</th><th>Date</th><th>Statut</th><th>Actions</th></tr></thead><tbody>
-      ${mine.slice(0,6).map(m=>`<tr><td><strong>${m.type}</strong> · ${m.service||''}</td><td>${m.date}</td><td>${missionBadge(m)}</td><td><button class="bo-action-btn" onclick="openRoute(${m.id})">🧭 Itinéraire</button></td></tr>`).join('') || '<tr><td colspan="4">Aucune mission pour cet établissement</td></tr>'}
-      </tbody></table>
+      <div class="bo-table-wrap"><table class="bo-table bo-table-stack"><thead><tr><th>Mission</th><th>Date</th><th>Statut</th><th>Actions</th></tr></thead><tbody>
+      ${mine.slice(0,6).map(m=>`<tr><td data-label="Mission"><strong>${m.type}</strong> · ${m.service||''}</td><td data-label="Date">${m.date}</td><td data-label="Statut">${missionBadge(m)}</td><td data-label="Actions"><button class="bo-action-btn" onclick="openRoute(${m.id})">🧭 Itinéraire</button></td></tr>`).join('') || '<tr><td colspan="4">Aucune mission pour cet établissement</td></tr>'}
+      </tbody></table></div>
     </div>`;
   } else if(screen==='missions'){
     html = `<div class="etab-topbar"><div><h1>Mes demandes</h1><p style="color:var(--text-muted);margin-top:4px;font-size:13px">Vous indiquez le besoin, l'équipe URGAD trouve le profil vérifié, vous validez.</p></div><button class="btn btn-primary" onclick="showEtabScreen('create')">➕ Nouvelle demande</button></div>
-    <div class="bo-card"><table class="bo-table"><thead><tr><th>Poste</th><th>Date</th><th>Horaires</th><th>Statut</th><th>Profil</th><th>Actions</th></tr></thead><tbody>
-    ${etabRequests.map(r=>`<tr><td><strong>${escHtml(r.posteLabel||r.title)}</strong>${r.urgent?' 🚨':''}${r.notes?`<div style="font-size:12px;color:var(--text-muted)">${escHtml(String(r.notes).slice(0,80))}</div>`:''}</td><td>${escHtml(r.date||'')}</td><td>${escHtml(r.startHour||'')} → ${escHtml(r.endHour||'')}</td><td>${requestBadge(r)}${r.requestStatus==='refusee'&&r.refusalReason?`<div style="font-size:11px;color:var(--text-muted);margin-top:4px">Motif : ${escHtml(r.refusalReason)}</div>`:''}</td><td>${r.confirmed?('✅ '+escHtml(r.confirmed.fullName||r.confirmed.displayName)):r.proposed?('👤 '+escHtml(r.proposed.displayName)):'—'}</td><td>${r.proposed?`<button class="bo-action-btn view" onclick="showEtabScreen('candidatures')">Voir le profil</button>`:''}<button class="bo-action-btn" onclick="openRoute(${r.id})">🧭</button></td></tr>`).join('') || '<tr><td colspan="6">Aucune demande pour le moment.</td></tr>'}
-    </tbody></table></div>`;
+    <div class="bo-card"><div class="bo-table-wrap etab-table-desktop"><table class="bo-table"><thead><tr><th>Poste</th><th>Date</th><th>Horaires</th><th>Statut</th><th>Profil</th><th>Actions</th></tr></thead><tbody>
+    ${etabRequests.length ? etabRequests.map(r=>`<tr><td><strong>${escHtml(r.posteLabel||r.title)}</strong>${r.urgent?' 🚨':''}${r.notes?`<div style="font-size:12px;color:var(--text-muted)">${escHtml(String(r.notes).slice(0,80))}</div>`:''}</td><td>${escHtml(r.date||'')}</td><td>${escHtml(r.startHour||'')} → ${escHtml(r.endHour||'')}</td><td>${requestBadge(r)}${r.requestStatus==='refusee'&&r.refusalReason?`<div style="font-size:11px;color:var(--text-muted);margin-top:4px">Motif : ${escHtml(r.refusalReason)}</div>`:''}</td><td>${r.confirmed?('✅ '+escHtml(r.confirmed.fullName||r.confirmed.displayName)):r.proposed?('👤 '+escHtml(r.proposed.displayName)):'—'}</td><td>${r.proposed?`<button class="bo-action-btn view" onclick="showEtabScreen('candidatures')">Voir le profil</button>`:''}<button class="bo-action-btn" onclick="openRoute(${r.id})">🧭</button></td></tr>`).join('') : '<tr><td colspan="6">Aucune demande pour le moment.</td></tr>'}
+    </tbody></table></div>
+    <div class="etab-req-cards">${etabRequests.length ? etabRequests.map(etabReqCard).join('') : '<p style="color:var(--text-muted)">Aucune demande pour le moment.</p>'}</div></div>`;
   } else if(screen==='create'){
     html = `<div class="etab-topbar"><div><h1>Nouvelle demande</h1><p style="color:var(--text-muted);margin-top:4px;font-size:13px">Indiquez le besoin : nous trouvons un profil vérifié (identité et diplôme) et vous le proposons. Vous n'avez plus qu'à valider.</p></div></div>
     ${trialBannerHtml()}
@@ -924,7 +969,7 @@ function showEtabScreen(screen, el){
     const confirmedR = etabRequests.filter(r=>r.confirmed && r.requestStatus==='validee');
     html = `<div class="etab-topbar"><div><h1>Profils à valider</h1><p style="color:var(--text-muted);margin-top:4px;font-size:13px">Profils présélectionnés par l'équipe URGAD. Le choix final vous appartient.</p></div></div>
     <div class="stat-grid">${toValidate.map(r=>proposedCardHtml(r)).join('') || '<p style="color:var(--text-muted)">Aucun profil en attente de validation. Nous vous prévenons dès qu\'un profil est proposé.</p>'}</div>
-    ${confirmedR.length?`<div class="bo-card" style="margin-top:22px"><h3>Missions confirmées</h3><table class="bo-table"><thead><tr><th>Poste</th><th>Date</th><th>Professionnel</th><th>Contact</th></tr></thead><tbody>${confirmedR.map(r=>`<tr><td>${escHtml(r.posteLabel)}</td><td>${escHtml(r.date||'')} · ${escHtml(r.startHour||'')}→${escHtml(r.endHour||'')}</td><td>${escHtml(r.confirmed.fullName||r.confirmed.displayName)}</td><td>${escHtml(r.confirmed.phone||'')} ${escHtml(r.confirmed.email||'')}</td></tr>`).join('')}</tbody></table></div>`:''}`;
+    ${confirmedR.length?`<div class="bo-card" style="margin-top:22px"><h3>Missions confirmées</h3><div class="bo-table-wrap"><table class="bo-table bo-table-stack"><thead><tr><th>Poste</th><th>Date</th><th>Professionnel</th><th>Contact</th></tr></thead><tbody>${confirmedR.map(r=>`<tr><td data-label="Poste">${escHtml(r.posteLabel)}</td><td data-label="Date">${escHtml(r.date||'')} · ${escHtml(r.startHour||'')}→${escHtml(r.endHour||'')}</td><td data-label="Professionnel">${escHtml(r.confirmed.fullName||r.confirmed.displayName)}</td><td data-label="Contact">${escHtml(r.confirmed.phone||'')} ${escHtml(r.confirmed.email||'')}</td></tr>`).join('')}</tbody></table></div></div>`:''}`;
   } else if(screen==='urgent'){
     html = `<div class="etab-topbar"><h1>🚨 Mission urgente</h1></div>
     <div class="bo-card" style="background:linear-gradient(135deg,#991B1B 0%,#7F1D1D 100%);border:1px solid rgba(239,68,68,0.3);color:#fff;max-width:700px">
@@ -1067,8 +1112,8 @@ function proposedCardHtml(r){
     '<div style="display:flex;align-items:center;gap:12px;margin-bottom:12px"><div class="bo-user-avatar" style="width:50px;height:50px;font-size:16px">'+escHtml(initials)+'</div>'+
     '<div style="flex:1"><strong style="color:var(--text);font-size:16px">'+escHtml(c.displayName)+'</strong><div style="font-size:13px;color:var(--text-muted)">'+escHtml(c.qualification||'')+(c.experienceYears!=null?' · '+c.experienceYears+' an(s) d\'expérience':'')+(c.distanceKm!=null?' · '+String(c.distanceKm).replace('.',',')+' km':'')+'</div></div></div>'+
     '<div style="margin-bottom:14px">'+badge(c.identityVerified,'Identité vérifiée')+badge(c.diplomaVerified,'Diplôme vérifié')+'</div>'+
-    '<div style="display:flex;gap:8px"><button class="btn btn-success" style="flex:1;padding:10px;font-size:13px" onclick="etabValidate('+r.id+')">Valider</button>'+
-    '<button class="btn btn-secondary" style="flex:1;padding:10px;font-size:13px" onclick="etabAskOther('+r.id+')">Demander un autre profil</button></div></div>';
+    '<div style="display:flex;gap:8px;flex-wrap:wrap"><button class="btn btn-success" style="flex:1;min-width:140px;padding:10px;font-size:13px" onclick="etabValidate('+r.id+')">Valider</button>'+
+    '<button class="btn btn-secondary" style="flex:1;min-width:140px;padding:10px;font-size:13px" onclick="etabAskOther('+r.id+')">Demander un autre profil</button></div></div>';
 }
 async function submitQuickRequest(){
   const body = { poste: val('q-poste','aide-soignant'), date: val('q-date'), startHour: val('q-start'), endHour: val('q-end'), comment: val('q-comment'), urgent: val('q-urgent')==='1' };
