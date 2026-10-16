@@ -260,14 +260,18 @@
   }
 
   async function login(email, password, expected){
-    var data = await request(null, 'POST', '/api/auth/login', { email: email, password: password });
+    var data = await request(null, 'POST', '/api/auth/login', {
+      email: String(email || '').trim().toLowerCase(),
+      password: String(password || '').trim()
+    });
     if (!data || !data.token || !data.user) throw new Error('Réponse de connexion inattendue.');
     var role = data.user.role;
     if (expected === 'admin') {
-      if (!data.user.isAdmin) throw new Error('Ce compte n\'est pas administrateur.');
+      if (!data.user.isAdmin) throw new Error('Ce compte n\'est pas administrateur. Back-office : urgad-bo.html');
       setToken('admin', data.token);
     } else if (expected && role !== expected) {
-      throw new Error('Ce compte n\'a pas le rôle attendu (' + role + ').');
+      var pages = { professional: 'urgad-pro.html (soignant)', establishment: 'urgad-etab.html (établissement)', admin: 'urgad-bo.html (admin)' };
+      throw new Error('Mauvais espace. Ce compte est « ' + role + ' » — ouvrez ' + (pages[role] || role) + '.');
     } else {
       setToken(role === 'admin' ? 'admin' : role, data.token);
     }

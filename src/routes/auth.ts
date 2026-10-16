@@ -148,9 +148,10 @@ router.post('/register/establishment', async (req, res, next) => {
 /** Login */
 router.post('/login', async (req, res, next) => {
   try {
-    const { email, password } = req.body;
+    const email = String(req.body?.email || '').trim().toLowerCase();
+    const password = String(req.body?.password || '').trim();
     if (!email || !password) return res.status(422).json({ message: 'Email et mot de passe requis.' });
-    const user = await dbGet('SELECT * FROM users WHERE email = ?', [email]) as any;
+    const user = await dbGet('SELECT * FROM users WHERE lower(email) = ?', [email]) as any;
     if (!user || user.deleted_at) return res.status(401).json({ message: 'Identifiants invalides.' });
     const valid = await bcrypt.compare(password, user.password);
     if (!valid) return res.status(401).json({ message: 'Identifiants invalides.' });
