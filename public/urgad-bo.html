@@ -602,6 +602,25 @@ input,select,textarea{font-family:inherit}
 .gate-brand img{height:42px}
 .bo-brand img,.etab-brand img{height:36px}
 .splash-logo img{height:86px;width:auto;display:block;filter:drop-shadow(0 20px 40px rgba(212,175,55,.22))}
+.verif-pro-card{border:1px solid var(--border);border-radius:16px;padding:16px;margin-bottom:14px;background:var(--surface);min-width:0}
+.verif-pro-head{display:flex;justify-content:space-between;align-items:flex-start;gap:12px;flex-wrap:wrap;margin-bottom:12px}
+.verif-docs{display:grid;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:10px}
+.verif-doc{border:1px solid var(--border);border-radius:12px;padding:12px;background:var(--bg-card);min-width:0}
+.verif-doc h4{font-size:13px;margin:0 0 4px;word-break:break-word}
+.verif-doc p{font-size:11px;color:var(--text-muted);margin:0 0 8px;line-height:1.4}
+.verif-doc .verif-doc-actions{display:flex;flex-wrap:wrap;gap:6px}
+.doc-preview{width:100%;min-height:240px;max-height:70vh;border:0;border-radius:12px;background:#111}
+.doc-preview-img{width:100%;max-height:70vh;object-fit:contain;border-radius:12px;background:#111}
+@media(max-width:640px){
+.bo-topbar{flex-wrap:wrap;gap:8px}
+.bo-stat-grid{grid-template-columns:1fr 1fr}
+.bo-stat .stat-value{font-size:26px}
+.modal{max-width:100%;margin:0;border-radius:16px 16px 0 0;max-height:94vh}
+.toast{min-width:0;width:calc(100vw - 32px)}
+.toast-container{left:16px;right:16px;bottom:16px}
+.verif-docs{grid-template-columns:1fr}
+.form-row{grid-template-columns:1fr}
+}
 </style>
 
 <script src="native-config.js"></script>
@@ -919,9 +938,11 @@ html=`<div class="verify-screen fade-in">
 <div class="status-badge status-pending">🟠 Vérification en cours</div>
 <h1 style="font-family:'Playfair Display',serif;font-size:26px;margin-bottom:8px">Vérification professionnelle</h1>
 <p class="sub">Transmettez vos documents pour valider votre profil</p>
-<div class="upload-box uploaded"><h4>✅ Diplôme d'État AS</h4><p>diplome_jean_lomama.pdf — Téléversé</p></div>
 <div class="upload-box uploaded"><h4>✅ Pièce d'identité</h4><p>carte_identite.pdf — Téléversé</p></div>
-<div class="upload-box" onclick="alert('Simulation : document ajouté')"><h4>📎 Justificatif de domicile</h4><p>Cliquez pour ajouter</p></div>
+<div class="upload-box uploaded"><h4>✅ Diplôme d'État AS</h4><p>diplome_jean_lomama.pdf — Téléversé</p></div>
+<div class="upload-box"><h4>📎 Carte Vitale</h4><p>Photo ou attestation de droits</p></div>
+<div class="upload-box"><h4>📎 Vaccins à jour</h4><p>Carnet ou justificatif</p></div>
+<div class="upload-box"><h4>📎 RIB</h4><p>Relevé d’identité bancaire</p></div>
 <p style="font-size:12px;color:var(--text-muted);margin:20px 0;line-height:1.6">L'équipe URGAD vérifie vos documents sous 24 à 48h.</p>
 <button class="btn btn-primary btn-block btn-lg" onclick="showProScreen('home')">Accéder à l'application</button>
 </div>`;
@@ -2212,7 +2233,7 @@ professionals:['Professionnels','Comptes renvoyés par l\'API'],
 establishments:['Établissements','Comptes renvoyés par l\'API'],
 requests:['Demandes','Besoin de l\'établissement → profil vérifié proposé → validation'],
 missions:['Missions','Liste API, toutes dates'],
-verification:['Vérifications','Identité et diplôme vérifiés séparément'],
+verification:['Vérifications','Fichiers déposés : identité, diplôme, carte Vitale, vaccins, RIB'],
 matching:['Matching','Performance du moteur de mise en relation'],
 disputes:['Litiges','Gestion des conflits et réclamations'],
 analytics:['Analytiques','Analyses approfondies de la plateforme'],
@@ -2360,35 +2381,90 @@ async function submitNewRequest(){
     await openRequestDetail(res.missionId || res.id);
   } catch(e){ toast('error','Demande', e.message||'Échec'); }
 }
-// ===== Vérification identité / diplôme =====
-function verifCell(p, kind){
+// ===== Vérification identité / diplôme / justificatifs =====
+function verifDocLabel(d){
+  const cat = (window.UrgadFeatures && UrgadFeatures.docCategoryLabel) ? UrgadFeatures.docCategoryLabel(d.category) : (d.category||'Document');
+  const idk = d.idKind ? ({cni:'CNI',passeport:'Passeport',titre_sejour:'Titre séjour'}[d.idKind]||d.idKind) : '';
+  const side = d.side ? ' · '+d.side : '';
+  return (d.name && d.name!==cat) ? (cat+' — '+d.name+(idk?' ('+idk+side+')':side)) : (cat+(idk?' · '+idk:'')+side);
+}
+function verifDocCard(p, d){
+  const st = d.status==='approved'?'verified':d.status==='rejected'?'rejected':'pending';
+  const stTxt = d.status==='approved'?'Validé':d.status==='rejected'?'Refusé':'En attente';
+  const canOpen = !!d.hasFile && !d.filePurgedAt;
+  const openBtn = canOpen
+    ? `<button class="bo-action-btn view" type="button" onclick="boPreviewDoc(${Number(d.id)})">👁 Voir le fichier</button>`
+    : `<span style="font-size:11px;color:var(--text-dim)">${d.filePurgedAt?'Fichier supprimé':'Sans fichier'}</span>`;
+  const extra = (d.category==='identity'||d.category==='diploma') ? '' : (
+    (d.status!=='approved'?`<button class="bo-action-btn accept" onclick="boReviewDoc(${d.id},'approve')">✓ Valider</button>`:'')+
+    (d.status!=='rejected'?`<button class="bo-action-btn reject" onclick="boReviewDoc(${d.id},'reject')">✕ Refuser</button>`:'')
+  );
+  return `<div class="verif-doc"><h4>${escB(verifDocLabel(d))}</h4><p>${escB(String(d.createdAt||'').slice(0,16))}${d.sizeBytes? ' · '+Math.round(d.sizeBytes/1024)+' ko':''}</p><span class="bo-badge ${st}">${stTxt}</span>${d.reason?`<p style="color:var(--red);margin-top:6px">${escB(d.reason)}</p>`:''}<div class="verif-doc-actions" style="margin-top:8px">${openBtn}${extra}</div></div>`;
+}
+function verifKindBlock(p, kind, title){
   const s = p[kind] || {};
   const docs = (p.documents||[]).filter(d=>d.category===kind);
-  const docBtns = docs.map(d=>d.hasFile?`<button class="bo-action-btn view" onclick="boOpenDoc(${d.id})">📄 ${escB(d.idKind?({cni:'CNI',passeport:'Passeport',titre_sejour:'Titre séjour'})[d.idKind]:'')} ${escB(d.side||'')}</button>`:`<span style="font-size:11px;color:var(--text-dim)">${d.filePurgedAt?'Fichier supprimé '+escB(String(d.filePurgedAt).slice(0,10)):'Sans fichier'}</span>`).join(' ');
-  return `${verifTag(s.status)}${s.reason?`<div style="font-size:11px;color:var(--red)">${escB(s.reason)}</div>`:''}${s.reviewedAt?`<div style="font-size:11px;color:var(--text-dim)">${escB(s.reviewedBy||'')} · ${escB(String(s.reviewedAt).slice(0,16))}</div>`:''}<div style="margin-top:6px">${docBtns||'<span style="font-size:11px;color:var(--text-dim)">Aucun document</span>'}</div>${docs.length?`<div style="margin-top:6px">${s.status!=='verifie'?`<button class="bo-action-btn accept" onclick="boReview(${p.userId},'${kind}','verifie')">✓ Vérifier</button> `:''}${s.status!=='refuse'?`<button class="bo-action-btn reject" onclick="boReview(${p.userId},'${kind}','refuse')">✕ Refuser</button>`:''}</div>`:''}`;
+  return `<div style="margin-bottom:12px"><div style="display:flex;flex-wrap:wrap;align-items:center;gap:8px;margin-bottom:8px"><strong style="font-size:13px">${title}</strong>${verifTag(s.status)}${docs.length?`<button class="bo-action-btn accept" onclick="boReview(${p.userId},'${kind}','verifie')">✓ Vérifier ${title.toLowerCase()}</button><button class="bo-action-btn reject" onclick="boReview(${p.userId},'${kind}','refuse')">✕ Refuser</button>`:''}</div>${s.reason?`<p style="font-size:12px;color:var(--red)">${escB(s.reason)}</p>`:''}<div class="verif-docs">${docs.length?docs.map(d=>verifDocCard(p,d)).join(''):'<p style="font-size:12px;color:var(--text-dim)">Aucun fichier déposé.</p>'}</div></div>`;
 }
 function renderVerification(){
-  const q = window.urgadVerifQueue || { professionals:[] };
+  const q = window.urgadVerifQueue;
+  if(q==null){
+    return `<div class="bo-card"><strong>File de vérification</strong><p style="color:var(--text-muted);margin-top:8px;font-size:13px">Impossible de charger les documents. Reconnectez-vous, puis rouvrez cet écran.</p><button class="btn btn-primary" onclick="refreshAdmin().then(function(){showBoScreen('verification')})">Réessayer</button></div>`;
+  }
   const pros = q.professionals || [];
-  const todo = pros.filter(p=>(p.identity.status!=='verifie' && p.identity.documents) || (p.diploma.status!=='verifie' && p.diploma.documents));
+  const todo = pros.filter(p=>{
+    const docs = p.documents||[];
+    const pendingExtra = docs.some(d=>d.category!=='identity'&&d.category!=='diploma'&&d.status!=='approved'&&d.status!=='rejected');
+    return (p.identity&&p.identity.status!=='verifie' && (p.identity.documents||docs.filter(d=>d.category==='identity').length)) || (p.diploma&&p.diploma.status!=='verifie' && (p.diploma.documents||docs.filter(d=>d.category==='diploma').length)) || pendingExtra;
+  });
   const ok = pros.filter(p=>p.proposable).length;
   const pendingEtabs = establishments.filter(e=>e.status==='pending');
+  const extraMissing = (p, cat) => !(p.documents||[]).some(d=>d.category===cat);
   return `<div class="bo-stat-grid">
 <div class="bo-stat"><div class="bo-stat-header"><div class="stat-label">À vérifier</div><div class="stat-icon amber">🟠</div></div><div class="stat-value" style="color:var(--amber)">${todo.length}</div></div>
 <div class="bo-stat"><div class="bo-stat-header"><div class="stat-label">Pros proposables</div><div class="stat-icon emerald">✅</div></div><div class="stat-value" style="color:var(--emerald-soft)">${ok}</div></div>
-<div class="bo-stat"><div class="bo-stat-header"><div class="stat-label">Sans document</div><div class="stat-icon blue">📭</div></div><div class="stat-value">${pros.filter(p=>!p.identity.documents && !p.diploma.documents).length}</div></div>
+<div class="bo-stat"><div class="bo-stat-header"><div class="stat-label">Sans document</div><div class="stat-icon blue">📭</div></div><div class="stat-value">${pros.filter(p=>!(p.documents||[]).length).length}</div></div>
 <div class="bo-stat"><div class="bo-stat-header"><div class="stat-label">Établissements en attente</div><div class="stat-icon gold">🏢</div></div><div class="stat-value">${pendingEtabs.length}</div></div>
 </div>
-<div class="bo-card"><div class="bo-card-header"><div><h3>🆔 Identité et 🎓 diplôme</h3><p style="color:var(--text-muted);font-size:12px;margin-top:4px">Un profil n'est proposable que si les deux sont vérifiés. Pièces d'identité : accès administrateurs uniquement (chaque consultation est journalisée), fichier supprimé ${q.identityRetentionDays!=null?q.identityRetentionDays+' jours ':''}après vérification.</p></div></div>
-<table class="bo-table"><thead><tr><th>Professionnel</th><th>Identité</th><th>Diplôme</th><th>Proposable</th></tr></thead><tbody>
-${pros.map(p=>`<tr><td><strong>${escB(p.name)}</strong><div style="font-size:11px;color:var(--text-dim)">${escB(p.profession||'—')} · ${escB(p.email||'')} · inscrit ${escB(String(p.createdAt||'').slice(0,10))}</div></td><td>${verifCell(p,'identity')}</td><td>${verifCell(p,'diploma')}</td><td>${p.proposable?'<span class="bo-badge verified">Oui</span>':'<span class="bo-badge pending">Non</span>'}</td></tr>`).join('') || '<tr><td colspan="4" style="color:var(--text-muted)">Aucun professionnel.</td></tr>'}
-</tbody></table></div>
+<div class="bo-card"><div class="bo-card-header"><div><h3>Justificatifs des professionnels</h3><p style="color:var(--text-muted);font-size:12px;margin-top:4px">Ouvrez chaque fichier ici. Identité et diplôme conditionnent la proposition à un établissement. Carte Vitale, vaccins et RIB : équipe URGAD uniquement. Consultation journalisée. Fichiers d'identité supprimés ${q.identityRetentionDays!=null?q.identityRetentionDays+' jours ':''}après vérification.</p></div></div>
+${pros.map(p=>`<article class="verif-pro-card">
+<div class="verif-pro-head"><div><strong>${escB(p.name)}</strong><div style="font-size:12px;color:var(--text-dim)">${escB(p.profession||'—')} · ${escB(p.email||'')} · ${escB(p.phone||'')} · inscrit ${escB(String(p.createdAt||'').slice(0,10))}</div></div>${p.proposable?'<span class="bo-badge verified">Proposable</span>':'<span class="bo-badge pending">Non proposable</span>'}</div>
+${verifKindBlock(p,'identity',"Pièce d'identité")}
+${verifKindBlock(p,'diploma','Diplôme')}
+<div style="margin-bottom:8px"><strong style="font-size:13px">Carte Vitale, vaccins, RIB</strong>${extraMissing(p,'carte_vitale')||extraMissing(p,'vaccins')||extraMissing(p,'rib')?`<span style="font-size:11px;color:var(--text-dim);margin-left:8px">${[extraMissing(p,'carte_vitale')?'Carte Vitale':null,extraMissing(p,'vaccins')?'Vaccins':null,extraMissing(p,'rib')?'RIB':null].filter(Boolean).join(', ')} manquant(s)</span>`:''}</div>
+<div class="verif-docs">${(p.documents||[]).filter(d=>d.category==='carte_vitale'||d.category==='vaccins'||d.category==='rib'||d.category==='other').map(d=>verifDocCard(p,d)).join('')||'<p style="font-size:12px;color:var(--text-dim)">Aucun de ces justificatifs pour le moment.</p>'}</div>
+</article>`).join('') || '<p style="color:var(--text-muted)">Aucun professionnel inscrit.</p>'}
+</div>
 <div class="bo-card"><div class="bo-card-header"><div><h3>🟠 Établissements à vérifier</h3></div></div>
-<table class="bo-table"><thead><tr><th>Établissement</th><th>Type</th><th>SIRET</th><th>Actions</th></tr></thead><tbody>
-${pendingEtabs.map(e=>`<tr><td><strong>${escB(e.name)}</strong></td><td>${escB(e.type)}</td><td style="font-family:monospace;font-size:12px">${escB(e.siret)}</td><td><button class="bo-action-btn view" onclick="viewEstablishment(${e.id})">Voir</button><button class="bo-action-btn accept" onclick="validateEtab(${e.id})">✓ Valider</button><button class="bo-action-btn reject" onclick="rejectEtab(${e.id})">✕ Rejeter</button></td></tr>`).join('') || '<tr><td colspan="4" style="color:var(--text-muted)">Aucun.</td></tr>'}
-</tbody></table></div>`;
+<div class="bo-table-wrap"><table class="bo-table bo-table-stack"><thead><tr><th>Établissement</th><th>Type</th><th>SIRET</th><th>Actions</th></tr></thead><tbody>
+${pendingEtabs.map(e=>`<tr><td data-label="Établissement"><strong>${escB(e.name)}</strong></td><td data-label="Type">${escB(e.type)}</td><td data-label="SIRET" style="font-family:monospace;font-size:12px">${escB(e.siret)}</td><td data-label="Actions"><button class="bo-action-btn view" onclick="viewEstablishment(${e.id})">Voir</button><button class="bo-action-btn accept" onclick="validateEtab(${e.id})">✓ Valider</button><button class="bo-action-btn reject" onclick="rejectEtab(${e.id})">✕ Rejeter</button></td></tr>`).join('') || '<tr><td colspan="4" style="color:var(--text-muted)">Aucun.</td></tr>'}
+</tbody></table></div></div>`;
 }
-async function boOpenDoc(id){ try { await UrgadApi.openDocument('admin', id); } catch(e){ toast('error','Document', e.message||'Échec'); } }
+async function boPreviewDoc(id, name, mime){
+  try {
+    const all = ((window.urgadVerifQueue||{}).professionals||[]).reduce(function(acc,p){ return acc.concat(p.documents||[]); }, []);
+    const meta = all.find(function(x){ return Number(x.id)===Number(id); }) || {};
+    name = name || meta.name || 'Document';
+    mime = mime || meta.mimeType || '';
+    const file = await UrgadApi.openDocument('admin', id);
+    const isImg = (mime||file.mime||'').indexOf('image/')===0;
+    document.getElementById('modalContent').innerHTML = `<div class="modal-header"><h2>${escB(name||'Document')}</h2><button class="modal-close" onclick="closeModal()">✕</button></div>
+    <div class="modal-body">${isImg?`<img class="doc-preview-img" alt="" src="${file.url}">`:`<iframe class="doc-preview" src="${file.url}" title="Document"></iframe>`}</div>
+    <div class="modal-footer"><button class="btn btn-ghost" onclick="closeModal()">Fermer</button><a class="btn btn-primary" href="${file.url}" target="_blank" rel="noopener">Ouvrir dans un onglet</a></div>`;
+    document.getElementById('modal').classList.add('active');
+  } catch(e){ toast('error','Document', e.message||'Impossible d’ouvrir le fichier'); }
+}
+async function boOpenDoc(id){ return boPreviewDoc(id, 'Document', ''); }
+async function boReviewDoc(id, decision){
+  let reason = '';
+  if(decision==='reject'){ reason = prompt('Motif du refus (communiqué au professionnel)'); if(!reason) return; }
+  try {
+    await UrgadApi.reviewProfessionalDocument(id, decision, reason);
+    window.urgadVerifQueue = await UrgadApi.verificationQueue();
+    toast('success','Document', decision==='approve'?'Validé':'Refusé');
+    showBoScreen('verification');
+  } catch(e){ toast('error','Document', e.message||'Échec'); }
+}
 async function boReview(userId, kind, decision){
   let reason = '';
   if(decision==='refuse'){ reason = prompt('Motif du refus (communiqué au professionnel)'); if(!reason) return; }

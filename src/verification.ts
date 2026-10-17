@@ -12,27 +12,40 @@ import { UPLOAD_DIR } from './uploads.js';
 export type VerifKind = 'identity' | 'diploma';
 export const VERIF_STATUSES = ['en_attente', 'verifie', 'refuse'] as const;
 export const ID_KINDS = ['cni', 'passeport', 'titre_sejour'] as const;
+export const DOC_CATEGORIES = ['identity', 'diploma', 'carte_vitale', 'vaccins', 'rib', 'other'] as const;
+export type DocCategory = (typeof DOC_CATEGORIES)[number];
 
 export function statusOf(v: any): 'en_attente' | 'verifie' | 'refuse' {
   return v === 'verifie' || v === 'refuse' ? v : 'en_attente';
 }
 
 /** Catégorie d'un document à partir de ce que le client envoie. */
-export function categoryOf(body: any): 'identity' | 'diploma' | 'other' {
+export function categoryOf(body: any): DocCategory {
   const c = String(body?.category || '').toLowerCase();
   if (c === 'identity' || c === 'identite') return 'identity';
   if (c === 'diploma' || c === 'diplome') return 'diploma';
+  if (c === 'carte_vitale' || c === 'vitale') return 'carte_vitale';
+  if (c === 'vaccins' || c === 'vaccin') return 'vaccins';
+  if (c === 'rib') return 'rib';
   const t = (String(body?.type || body?.docType || '') + ' ' + String(body?.name || '')).toLowerCase();
   if (/identit|cni|carte nationale|passeport|passport|titre de s[eé]jour|titre_sejour/.test(t)) return 'identity';
   if (/dipl[oô]m|rpps|adeli|\bdeas\b|\bdei\b|attestation de formation/.test(t)) return 'diploma';
+  if (/vitale/.test(t)) return 'carte_vitale';
+  if (/vaccin/.test(t)) return 'vaccins';
+  if (/\brib\b|\biban\b|relev[eé] d.identit/.test(t)) return 'rib';
   return 'other';
+}
+
+export function truthyFile(v: any): boolean {
+  return v === true || v === 1 || v === '1' || v === 't' || v === 'true';
 }
 
 export async function verificationOf(userId: number) {
   const p = await dbGet<any>('SELECT identity_status, identity_reason, identity_reviewed_by, identity_reviewed_at, diploma_status, diploma_reason, diploma_reviewed_by, diploma_reviewed_at FROM professionals WHERE user_id = ?', [userId]);
-  const docs = await dbAll<any>("SELECT id, name, doc_type, category, id_kind, side, status, review_reason, reviewed_by, reviewed_at, created_at, file_purged_at, CASE WHEN stored_name IS NULL THEN 0 ELSE 1 END AS has_file FROM professional_documents WHERE user_id = ? ORDER BY id DESC", [userId]);
-  const identityDocs = docs.filter((d) => d.category === 'identity');
-  const diplomaDocs = docs.filter((d) => d.category === 'diploma');
+  const docs = await dbAll<any>("SELECT id, name, doc_type, category, id_kind, side, status, review_reason, reviewed_by, reviewed_at, created_at, file_purged_at, stored_name, mime_type, size_bytes FROM professional_documents WHERE user_id = ? ORDER BY id DESC", [userId]);
+  const of = (cat: string) => docs.filter((d) => d.category === cat);
+  const identityDocs = of('identity');
+  const diplomaDocs = of('diploma');
   return {
     identity: {
       status: statusOf(p?.identity_status), reason: p?.identity_reason || null, reviewedBy: p?.identity_reviewed_by || null, reviewedAt: p?.identity_reviewed_at || null,
@@ -42,11 +55,15 @@ export async function verificationOf(userId: number) {
       status: statusOf(p?.diploma_status), reason: p?.diploma_reason || null, reviewedBy: p?.diploma_reviewed_by || null, reviewedAt: p?.diploma_reviewed_at || null,
       documents: diplomaDocs.length,
     },
+    carteVitale: { documents: of('carte_vitale').length },
+    vaccins: { documents: of('vaccins').length },
+    rib: { documents: of('rib').length },
     proposable: statusOf(p?.identity_status) === 'verifie' && statusOf(p?.diploma_status) === 'verifie',
     documents: docs.map((d) => ({
       id: d.id, name: d.name, type: d.doc_type || '', category: d.category || 'other', idKind: d.id_kind || null, side: d.side || null,
       status: d.status || 'pending', reason: d.review_reason || null, reviewedBy: d.reviewed_by || null, reviewedAt: d.reviewed_at || null,
-      createdAt: d.created_at || null, hasFile: Number(d.has_file) === 1, filePurgedAt: d.file_purged_at || null,
+      createdAt: d.created_at || null, hasFile: !!d.stored_name || truthyFile(d.has_file), filePurgedAt: d.file_purged_at || null,
+      mimeType: d.mime_type || null, sizeBytes: d.size_bytes || 0,
     })),
   };
 }

@@ -90,7 +90,8 @@ router.post('/me/documents', authMiddleware, async (req: any, res: any, next: an
       id = row?.id ?? null;
     }
     const who = await dbGet('SELECT first_name, last_name, email FROM users WHERE id = ?', [req.user.id]) as any;
-    void notifyAdmins('Document professionnel à vérifier', `${((who?.first_name || '') + ' ' + (who?.last_name || '')).trim() || who?.email} a déposé « ${name} » (${category === 'identity' ? 'pièce d\'identité' + (side ? ' ' + side : '') : category === 'diploma' ? 'diplôme' : docType}).`, { userId: req.user.id, documentId: id, screen: 'verification' }, 'admin_document');
+    const catLabel = category === 'identity' ? ('pièce d\'identité' + (side ? ' ' + side : '')) : category === 'diploma' ? 'diplôme' : category === 'carte_vitale' ? 'carte Vitale' : category === 'vaccins' ? 'vaccins' : category === 'rib' ? 'RIB' : docType;
+    void notifyAdmins('Document professionnel à vérifier', `${((who?.first_name || '') + ' ' + (who?.last_name || '')).trim() || who?.email} a déposé « ${name} » (${catLabel}).`, { userId: req.user.id, documentId: id, screen: 'verification' }, 'admin_document');
     return res.status(201).json({
       ...publicProDocument({
         id, name, doc_type: docType, status: 'pending', created_at: null, category, id_kind: idKind, side,

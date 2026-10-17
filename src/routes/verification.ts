@@ -79,7 +79,8 @@ router.get('/documents/:id/file', authMiddleware, async (req: any, res: any, nex
     if (!d) return res.status(404).json({ message: 'Document introuvable.' });
     const isOwner = req.user.role === 'professional' && Number(d.user_id) === Number(req.user.id);
     if (req.user.role === 'establishment' && !req.user.isAdmin) return res.status(403).json({ message: 'Les établissements n\'ont pas accès aux justificatifs des professionnels.' });
-    if (d.category === 'identity' && !req.user.isAdmin) return res.status(403).json({ message: 'Pièce d\'identité : accès réservé à l\'équipe de vérification.' });
+    const adminOnly = d.category === 'identity';
+    if (adminOnly && !req.user.isAdmin) return res.status(403).json({ message: 'Pièce d\'identité : accès réservé à l\'équipe de vérification.' });
     if (!req.user.isAdmin && !isOwner) return res.status(403).json({ message: 'Non autorisé.' });
     if (!d.stored_name) return res.status(410).json({ message: d.file_purged_at ? 'Fichier effacé après vérification (minimisation RGPD).' : 'Aucun fichier stocké.' });
     const file = path.join(UPLOAD_DIR, path.basename(String(d.stored_name)));

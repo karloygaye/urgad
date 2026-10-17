@@ -627,6 +627,14 @@ input,select,textarea{font-family:inherit}
 .gate-brand img{height:42px}
 .bo-brand img,.etab-brand img{height:36px}
 .splash-logo img{height:86px;width:auto;display:block;filter:drop-shadow(0 20px 40px rgba(212,175,55,.22))}
+@media(max-width:640px){
+.modal{max-width:100%;margin:0;border-radius:16px 16px 0 0;max-height:94vh}
+.toast{min-width:0;width:calc(100vw - 32px)}
+.toast-container{left:16px;right:16px;bottom:16px}
+.form-row{grid-template-columns:1fr}
+.etab-topbar{flex-wrap:wrap}
+.plan-grid{grid-template-columns:1fr}
+}
 </style>
 <script src="native-config.js"></script>
 <script src="urgad-store.js"></script>

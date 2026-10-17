@@ -357,7 +357,18 @@
     return on + ' jour(s) avec créneau sur 14';
   }
 
+  var DOC_SLOTS = [
+    { category: 'identity', title: "Pièce d'identité", hint: 'CNI, passeport ou titre de séjour — recto et verso', icon: '🆔', required: true, action: 'identity' },
+    { category: 'diploma', title: 'Diplôme', hint: 'DEAS, DEI, attestation de formation…', icon: '🎓', required: true, action: 'diploma' },
+    { category: 'carte_vitale', title: 'Carte Vitale', hint: 'Photo ou attestation de droits', icon: '💳', required: true, action: 'carte_vitale' },
+    { category: 'vaccins', title: 'Vaccins à jour', hint: 'Carnet ou justificatif de vaccinations', icon: '💉', required: true, action: 'vaccins' },
+    { category: 'rib', title: 'RIB', hint: 'Relevé d’identité bancaire au nom du soignant', icon: '🏦', required: true, action: 'rib' }
+  ];
+  var DOC_CAT_LABELS = { identity: "Pièce d'identité", diploma: 'Diplôme', carte_vitale: 'Carte Vitale', vaccins: 'Vaccins', rib: 'RIB', other: 'Autre' };
+  function docCategoryLabel(cat){ return DOC_CAT_LABELS[cat] || cat || 'Document'; }
+
   window.UrgadFeatures = {
+    DOC_SLOTS: DOC_SLOTS, docCategoryLabel: docCategoryLabel,
     esc: esc, timeAgo: timeAgo, iconFor: iconFor,
     startNotifications: startNotifications, stopNotifications: stopNotifications, refreshNotifications: refreshNotifications,
     markRead: markRead, markAllRead: markAllRead, setBadge: setBadge,

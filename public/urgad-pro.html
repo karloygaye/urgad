@@ -576,6 +576,20 @@ input,select,textarea{font-family:inherit}
 .gate-brand img{height:42px}
 .bo-brand img,.etab-brand img{height:36px}
 .splash-logo img{height:86px;width:auto;display:block;filter:drop-shadow(0 20px 40px rgba(212,175,55,.22))}
+.doc-card{flex-wrap:wrap}
+.doc-preview{width:100%;min-height:240px;max-height:70vh;border:0;border-radius:12px;background:#111}
+.doc-preview-img{width:100%;max-height:70vh;object-fit:contain;border-radius:12px;background:#111}
+@media(max-width:640px){
+.landing-header{flex-direction:column;align-items:flex-start;gap:12px}
+.landing-cards,.landing-stats{grid-template-columns:1fr}
+.landing-title{font-size:32px}
+.phone-frame{max-width:100%;margin:0;border-radius:0;min-height:100vh;box-shadow:none;border-left:none;border-right:none}
+.modal{max-width:100%;margin:0;border-radius:16px 16px 0 0;max-height:94vh}
+.toast{min-width:0;width:calc(100vw - 32px);max-width:none}
+.toast-container{left:16px;right:16px;bottom:16px}
+.form-row{grid-template-columns:1fr}
+.upload-box,.doc-card{padding:14px}
+}
 </style>
 </head>
 <body>
@@ -918,29 +932,43 @@ function verifBadge(st){
 function renderProDocuments(){
   const v = U.verification || { identity:{status:'en_attente',documents:0,sides:[]}, diploma:{status:'en_attente',documents:0}, documents:[] };
   const docs = v.documents || [];
-  const block = function(kind, title, icon, action){
+  const slots = (window.UrgadFeatures && UrgadFeatures.DOC_SLOTS) || [];
+  const actionFor = function(slot){
+    if(slot.action==='identity') return 'openIdentityUpload()';
+    if(slot.action==='diploma') return "markDocUploaded('Diplôme','diploma')";
+    if(slot.action==='carte_vitale') return "markDocUploaded('Carte Vitale','carte_vitale')";
+    if(slot.action==='vaccins') return "markDocUploaded('Justificatif de vaccins à jour','vaccins')";
+    if(slot.action==='rib') return "markDocUploaded('RIB','rib')";
+    return "markDocUploaded('Document','other')";
+  };
+  const block = function(slot){
+    const kind = slot.category;
     const s = v[kind] || {};
     const list = docs.filter(function(d){ return d.category===kind; });
     const missing = !list.length;
+    const st = kind==='identity'||kind==='diploma' ? (missing?'en_attente':s.status) : (list.some(function(d){return d.status==='approved';})?'verifie':list.some(function(d){return d.status==='rejected';})?'refuse':'en_attente');
+    const action = actionFor(slot);
     return '<div class="doc-card" style="flex-wrap:wrap'+(missing?';border-style:dashed;cursor:pointer':'')+'"'+(missing?' onclick="'+action+'"':'')+'>'+
-      '<div class="doc-icon '+(s.status==='verifie'?'valid':missing?'missing':'pending')+'">'+icon+'</div>'+
-      '<div class="doc-info"><h4>'+title+'</h4><p>'+(missing?'Aucun document : cliquez pour ajouter':list.length+' fichier(s)'+(kind==='identity'&&s.sides&&s.sides.length?' • '+s.sides.join(' + '):''))+'</p>'+
+      '<div class="doc-icon '+(st==='verifie'?'valid':missing?'missing':'pending')+'">'+slot.icon+'</div>'+
+      '<div class="doc-info"><h4>'+slot.title+'</h4><p>'+(missing?slot.hint:list.length+' fichier(s)'+(kind==='identity'&&v.identity&&v.identity.sides&&v.identity.sides.length?' • '+v.identity.sides.join(' + '):''))+'</p>'+
       (s.status==='refuse'&&s.reason?'<p style="color:#f87171">Motif : '+escP(s.reason)+'</p>':'')+
-      (s.reviewedAt?'<p>Revu le '+escP(String(s.reviewedAt).slice(0,10))+'</p>':'')+'</div>'+
-      verifBadge(missing?'en_attente':s.status)+
-      (!missing && s.status!=='verifie' ? '<button class="btn btn-ghost" style="width:100%;margin-top:10px" onclick="'+action+'">+ Ajouter / remplacer</button>' : '')+
+      (list[0]&&list[0].reason&&list[0].status==='rejected'?'<p style="color:#f87171">Motif : '+escP(list[0].reason)+'</p>':'')+
+      '</div>'+
+      verifBadge(st)+
+      (!missing ? '<button class="btn btn-ghost" style="width:100%;margin-top:10px" onclick="event.stopPropagation();'+action+'">+ Ajouter / remplacer</button>' : '')+
       '</div>';
   };
-  const others = docs.filter(function(d){ return d.category!=='identity' && d.category!=='diploma'; });
+  const known = {};
+  slots.forEach(function(s){ known[s.category]=true; });
+  const others = docs.filter(function(d){ return !known[d.category]; });
   return '<div class="profile-sub-header"><button class="back-btn" onclick="showProScreen(\'profile\')">←</button><h2>Mes documents</h2><div></div></div>'+
   '<div class="profile-sub-body fade-in">'+
   '<div style="background:linear-gradient(135deg,rgba(212,175,55,0.08),rgba(16,185,129,0.04));border:1px solid var(--border);border-radius:18px;padding:18px;margin-bottom:18px;text-align:center">'+
     '<div style="font-size:40px;margin-bottom:6px">'+(v.proposable?'✅':'📋')+'</div>'+
     '<div style="font-weight:700;color:var(--gold-soft);margin-bottom:4px">'+(v.proposable?'Profil vérifié':'Vérification en cours')+'</div>'+
-    '<div style="font-size:13px;color:var(--text-muted);line-height:1.5">'+(v.proposable?'Identité et diplôme vérifiés : l\'équipe peut proposer votre profil aux établissements.':'Votre identité et votre diplôme doivent être vérifiés par l\'équipe URGAD avant que votre profil soit proposé à un établissement.')+'</div></div>'+
-  '<div class="section-title">Identité</div>'+ block('identity', "Pièce d'identité", '🆔', 'openIdentityUpload()')+
-  '<p style="font-size:11px;color:var(--text-muted);margin:6px 0 16px;line-height:1.5">Visible uniquement par l\'équipe URGAD, jamais par les établissements. Fichier supprimé '+(v.identityRetentionDays!=null?v.identityRetentionDays+' jours ':'')+'après vérification (seul le résultat est conservé).</p>'+
-  '<div class="section-title">Diplôme</div>'+ block('diploma', 'Diplôme (DEAS, DEI…)', '🎓', "markDocUploaded('Diplôme','diploma')")+
+    '<div style="font-size:13px;color:var(--text-muted);line-height:1.5">'+(v.proposable?'Identité et diplôme vérifiés : l\'équipe peut proposer votre profil aux établissements.':'Déposez pièce d\'identité, diplôme, carte Vitale, vaccins et RIB. Identité et diplôme doivent être validés avant proposition à un établissement.')+'</div></div>'+
+  slots.map(block).join('')+
+  '<p style="font-size:11px;color:var(--text-muted);margin:6px 0 16px;line-height:1.5">Pièce d\'identité, carte Vitale et RIB : visibles uniquement par l\'équipe URGAD, jamais par les établissements.</p>'+
   (others.length?'<div class="section-title" style="margin-top:16px">Autres documents</div>'+others.map(function(d){ return '<div class="doc-card"><div class="doc-icon pending">📄</div><div class="doc-info"><h4>'+escP(d.name)+'</h4><p>'+escP(String(d.createdAt||'').slice(0,10))+'</p></div><div class="doc-status '+(d.status==='approved'?'valid':d.status==='rejected'?'missing':'pending')+'">'+(d.status==='approved'?'✓ Validé':d.status==='rejected'?'✕ Refusé':'⏳ En cours')+'</div></div>'; }).join(''):'')+
   '<button class="btn btn-ghost btn-block" style="margin-top:16px" onclick="markDocUploaded(\'Document\',\'other\')">+ Autre document</button></div>';
 }
@@ -1183,9 +1211,11 @@ html=`<div class="verify-screen fade-in">
 <div class="status-badge status-pending">🟠 Vérification en cours</div>
 <h1 style="font-family:'Playfair Display',serif;font-size:26px;margin-bottom:8px">Vérification professionnelle</h1>
 <p class="sub">Transmettez vos documents pour valider votre profil</p>
-<div class="upload-box" onclick="markDocUploaded('Diplôme','diploma')"><h4>📎 Diplôme</h4><p>DEAS, DEI… (photo ou PDF)</p></div>
 <div class="upload-box" onclick="openIdentityUpload()"><h4>📎 Pièce d'identité</h4><p>CNI, passeport ou titre de séjour — recto/verso</p></div>
-<div class="upload-box" onclick="markDocUploaded('Justificatif de domicile','other')"><h4>📎 Justificatif de domicile</h4><p>Facultatif</p></div>
+<div class="upload-box" onclick="markDocUploaded('Diplôme','diploma')"><h4>📎 Diplôme</h4><p>DEAS, DEI… (photo ou PDF)</p></div>
+<div class="upload-box" onclick="markDocUploaded('Carte Vitale','carte_vitale')"><h4>📎 Carte Vitale</h4><p>Photo de la carte ou attestation de droits</p></div>
+<div class="upload-box" onclick="markDocUploaded('Justificatif de vaccins à jour','vaccins')"><h4>📎 Vaccins à jour</h4><p>Carnet ou justificatif de vaccinations</p></div>
+<div class="upload-box" onclick="markDocUploaded('RIB','rib')"><h4>📎 RIB</h4><p>Relevé d’identité bancaire au nom du soignant</p></div>
 <p style="font-size:12px;color:var(--text-muted);margin:20px 0;line-height:1.6">L'équipe URGAD vérifie votre identité et votre diplôme avant de proposer votre profil aux établissements. La pièce d'identité n'est jamais visible par les établissements et le fichier est supprimé après vérification.</p>
 <button class="btn btn-primary btn-block btn-lg" onclick="finishProSignup()">Accéder à l'application</button>
 </div>`;

@@ -546,8 +546,12 @@
       if (!res.ok) { var t = ''; try { t = (await res.json()).message; } catch (e) {} throw new Error(t || ('HTTP ' + res.status)); }
       var blob = await res.blob();
       var url = URL.createObjectURL(blob);
-      window.open(url, '_blank');
-      setTimeout(function(){ URL.revokeObjectURL(url); }, 60000);
+      setTimeout(function(){ URL.revokeObjectURL(url); }, 120000);
+      return { url: url, blob: blob, mime: blob.type || res.headers.get('Content-Type') || '' };
+    },
+    reviewProfessionalDocument: function(id, decision, reason){
+      var dec = (decision === 'verifie' || decision === 'approve' || decision === 'approved') ? 'approve' : 'reject';
+      return request('admin', 'POST', '/api/admin/documents/professional/' + id + '/' + dec, { reason: reason || '' });
     },
     mapMission: mapMission,
     mapApplication: mapApplication,
