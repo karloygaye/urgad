@@ -790,7 +790,7 @@ async function refreshAdmin(){
   setNavBadge('professionals', String(professionals.length));
   setNavBadge('missions', String(missions.length));
   try { window.urgadVerifQueue = await UrgadApi.verificationQueue(); } catch(e) { window.urgadVerifQueue = null; }
-  const vq = ((window.urgadVerifQueue||{}).professionals||[]).filter(function(p){ return (p.identity.status!=='verifie' && p.identity.documents) || (p.diploma.status!=='verifie' && p.diploma.documents); }).length;
+  const vq = ((window.urgadVerifQueue||{}).professionals||[]).filter(function(p){ return typeof verifNeedsAction==='function' ? verifNeedsAction(p) : ((p.identity&&p.identity.status!=='verifie' && p.identity.documents) || (p.diploma&&p.diploma.status!=='verifie' && p.diploma.documents)); }).length;
   setNavBadge('verification', String(vq + establishments.filter(function(e){ return e.status==='pending'; }).length));
   await reloadRequests();
   setNavBadge('disputes', String(disputes.filter(function(d){ return d.status!=='resolved'; }).length));
@@ -2252,7 +2252,12 @@ const renderers = {requests:renderRequests,dashboard:renderDashboard,map:renderM
 const content = document.getElementById('boContent');
 const localNote = {verificationLegacy:"La liste des pros vient de l'API. Valider / refuser un pro appelle l'API. Valider un établissement n'a pas d'endpoint. Les compteurs « validés aujourd'hui » et « délai moyen » ne sont pas calculés."}[screen];
 const banner = localNote ? '<div class="bo-card" style="border-color:rgba(245,158,11,0.5);margin-bottom:16px"><strong style="color:#F59E0B">Aperçu local</strong><p style="color:var(--text-muted);margin-top:6px;font-size:13px">'+localNote+'</p></div>' : '';
-content.innerHTML = '<div class="fade-in">'+banner+(renderers[screen]?renderers[screen]():'<div style="text-align:center;padding:60px;color:var(--text-muted)"><div style="font-size:48px;margin-bottom:16px;opacity:0.5">🚧</div><h3 style="color:var(--text);margin-bottom:6px">Section en construction</h3></div>')+'</div>';
+try {
+  content.innerHTML = '<div class="fade-in">'+banner+(renderers[screen]?renderers[screen]():'<div style="text-align:center;padding:60px;color:var(--text-muted)"><div style="font-size:48px;margin-bottom:16px;opacity:0.5">🚧</div><h3 style="color:var(--text);margin-bottom:6px">Section en construction</h3></div>')+'</div>';
+} catch(err){
+  console.error(err);
+  content.innerHTML = '<div class="bo-card"><strong>Écran indisponible</strong><p style="color:var(--text-muted);margin-top:8px;font-size:13px">'+(err&&err.message?escB(err.message):'Erreur d’affichage')+'</p><button class="btn btn-primary" onclick="refreshAdmin().then(function(){showBoScreen(\''+screen+'\')})">Réessayer</button></div>';
+}
 if(screen==='map') setTimeout(initLiveMap,100);
 }
 // ===== Demandes (l'équipe trouve le profil, l'établissement valide) =====
@@ -2395,21 +2400,47 @@ function verifDocCard(p, d){
   const openBtn = canOpen
     ? `<button class="bo-action-btn view" type="button" onclick="boPreviewDoc(${Number(d.id)})">👁 Voir le fichier</button>`
     : `<span style="font-size:11px;color:var(--text-dim)">${d.filePurgedAt?'Fichier supprimé':'Sans fichier'}</span>`;
-  const extra = (d.category==='identity'||d.category==='diploma') ? '' : (
+  const extra =
     (d.status!=='approved'?`<button class="bo-action-btn accept" onclick="boReviewDoc(${d.id},'approve')">✓ Valider</button>`:'')+
-    (d.status!=='rejected'?`<button class="bo-action-btn reject" onclick="boReviewDoc(${d.id},'reject')">✕ Refuser</button>`:'')
-  );
+    (d.status!=='rejected'?`<button class="bo-action-btn reject" onclick="boReviewDoc(${d.id},'reject')">✕ Refuser</button>`:'');
   return `<div class="verif-doc"><h4>${escB(verifDocLabel(d))}</h4><p>${escB(String(d.createdAt||'').slice(0,16))}${d.sizeBytes? ' · '+Math.round(d.sizeBytes/1024)+' ko':''}</p><span class="bo-badge ${st}">${stTxt}</span>${d.reason?`<p style="color:var(--red);margin-top:6px">${escB(d.reason)}</p>`:''}<div class="verif-doc-actions" style="margin-top:8px">${openBtn}${extra}</div></div>`;
 }
 function verifKindBlock(p, kind, title){
   const s = p[kind] || {};
   const docs = (p.documents||[]).filter(d=>d.category===kind);
   const actions = [];
-  if(docs.length && s.status!=='verifie') actions.push(`<button class="bo-action-btn accept" onclick="boReview(${p.userId},'${kind}','verifie')">✓ ${s.status==='refuse'?'Passer en vérifié':'Vérifier'} ${title.toLowerCase()}</button>`);
+  const pendingDocs = docs.some(d=>d.status!=='approved'&&d.status!=='rejected');
+  if(docs.length && (s.status!=='verifie' || pendingDocs)) actions.push(`<button class="bo-action-btn accept" onclick="boReview(${p.userId},'${kind}','verifie')">✓ ${s.status==='verifie'?'Valider le complément':s.status==='refuse'?'Passer en vérifié':'Vérifier'} ${title.toLowerCase()}</button>`);
   if(s.status==='verifie') actions.push(`<button class="bo-action-btn reject" onclick="boReview(${p.userId},'${kind}','refuse')">✕ Revenir sur la validation</button>`);
   else if(s.status!=='refuse' && docs.length) actions.push(`<button class="bo-action-btn reject" onclick="boReview(${p.userId},'${kind}','refuse')">✕ Refuser</button>`);
   if(s.status==='refuse') actions.push(`<button class="bo-action-btn view" onclick="boReview(${p.userId},'${kind}','en_attente')">↩︎ Annuler le refus</button>`);
   return `<div style="margin-bottom:12px"><div style="display:flex;flex-wrap:wrap;align-items:center;gap:8px;margin-bottom:8px"><strong style="font-size:13px">${title}</strong>${verifTag(s.status)}${actions.join('')}</div>${s.reason?`<p style="font-size:12px;color:var(--red)">${escB(s.reason)}</p>`:''}<div class="verif-docs">${docs.length?docs.map(d=>verifDocCard(p,d)).join(''):'<p style="font-size:12px;color:var(--text-dim)">Aucun fichier déposé.</p>'}</div></div>`;
+}
+let boVerifFocus = null;
+let boVerifFilter = 'open';
+let boVerifQuery = '';
+function docCatLabel(c){
+  return (window.UrgadFeatures && UrgadFeatures.docCategoryLabel) ? UrgadFeatures.docCategoryLabel(c) : (c||'Document');
+}
+function verifNeedsAction(p){
+  const docs = p.documents||[];
+  const pending = docs.some(d=>d.status!=='approved'&&d.status!=='rejected');
+  const idWait = p.identity&&p.identity.status!=='verifie' && docs.some(d=>d.category==='identity');
+  const dipWait = p.diploma&&p.diploma.status!=='verifie' && docs.some(d=>d.category==='diploma');
+  return !!(p.documentRequest || pending || idWait || dipWait);
+}
+function extraMissing(p, cat){ return !(p.documents||[]).some(d=>d.category===cat); }
+function verifProCard(p){
+  const ask = p.documentRequest;
+  const askCats = (ask && ask.categories && ask.categories.length) ? ask.categories.map(docCatLabel).join(', ') : '';
+  return `<article class="verif-pro-card" id="verif-dossier-${p.userId}">
+<div class="verif-pro-head"><div><strong>${escB(p.name)}</strong><div style="font-size:12px;color:var(--text-dim)">${escB(p.profession||'—')} · ${escB(p.email||'')} · ${escB(p.phone||'')} · inscrit ${escB(String(p.createdAt||'').slice(0,10))} · ${escB((p.documents||[]).length)} pièce(s)</div></div><div style="display:flex;flex-wrap:wrap;gap:6px;align-items:center">${p.proposable?'<span class="bo-badge verified">Proposable</span>':'<span class="bo-badge pending">Non proposable</span>'}${ask?'<span class="bo-badge pending">Complément</span>':''}<button class="bo-action-btn view" onclick="boAskDocs(${p.userId})">📎 Demander un complément</button></div></div>
+${ask?`<p style="font-size:12px;color:var(--amber);margin:0 0 10px">Complément demandé${askCats?' ('+escB(askCats)+')':''} : ${escB(ask.message||'')}</p>`:''}
+${verifKindBlock(p,'identity',"Pièce d'identité")}
+${verifKindBlock(p,'diploma','Diplôme')}
+<div style="margin-bottom:8px"><strong style="font-size:13px">Carte Vitale, vaccins, RIB</strong>${extraMissing(p,'carte_vitale')||extraMissing(p,'vaccins')||extraMissing(p,'rib')?`<span style="font-size:11px;color:var(--text-dim);margin-left:8px">${[extraMissing(p,'carte_vitale')?'Carte Vitale':null,extraMissing(p,'vaccins')?'Vaccins':null,extraMissing(p,'rib')?'RIB':null].filter(Boolean).join(', ')} manquant(s)</span>`:''}</div>
+<div class="verif-docs">${(p.documents||[]).filter(d=>d.category==='carte_vitale'||d.category==='vaccins'||d.category==='rib'||d.category==='other').map(d=>verifDocCard(p,d)).join('')||'<p style="font-size:12px;color:var(--text-dim)">Aucun de ces justificatifs pour le moment.</p>'}</div>
+</article>`;
 }
 function renderVerification(){
   const q = window.urgadVerifQueue;
@@ -2417,34 +2448,74 @@ function renderVerification(){
     return `<div class="bo-card"><strong>File de vérification</strong><p style="color:var(--text-muted);margin-top:8px;font-size:13px">Impossible de charger les documents. Reconnectez-vous, puis rouvrez cet écran.</p><button class="btn btn-primary" onclick="refreshAdmin().then(function(){showBoScreen('verification')})">Réessayer</button></div>`;
   }
   const pros = q.professionals || [];
-  const todo = pros.filter(p=>{
-    const docs = p.documents||[];
-    const pendingExtra = docs.some(d=>d.category!=='identity'&&d.category!=='diploma'&&d.status!=='approved'&&d.status!=='rejected');
-    return (p.identity&&p.identity.status!=='verifie' && (p.identity.documents||docs.filter(d=>d.category==='identity').length)) || (p.diploma&&p.diploma.status!=='verifie' && (p.diploma.documents||docs.filter(d=>d.category==='diploma').length)) || pendingExtra;
-  });
+  const todo = pros.filter(verifNeedsAction);
   const ok = pros.filter(p=>p.proposable).length;
   const pendingEtabs = establishments.filter(e=>e.status==='pending');
-  const extraMissing = (p, cat) => !(p.documents||[]).some(d=>d.category===cat);
+  const focus = boVerifFocus ? pros.find(p=>Number(p.userId)===Number(boVerifFocus)) : null;
+  if(boVerifFocus && !focus){
+    return `<div class="bo-card"><button class="btn btn-ghost btn-sm" onclick="boVerifFocus=null;showBoScreen('verification')">← Tous les dossiers</button><p style="margin-top:12px;color:var(--text-muted)">Dossier introuvable. Le compte a peut-être été supprimé.</p></div>`;
+  }
+  if(focus){
+    return `<div style="margin-bottom:12px"><button class="btn btn-ghost btn-sm" onclick="boVerifFocus=null;showBoScreen('verification')">← Tous les dossiers</button></div>
+    ${verifProCard(focus)}
+    <div class="bo-card"><div class="bo-card-header"><div><h3>🟠 Établissements à vérifier</h3></div></div>
+    <div class="bo-table-wrap"><table class="bo-table bo-table-stack"><thead><tr><th>Établissement</th><th>Type</th><th>SIRET</th><th>Actions</th></tr></thead><tbody>
+    ${pendingEtabs.map(e=>`<tr><td data-label="Établissement"><strong>${escB(e.name)}</strong></td><td data-label="Type">${escB(e.type)}</td><td data-label="SIRET" style="font-family:monospace;font-size:12px">${escB(e.siret)}</td><td data-label="Actions"><button class="bo-action-btn view" onclick="viewEstablishment(${e.id})">Voir</button><button class="bo-action-btn accept" onclick="validateEtab(${e.id})">✓ Valider</button><button class="bo-action-btn reject" onclick="rejectEtab(${e.id})">✕ Rejeter</button></td></tr>`).join('') || '<tr><td colspan="4" style="color:var(--text-muted)">Aucun.</td></tr>'}
+    </tbody></table></div></div>`;
+  }
+  const f = boVerifFilter || 'open';
+  const qtxt = String(boVerifQuery||'').trim().toLowerCase();
+  const list = pros.filter(p=>{
+    if(f==='open' && !verifNeedsAction(p)) return false;
+    if(f==='complement' && !p.documentRequest) return false;
+    if(f==='done' && verifNeedsAction(p)) return false;
+    if(!qtxt) return true;
+    const hay = [p.name,p.email,p.phone,p.profession].join(' ').toLowerCase();
+    return hay.indexOf(qtxt)>=0;
+  });
   return `<div class="bo-stat-grid">
-<div class="bo-stat"><div class="bo-stat-header"><div class="stat-label">À vérifier</div><div class="stat-icon amber">🟠</div></div><div class="stat-value" style="color:var(--amber)">${todo.length}</div></div>
+<div class="bo-stat" onclick="boVerifFilter='open';showBoScreen('verification')"><div class="bo-stat-header"><div class="stat-label">À traiter</div><div class="stat-icon amber">🟠</div></div><div class="stat-value" style="color:var(--amber)">${todo.length}</div></div>
 <div class="bo-stat"><div class="bo-stat-header"><div class="stat-label">Pros proposables</div><div class="stat-icon emerald">✅</div></div><div class="stat-value" style="color:var(--emerald-soft)">${ok}</div></div>
-<div class="bo-stat"><div class="bo-stat-header"><div class="stat-label">Sans document</div><div class="stat-icon blue">📭</div></div><div class="stat-value">${pros.filter(p=>!(p.documents||[]).length).length}</div></div>
+<div class="bo-stat" onclick="boVerifFilter='complement';showBoScreen('verification')"><div class="bo-stat-header"><div class="stat-label">Complément demandé</div><div class="stat-icon blue">📎</div></div><div class="stat-value">${pros.filter(p=>!!p.documentRequest).length}</div></div>
 <div class="bo-stat"><div class="bo-stat-header"><div class="stat-label">Établissements en attente</div><div class="stat-icon gold">🏢</div></div><div class="stat-value">${pendingEtabs.length}</div></div>
 </div>
-<div class="bo-card"><div class="bo-card-header"><div><h3>Justificatifs des professionnels</h3><p style="color:var(--text-muted);font-size:12px;margin-top:4px">Ouvrez chaque fichier ici. Identité et diplôme conditionnent la proposition à un établissement. Carte Vitale, vaccins et RIB : équipe URGAD uniquement. Consultation journalisée. Fichiers d'identité supprimés ${q.identityRetentionDays!=null?q.identityRetentionDays+' jours ':''}après vérification.</p></div></div>
-${pros.map(p=>`<article class="verif-pro-card">
-<div class="verif-pro-head"><div><strong>${escB(p.name)}</strong><div style="font-size:12px;color:var(--text-dim)">${escB(p.profession||'—')} · ${escB(p.email||'')} · ${escB(p.phone||'')} · inscrit ${escB(String(p.createdAt||'').slice(0,10))}</div></div><div style="display:flex;flex-wrap:wrap;gap:6px;align-items:center">${p.proposable?'<span class="bo-badge verified">Proposable</span>':'<span class="bo-badge pending">Non proposable</span>'}<button class="bo-action-btn view" onclick="boAskDocs(${p.userId})">📎 Demander un complément</button></div></div>
-${p.documentRequest?`<p style="font-size:12px;color:var(--amber);margin:0 0 10px">Complément demandé${p.documentRequest.categories&&p.documentRequest.categories.length?' ('+escB(p.documentRequest.categories.map(c=>UrgadFeatures.docCategoryLabel(c)).join(', '))+')':''} : ${escB(p.documentRequest.message||'')}</p>`:''}
-${verifKindBlock(p,'identity',"Pièce d'identité")}
-${verifKindBlock(p,'diploma','Diplôme')}
-<div style="margin-bottom:8px"><strong style="font-size:13px">Carte Vitale, vaccins, RIB</strong>${extraMissing(p,'carte_vitale')||extraMissing(p,'vaccins')||extraMissing(p,'rib')?`<span style="font-size:11px;color:var(--text-dim);margin-left:8px">${[extraMissing(p,'carte_vitale')?'Carte Vitale':null,extraMissing(p,'vaccins')?'Vaccins':null,extraMissing(p,'rib')?'RIB':null].filter(Boolean).join(', ')} manquant(s)</span>`:''}</div>
-<div class="verif-docs">${(p.documents||[]).filter(d=>d.category==='carte_vitale'||d.category==='vaccins'||d.category==='rib'||d.category==='other').map(d=>verifDocCard(p,d)).join('')||'<p style="font-size:12px;color:var(--text-dim)">Aucun de ces justificatifs pour le moment.</p>'}</div>
-</article>`).join('') || '<p style="color:var(--text-muted)">Aucun professionnel inscrit.</p>'}
+<div class="filters-bar">
+<button class="filter-chip ${f==='open'?'active':''}" onclick="boVerifFilter='open';showBoScreen('verification')">À traiter (${todo.length})</button>
+<button class="filter-chip ${f==='complement'?'active':''}" onclick="boVerifFilter='complement';showBoScreen('verification')">Complément (${pros.filter(p=>!!p.documentRequest).length})</button>
+<button class="filter-chip ${f==='all'?'active':''}" onclick="boVerifFilter='all';showBoScreen('verification')">Tous (${pros.length})</button>
+<button class="filter-chip ${f==='done'?'active':''}" onclick="boVerifFilter='done';showBoScreen('verification')">Dossiers clos</button>
+<input type="search" value="${escB(boVerifQuery)}" placeholder="Nom, e-mail, téléphone…" onkeydown="if(event.key==='Enter'){boVerifQuery=this.value;showBoScreen('verification')}" onblur="if(this.value!==boVerifQuery){boVerifQuery=this.value;showBoScreen('verification')}" style="margin-left:auto;min-width:180px;max-width:280px;padding:8px 12px;border-radius:10px;border:1px solid var(--border);background:var(--surface);color:var(--text)">
+</div>
+<div class="bo-card"><div class="bo-card-header"><div><h3>Dossiers documents</h3><p style="color:var(--text-muted);font-size:12px;margin-top:4px">Ouvrez un dossier pour voir les pièces déjà validées et valider un complément. Identité et diplôme conditionnent la proposition. Fichiers d'identité supprimés ${q.identityRetentionDays!=null?q.identityRetentionDays+' jours ':''}après vérification.</p></div></div>
+${list.length?`<div class="bo-table-wrap"><table class="bo-table bo-table-stack"><thead><tr><th>Professionnel</th><th>Identité</th><th>Diplôme</th><th>Pièces</th><th>Action</th></tr></thead><tbody>
+${list.map(p=>{
+  const docs=p.documents||[];
+  const pending=docs.filter(d=>d.status!=='approved'&&d.status!=='rejected').length;
+  return `<tr>
+<td data-label="Professionnel"><strong>${escB(p.name)}</strong><div style="font-size:11px;color:var(--text-dim)">${escB(p.email||'')} · ${escB(p.phone||'')}</div></td>
+<td data-label="Identité">${verifTag((p.identity||{}).status)}</td>
+<td data-label="Diplôme">${verifTag((p.diploma||{}).status)}</td>
+<td data-label="Pièces">${docs.length} fichier(s)${pending?` · <span style="color:var(--amber)">${pending} à revoir</span>`:''}${p.documentRequest?' · complément':''}</td>
+<td data-label="Action"><button class="bo-action-btn view" onclick="boOpenDossier(${p.userId})">Ouvrir le dossier</button></td>
+</tr>`;
+}).join('')}
+</tbody></table></div>`:'<p style="color:var(--text-muted)">Aucun dossier pour ce filtre.</p>'}
 </div>
 <div class="bo-card"><div class="bo-card-header"><div><h3>🟠 Établissements à vérifier</h3></div></div>
 <div class="bo-table-wrap"><table class="bo-table bo-table-stack"><thead><tr><th>Établissement</th><th>Type</th><th>SIRET</th><th>Actions</th></tr></thead><tbody>
 ${pendingEtabs.map(e=>`<tr><td data-label="Établissement"><strong>${escB(e.name)}</strong></td><td data-label="Type">${escB(e.type)}</td><td data-label="SIRET" style="font-family:monospace;font-size:12px">${escB(e.siret)}</td><td data-label="Actions"><button class="bo-action-btn view" onclick="viewEstablishment(${e.id})">Voir</button><button class="bo-action-btn accept" onclick="validateEtab(${e.id})">✓ Valider</button><button class="bo-action-btn reject" onclick="rejectEtab(${e.id})">✕ Rejeter</button></td></tr>`).join('') || '<tr><td colspan="4" style="color:var(--text-muted)">Aucun.</td></tr>'}
 </tbody></table></div></div>`;
+}
+async function boOpenDossier(userId){
+  boVerifFocus = Number(userId);
+  try {
+    const one = await UrgadApi.verificationDossier(userId);
+    const q = window.urgadVerifQueue || { professionals: [] };
+    const rest = (q.professionals||[]).filter(p=>Number(p.userId)!==Number(userId));
+    window.urgadVerifQueue = Object.assign({}, q, { professionals: [one].concat(rest) });
+  } catch(e) {}
+  closeModal();
+  showBoScreen('verification');
 }
 async function boPreviewDoc(id, name, mime){
   try {
@@ -2468,6 +2539,7 @@ async function boReviewDoc(id, decision){
     await UrgadApi.reviewProfessionalDocument(id, decision, reason);
     window.urgadVerifQueue = await UrgadApi.verificationQueue();
     toast('success','Document', decision==='approve'?'Validé':'Refusé');
+    if(boVerifFocus) return boOpenDossier(boVerifFocus);
     showBoScreen('verification');
   } catch(e){ toast('error','Document', e.message||'Échec'); }
 }
@@ -2478,6 +2550,7 @@ async function boReview(userId, kind, decision){
     await UrgadApi.reviewVerification(userId, kind, decision, reason);
     window.urgadVerifQueue = await UrgadApi.verificationQueue();
     toast('success', kind==='identity'?'Identité':'Diplôme', decision==='verifie'?'Vérifié':decision==='en_attente'?'Refus annulé, dossier rouvert':'Refusé');
+    if(boVerifFocus) return boOpenDossier(boVerifFocus);
     showBoScreen('verification');
   } catch(e){ toast('error','Vérification', e.message||'Échec'); }
 }
@@ -2502,8 +2575,8 @@ async function submitBoAskDocs(userId){
     await UrgadApi.requestProfessionalDocuments(userId, cats, message);
     closeModal();
     window.urgadVerifQueue = await UrgadApi.verificationQueue();
-    toast('success','Complément','Le professionnel a été notifié.');
-    showBoScreen('verification');
+    toast('success','Complément','Le professionnel a été notifié. Le dossier reste ouvert.');
+    return boOpenDossier(userId);
   } catch(e){ toast('error','Complément', e.message||'Échec'); }
 }
 
@@ -3335,6 +3408,7 @@ ${UrgadFeatures.availabilityGridHtml(p.availability, { clickable: false })}
 </div>
 <div class="modal-footer">
 <button class="btn btn-ghost" onclick="closeModal()">Fermer</button>
+<button class="btn btn-primary" onclick="boOpenDossier(${p.userId||p.id})">📄 Ouvrir le dossier documents</button>
 <button class="btn btn-secondary" onclick="messagePro(${p.id})">Message</button>
 ${p.status==='pending'?`<button class="btn btn-danger" onclick="rejectPro(${p.id})">Refuser</button><button class="btn btn-success" onclick="validatePro(${p.id})">Valider</button>`:''}
 ${p.suspended?`<button class="btn btn-success" onclick="unsuspendPro(${p.id})">Réactiver</button>`:`<button class="btn btn-danger" onclick="suspendPro(${p.id})">Suspendre</button>`}
@@ -3434,10 +3508,8 @@ document.getElementById('modalContent').innerHTML = `<div class="modal-header"><
 document.getElementById('modal').classList.add('active');
 }
 function viewVerification(id){
-  closeModal();
-  showBoScreen('verification');
   const p = professionals.find(x=>x.id===id);
-  toast('info','Vérifications', p ? ('Identité et diplôme de '+p.name+' — ouvrez les fichiers dans le tableau.') : 'Identité et diplôme se vérifient dans cet écran.');
+  boOpenDossier((p && (p.userId||p.id)) || id);
 }
 function viewDispute(id){
 const d = disputes.find(x=>x.id===id);

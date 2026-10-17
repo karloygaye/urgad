@@ -84,7 +84,7 @@ export async function verificationOf(userId: number) {
     documents: docs.map((d) => ({
       id: d.id, name: d.name, type: d.doc_type || '', category: d.category || 'other', idKind: d.id_kind || null, side: d.side || null,
       status: d.status || 'pending', reason: d.review_reason || null, reviewedBy: d.reviewed_by || null, reviewedAt: d.reviewed_at || null,
-      createdAt: d.created_at || null, hasFile: !!d.stored_name || truthyFile(d.has_file), filePurgedAt: d.file_purged_at || null,
+      createdAt: d.created_at || null, hasFile: !!d.stored_name || Number(d.size_bytes) > 0 || truthyFile(d.has_file), filePurgedAt: d.file_purged_at || null,
       mimeType: d.mime_type || null, sizeBytes: d.size_bytes || 0,
     })),
   };
@@ -123,10 +123,10 @@ export async function requestMoreDocuments(userId: number, categories: DocCatego
   await dbRun("UPDATE professionals SET document_request_categories = ?, document_request_message = ?, document_request_at = datetime('now'), document_request_by = ? WHERE user_id = ?",
     [cats.join(','), message, reviewer, userId]);
   if (cats.includes('identity')) {
-    await dbRun("UPDATE professionals SET identity_status = 'en_attente' WHERE user_id = ? AND (identity_status IS NULL OR identity_status = 'refuse')", [userId]);
+    await dbRun("UPDATE professionals SET identity_status = 'en_attente' WHERE user_id = ? AND (identity_status IS NULL OR identity_status = 'refuse' OR identity_status = 'verifie')", [userId]);
   }
   if (cats.includes('diploma')) {
-    await dbRun("UPDATE professionals SET diploma_status = 'en_attente' WHERE user_id = ? AND (diploma_status IS NULL OR diploma_status = 'refuse')", [userId]);
+    await dbRun("UPDATE professionals SET diploma_status = 'en_attente' WHERE user_id = ? AND (diploma_status IS NULL OR diploma_status = 'refuse' OR diploma_status = 'verifie')", [userId]);
   }
   await syncAccountAfterReview(userId);
   return verificationOf(userId);
@@ -149,8 +149,13 @@ export async function consumeDocumentRequest(userId: number, category: string) {
 export async function onDocumentUploaded(userId: number, category: string) {
   if (category === 'identity' || category === 'diploma') {
     const col = category === 'identity' ? 'identity_status' : 'diploma_status';
-    await dbRun(`UPDATE professionals SET ${col} = 'en_attente' WHERE user_id = ? AND (${col} IS NULL OR ${col} = 'refuse')`, [userId]);
-    await syncAccountAfterReview(userId);
+    const p = await dbGet<any>('SELECT document_request_categories, identity_status, diploma_status FROM professionals WHERE user_id = ?', [userId]);
+    const asked = parseDocCategories(p?.document_request_categories).includes(category as DocCategory);
+    const current = category === 'identity' ? p?.identity_status : p?.diploma_status;
+    if (asked || current === 'refuse' || !current) {
+      await dbRun(`UPDATE professionals SET ${col} = 'en_attente' WHERE user_id = ?`, [userId]);
+      await syncAccountAfterReview(userId);
+    }
   }
   await consumeDocumentRequest(userId, category);
 }

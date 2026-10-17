@@ -37,6 +37,24 @@ router.get('/queue', authMiddleware, async (req: any, res: any, next: any) => {
   } catch (err) { next(err); }
 });
 
+/** Dossier d'un professionnel (admin) : toutes les pièces, y compris déjà validées. */
+router.get('/dossier/:userId', authMiddleware, async (req: any, res: any, next: any) => {
+  try {
+    if (!req.user.isAdmin) return res.status(403).json({ message: 'Réservé aux administrateurs.' });
+    const userId = Number(req.params.userId);
+    const p = await dbGet<any>("SELECT u.id AS user_id, u.email, u.phone, u.first_name, u.last_name, u.created_at, p.profession FROM users u JOIN professionals p ON p.user_id = u.id WHERE u.id = ? AND u.role = 'professional' AND u.deleted_at IS NULL", [userId]);
+    if (!p) return res.status(404).json({ message: 'Professionnel introuvable.' });
+    const v = await verificationOf(userId);
+    return res.json({
+      identityRetentionDays: await identityRetentionDays(),
+      userId: p.user_id,
+      name: `${p.first_name || ''} ${p.last_name || ''}`.trim() || p.email,
+      email: p.email, phone: p.phone, profession: p.profession || null, createdAt: p.created_at,
+      ...v,
+    });
+  } catch (err) { next(err); }
+});
+
 /** Décision admin : { kind: identity|diploma, decision: verifie|refuse|en_attente, reason } */
 router.post('/:userId/review', authMiddleware, async (req: any, res: any, next: any) => {
   try {

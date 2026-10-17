@@ -553,6 +553,7 @@
     // Vérification identité / diplôme
     verificationMe: function(){ return request('professional', 'GET', '/api/verification/me'); },
     verificationQueue: function(){ return request('admin', 'GET', '/api/verification/queue'); },
+    verificationDossier: function(userId){ return request('admin', 'GET', '/api/verification/dossier/' + userId); },
     reviewVerification: function(userId, kind, decision, reason){ return request('admin', 'POST', '/api/verification/' + userId + '/review', { kind: kind, decision: decision, reason: reason || '' }); },
     requestProfessionalDocuments: function(userId, categories, message){ return request('admin', 'POST', '/api/verification/' + userId + '/request-documents', { categories: categories || [], message: message || '' }); },
     openDocument: function(role, id){ return openAuthBlob(role, '/api/verification/documents/' + id + '/file'); },
