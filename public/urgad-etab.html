@@ -1030,13 +1030,14 @@ function showEtabScreen(screen, el){
   } else if(screen==='documents'){
     html = `<div class="etab-topbar"><h1>Documents</h1></div>
     <div class="bo-card" style="max-width:720px">
-      <p style="color:var(--text-muted);font-size:13px;margin-bottom:16px">Le nom, le type et le fichier sont enregistrés. Les octets sont écrits dans le dossier uploads du serveur. Aucun envoi externe.</p>
+      ${a.documentRequest?`<div style="border:1px solid rgba(245,158,11,0.35);background:rgba(245,158,11,0.08);border-radius:14px;padding:14px;margin-bottom:16px"><strong style="color:#fbbf24">URGAD demande un complément</strong><p style="font-size:13px;color:var(--text-muted);margin-top:6px">${escHtml(a.documentRequest.message||'')}</p></div>`:''}
+      <p style="color:var(--text-muted);font-size:13px;margin-bottom:16px">Le nom, le type et le fichier sont enregistrés. Ils restent consultables par l’équipe URGAD après un redéploiement.</p>
       <div class="form-group"><label>Nom affiché</label><input id="doc-name" type="text" placeholder="Ex. KBIS 2026"></div>
       <div class="form-group"><label>Type</label><select id="doc-type"><option>KBIS</option><option>Attestation URSSAF</option><option>Assurance</option><option>Autre</option></select></div>
       <div class="form-group"><label>Fichier</label><input id="doc-file" type="file" onchange="fillDocName(this)"></div>
       <button class="btn btn-primary" onclick="saveEtabDocument()">Enregistrer le fichier</button>
       <div style="margin-top:22px">
-        ${etabDocs.length?etabDocs.map(d=>`<div style="padding:12px 0;border-top:1px solid var(--border);display:flex;justify-content:space-between;gap:12px"><div><strong>${escHtml(d.name)}</strong><div style="font-size:12px;color:var(--text-muted)">${escHtml(d.type||'')} · ${d.fileStored?('fichier '+escHtml(d.storedName||'')+' · '+(d.sizeBytes||0)+' o'):'sans fichier'}</div></div><span class="bo-badge pending">${escHtml(d.status||'pending')}</span></div>`).join(''):'<p style="color:var(--text-muted);margin-top:16px">Aucun document.</p>'}
+        ${etabDocs.length?etabDocs.map(d=>`<div style="padding:12px 0;border-top:1px solid var(--border);display:flex;justify-content:space-between;gap:12px"><div><strong>${escHtml(d.name)}</strong><div style="font-size:12px;color:var(--text-muted)">${escHtml(d.type||'')} · ${d.fileStored?(Math.round((d.sizeBytes||0)/1024)+' ko'):'sans fichier'}</div></div><span class="bo-badge ${d.status==='approved'?'verified':d.status==='rejected'?'rejected':'pending'}">${d.status==='approved'?'Validé':d.status==='rejected'?'Refusé':'En attente'}</span></div>`).join(''):'<p style="color:var(--text-muted);margin-top:16px">Aucun document.</p>'}
       </div>
     </div>`;
   } else if(screen==='subscription'){
@@ -1244,7 +1245,7 @@ async function saveEtabDocument(){
     const payload = await UrgadApi.readFile(file);
     await UrgadApi.addEstablishmentDocument(Object.assign({ name, type }, payload));
     await refreshEtab();
-    toast('success','Document','Fichier enregistré sur le disque du serveur.');
+    toast('success','Document','Fichier enregistré pour vérification.');
     showEtabScreen('documents');
   } catch(e) { toast('error','Document', e.message||'Échec'); }
 }

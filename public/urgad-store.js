@@ -67,6 +67,15 @@
     return data;
   }
 
+  async function openAuthBlob(role, path){
+    var res = await fetch(BASE + path, { headers: { Authorization: 'Bearer ' + token(role) } });
+    if (!res.ok) { var t = ''; try { t = (await res.json()).message; } catch (e) {} throw new Error(t || ('HTTP ' + res.status)); }
+    var blob = await res.blob();
+    var url = URL.createObjectURL(blob);
+    setTimeout(function(){ URL.revokeObjectURL(url); }, 120000);
+    return { url: url, blob: blob, mime: blob.type || res.headers.get('Content-Type') || '' };
+  }
+
   function stripSecrets(row){
     if (!row || typeof row !== 'object') return row;
     var copy = Object.assign({}, row);
@@ -231,6 +240,7 @@
       address: row.address || '',
       postalCode: row.postal_code || '',
       documentCount: row.document_count != null ? row.document_count : 0,
+      documentRequest: row.document_request_message ? { message: row.document_request_message, at: row.document_request_at || null, by: row.document_request_by || null } : null,
       subscription: subscription,
       lat: coord(row.latitude != null ? row.latitude : row.lat),
       lng: coord(row.longitude != null ? row.longitude : row.lng),
@@ -255,6 +265,7 @@
       status: e.status,
       subscription: e.subscription || null,
       documentCount: e.documentCount || 0,
+      documentRequest: e.documentRequest || null,
       lat: e.lat,
       lng: e.lng,
       geocodeLabel: row.geocode_label || '',
@@ -511,6 +522,8 @@
       setTimeout(function(){ URL.revokeObjectURL(url); }, 1500);
     },
     adminEstablishmentDocuments: function(id){ return request('admin', 'GET', '/api/admin/establishments/' + id + '/documents'); },
+    openEstablishmentDocument: function(estId, docId){ return openAuthBlob('admin', '/api/admin/establishments/' + estId + '/documents/' + docId + '/file'); },
+    requestEstablishmentDocuments: function(id, message){ return request('admin', 'POST', '/api/admin/establishments/' + id + '/request-documents', { message: message || '' }); },
     approveEstablishment: function(id){ return request('admin', 'POST', '/api/admin/establishments/' + id + '/approve', {}); },
     rejectEstablishment: function(id, reason){ return request('admin', 'POST', '/api/admin/establishments/' + id + '/reject', { reason: reason || '' }); },
     adminDisputes: function(){ return request('admin', 'GET', '/api/admin/disputes'); },
@@ -541,17 +554,15 @@
     verificationMe: function(){ return request('professional', 'GET', '/api/verification/me'); },
     verificationQueue: function(){ return request('admin', 'GET', '/api/verification/queue'); },
     reviewVerification: function(userId, kind, decision, reason){ return request('admin', 'POST', '/api/verification/' + userId + '/review', { kind: kind, decision: decision, reason: reason || '' }); },
-    openDocument: async function(role, id){
-      var res = await fetch(BASE + '/api/verification/documents/' + id + '/file', { headers: { Authorization: 'Bearer ' + token(role) } });
-      if (!res.ok) { var t = ''; try { t = (await res.json()).message; } catch (e) {} throw new Error(t || ('HTTP ' + res.status)); }
-      var blob = await res.blob();
-      var url = URL.createObjectURL(blob);
-      setTimeout(function(){ URL.revokeObjectURL(url); }, 120000);
-      return { url: url, blob: blob, mime: blob.type || res.headers.get('Content-Type') || '' };
-    },
+    requestProfessionalDocuments: function(userId, categories, message){ return request('admin', 'POST', '/api/verification/' + userId + '/request-documents', { categories: categories || [], message: message || '' }); },
+    openDocument: function(role, id){ return openAuthBlob(role, '/api/verification/documents/' + id + '/file'); },
     reviewProfessionalDocument: function(id, decision, reason){
       var dec = (decision === 'verifie' || decision === 'approve' || decision === 'approved') ? 'approve' : 'reject';
       return request('admin', 'POST', '/api/admin/documents/professional/' + id + '/' + dec, { reason: reason || '' });
+    },
+    reviewEstablishmentDocument: function(id, decision, reason){
+      var dec = (decision === 'verifie' || decision === 'approve' || decision === 'approved') ? 'approve' : 'reject';
+      return request('admin', 'POST', '/api/admin/documents/establishment/' + id + '/' + dec, { reason: reason || '' });
     },
     mapMission: mapMission,
     mapApplication: mapApplication,

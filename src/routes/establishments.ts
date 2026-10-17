@@ -154,6 +154,7 @@ router.post('/me/documents', authMiddleware, async (req: any, res: any, next: an
       'INSERT INTO document_files (owner_type, document_id, stored_name, mime_type, size_bytes, file_bytes) VALUES (?, ?, ?, ?, ?, ?)',
       ['establishment', id, saved.storedName, saved.mimeType, saved.sizeBytes, saved.bytes]
     );
+    await dbRun('UPDATE establishments SET document_request_message = NULL, document_request_at = NULL, document_request_by = NULL WHERE id = ?', [estab.id]);
     void notifyAdmins('Document établissement à vérifier', `${estab.name} a déposé « ${name} » (${docType}).`, { establishmentId: estab.id, documentId: id, screen: 'establishments' }, 'admin_document');
     return res.status(201).json({
       ...(await publicDocument({ id, establishment_id: estab.id, name, doc_type: docType, status: 'pending', created_at: null })),

@@ -4,7 +4,7 @@ import { dbAll, dbGet, dbRun } from '../db.js';
 import { authMiddleware } from './_auth.js';
 import { resolveFileBytes } from '../uploads.js';
 import { notifySafe } from '../notify.js';
-import { applyReview, identityRetentionDays, purgeVerifiedIdentityFiles, statusOf, verificationOf } from '../verification.js';
+import { applyReview, categoryLabel, identityRetentionDays, parseDocCategories, purgeVerifiedIdentityFiles, requestMoreDocuments, statusOf, verificationOf } from '../verification.js';
 
 const router = Router();
 
@@ -37,7 +37,7 @@ router.get('/queue', authMiddleware, async (req: any, res: any, next: any) => {
   } catch (err) { next(err); }
 });
 
-/** Décision admin : { kind: identity|diploma, decision: verifie|refuse, reason } */
+/** Décision admin : { kind: identity|diploma, decision: verifie|refuse|en_attente, reason } */
 router.post('/:userId/review', authMiddleware, async (req: any, res: any, next: any) => {
   try {
     if (!req.user.isAdmin) return res.status(403).json({ message: 'Réservé aux administrateurs.' });
@@ -46,7 +46,7 @@ router.post('/:userId/review', authMiddleware, async (req: any, res: any, next: 
     const decision = String(req.body?.decision || '');
     const reason = String(req.body?.reason || '').trim().slice(0, 300);
     if (kind !== 'identity' && kind !== 'diploma') return res.status(422).json({ message: 'kind : identity ou diploma.' });
-    if (decision !== 'verifie' && decision !== 'refuse') return res.status(422).json({ message: 'decision : verifie ou refuse.' });
+    if (decision !== 'verifie' && decision !== 'refuse' && decision !== 'en_attente') return res.status(422).json({ message: 'decision : verifie, refuse ou en_attente.' });
     if (decision === 'refuse' && !reason) return res.status(422).json({ message: 'Motif requis pour un refus.' });
     const p = await dbGet<any>("SELECT p.id FROM professionals p JOIN users u ON u.id = p.user_id WHERE p.user_id = ? AND u.deleted_at IS NULL", [userId]);
     if (!p) return res.status(404).json({ message: 'Professionnel introuvable.' });
@@ -57,11 +57,34 @@ router.post('/:userId/review', authMiddleware, async (req: any, res: any, next: 
     const v = await applyReview(userId, kind, decision, reason, String(req.user.email || 'admin#' + req.user.id));
     await audit(req, 'verification_' + kind + '_' + decision, 'professional:' + userId, reason);
     const label = kind === 'identity' ? 'Pièce d\'identité' : 'Diplôme';
-    await notifySafe(userId, decision === 'verifie' ? `${label} vérifié(e) ✅` : `${label} refusé(e)`,
-      decision === 'verifie' ? (v.ok ? 'Identité et diplôme vérifiés : votre profil peut être proposé aux établissements.' : `${label} validé(e). Il reste à vérifier : ${kind === 'identity' ? 'le diplôme' : 'la pièce d\'identité'}.`)
-        : `Motif : ${reason}. Merci de déposer un document lisible et à jour.`,
-      { screen: 'my-documents', kind }, decision === 'verifie' ? 'verification_approved' : 'verification_rejected');
-    return res.json({ message: 'Décision enregistrée.', ...(await verificationOf(userId)) });
+    const title = decision === 'verifie' ? `${label} vérifié(e) ✅` : decision === 'en_attente' ? `${label} : examen rouvert` : `${label} refusé(e)`;
+    const body = decision === 'verifie'
+      ? (v.ok ? 'Identité et diplôme vérifiés : votre profil peut être proposé aux établissements.' : `${label} validé(e). Il reste à vérifier : ${kind === 'identity' ? 'le diplôme' : 'la pièce d\'identité'}.`)
+      : decision === 'en_attente'
+        ? 'La décision précédente a été annulée. Votre dossier est de nouveau en examen. Vous pouvez déposer un nouveau document si besoin.'
+        : `Motif : ${reason}. Vous pouvez renvoyer un document lisible, ou URGAD peut vous demander un complément.`;
+    await notifySafe(userId, title, body, { screen: 'my-documents', kind }, decision === 'verifie' ? 'verification_approved' : 'verification_rejected');
+    return res.json({ message: decision === 'en_attente' ? 'Refus annulé, dossier rouvert.' : 'Décision enregistrée.', ...(await verificationOf(userId)) });
+  } catch (err) { next(err); }
+});
+
+/** Demande de complément (pièces manquantes ou illisibles). Rouvre un refus si la catégorie est identity/diploma. */
+router.post('/:userId/request-documents', authMiddleware, async (req: any, res: any, next: any) => {
+  try {
+    if (!req.user.isAdmin) return res.status(403).json({ message: 'Réservé aux administrateurs.' });
+    const userId = Number(req.params.userId);
+    const message = String(req.body?.message || '').trim().slice(0, 500);
+    if (!message) return res.status(422).json({ message: 'Indiquez au professionnel ce qu’il doit envoyer.' });
+    const p = await dbGet<any>("SELECT p.id FROM professionals p JOIN users u ON u.id = p.user_id WHERE p.user_id = ? AND u.deleted_at IS NULL", [userId]);
+    if (!p) return res.status(404).json({ message: 'Professionnel introuvable.' });
+    const categories = parseDocCategories(req.body?.categories);
+    const v = await requestMoreDocuments(userId, categories, message, String(req.user.email || 'admin#' + req.user.id));
+    const labels = (v.documentRequest?.categories || []).map(categoryLabel).join(', ');
+    await audit(req, 'verification_request_documents', 'professional:' + userId, labels + ' — ' + message);
+    await notifySafe(userId, 'Complément de documents demandé',
+      (labels ? `Pièces demandées : ${labels}. ` : '') + message,
+      { screen: 'my-documents' }, 'document_rejected');
+    return res.json({ message: 'Demande envoyée au professionnel.', ...v });
   } catch (err) { next(err); }
 });
 

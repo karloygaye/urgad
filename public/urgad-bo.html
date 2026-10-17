@@ -2404,7 +2404,12 @@ function verifDocCard(p, d){
 function verifKindBlock(p, kind, title){
   const s = p[kind] || {};
   const docs = (p.documents||[]).filter(d=>d.category===kind);
-  return `<div style="margin-bottom:12px"><div style="display:flex;flex-wrap:wrap;align-items:center;gap:8px;margin-bottom:8px"><strong style="font-size:13px">${title}</strong>${verifTag(s.status)}${docs.length?`<button class="bo-action-btn accept" onclick="boReview(${p.userId},'${kind}','verifie')">✓ Vérifier ${title.toLowerCase()}</button><button class="bo-action-btn reject" onclick="boReview(${p.userId},'${kind}','refuse')">✕ Refuser</button>`:''}</div>${s.reason?`<p style="font-size:12px;color:var(--red)">${escB(s.reason)}</p>`:''}<div class="verif-docs">${docs.length?docs.map(d=>verifDocCard(p,d)).join(''):'<p style="font-size:12px;color:var(--text-dim)">Aucun fichier déposé.</p>'}</div></div>`;
+  const actions = [];
+  if(docs.length && s.status!=='verifie') actions.push(`<button class="bo-action-btn accept" onclick="boReview(${p.userId},'${kind}','verifie')">✓ ${s.status==='refuse'?'Passer en vérifié':'Vérifier'} ${title.toLowerCase()}</button>`);
+  if(s.status==='verifie') actions.push(`<button class="bo-action-btn reject" onclick="boReview(${p.userId},'${kind}','refuse')">✕ Revenir sur la validation</button>`);
+  else if(s.status!=='refuse' && docs.length) actions.push(`<button class="bo-action-btn reject" onclick="boReview(${p.userId},'${kind}','refuse')">✕ Refuser</button>`);
+  if(s.status==='refuse') actions.push(`<button class="bo-action-btn view" onclick="boReview(${p.userId},'${kind}','en_attente')">↩︎ Annuler le refus</button>`);
+  return `<div style="margin-bottom:12px"><div style="display:flex;flex-wrap:wrap;align-items:center;gap:8px;margin-bottom:8px"><strong style="font-size:13px">${title}</strong>${verifTag(s.status)}${actions.join('')}</div>${s.reason?`<p style="font-size:12px;color:var(--red)">${escB(s.reason)}</p>`:''}<div class="verif-docs">${docs.length?docs.map(d=>verifDocCard(p,d)).join(''):'<p style="font-size:12px;color:var(--text-dim)">Aucun fichier déposé.</p>'}</div></div>`;
 }
 function renderVerification(){
   const q = window.urgadVerifQueue;
@@ -2428,7 +2433,8 @@ function renderVerification(){
 </div>
 <div class="bo-card"><div class="bo-card-header"><div><h3>Justificatifs des professionnels</h3><p style="color:var(--text-muted);font-size:12px;margin-top:4px">Ouvrez chaque fichier ici. Identité et diplôme conditionnent la proposition à un établissement. Carte Vitale, vaccins et RIB : équipe URGAD uniquement. Consultation journalisée. Fichiers d'identité supprimés ${q.identityRetentionDays!=null?q.identityRetentionDays+' jours ':''}après vérification.</p></div></div>
 ${pros.map(p=>`<article class="verif-pro-card">
-<div class="verif-pro-head"><div><strong>${escB(p.name)}</strong><div style="font-size:12px;color:var(--text-dim)">${escB(p.profession||'—')} · ${escB(p.email||'')} · ${escB(p.phone||'')} · inscrit ${escB(String(p.createdAt||'').slice(0,10))}</div></div>${p.proposable?'<span class="bo-badge verified">Proposable</span>':'<span class="bo-badge pending">Non proposable</span>'}</div>
+<div class="verif-pro-head"><div><strong>${escB(p.name)}</strong><div style="font-size:12px;color:var(--text-dim)">${escB(p.profession||'—')} · ${escB(p.email||'')} · ${escB(p.phone||'')} · inscrit ${escB(String(p.createdAt||'').slice(0,10))}</div></div><div style="display:flex;flex-wrap:wrap;gap:6px;align-items:center">${p.proposable?'<span class="bo-badge verified">Proposable</span>':'<span class="bo-badge pending">Non proposable</span>'}<button class="bo-action-btn view" onclick="boAskDocs(${p.userId})">📎 Demander un complément</button></div></div>
+${p.documentRequest?`<p style="font-size:12px;color:var(--amber);margin:0 0 10px">Complément demandé${p.documentRequest.categories&&p.documentRequest.categories.length?' ('+escB(p.documentRequest.categories.map(c=>UrgadFeatures.docCategoryLabel(c)).join(', '))+')':''} : ${escB(p.documentRequest.message||'')}</p>`:''}
 ${verifKindBlock(p,'identity',"Pièce d'identité")}
 ${verifKindBlock(p,'diploma','Diplôme')}
 <div style="margin-bottom:8px"><strong style="font-size:13px">Carte Vitale, vaccins, RIB</strong>${extraMissing(p,'carte_vitale')||extraMissing(p,'vaccins')||extraMissing(p,'rib')?`<span style="font-size:11px;color:var(--text-dim);margin-left:8px">${[extraMissing(p,'carte_vitale')?'Carte Vitale':null,extraMissing(p,'vaccins')?'Vaccins':null,extraMissing(p,'rib')?'RIB':null].filter(Boolean).join(', ')} manquant(s)</span>`:''}</div>
@@ -2471,9 +2477,34 @@ async function boReview(userId, kind, decision){
   try {
     await UrgadApi.reviewVerification(userId, kind, decision, reason);
     window.urgadVerifQueue = await UrgadApi.verificationQueue();
-    toast('success', kind==='identity'?'Identité':'Diplôme', decision==='verifie'?'Vérifié':'Refusé');
+    toast('success', kind==='identity'?'Identité':'Diplôme', decision==='verifie'?'Vérifié':decision==='en_attente'?'Refus annulé, dossier rouvert':'Refusé');
     showBoScreen('verification');
   } catch(e){ toast('error','Vérification', e.message||'Échec'); }
+}
+function boAskDocs(userId){
+  const p = ((window.urgadVerifQueue||{}).professionals||[]).find(x=>Number(x.userId)===Number(userId)) || {};
+  const req = p.documentRequest || {};
+  const selected = new Set(req.categories||[]);
+  const slots = (window.UrgadFeatures && UrgadFeatures.DOC_SLOTS) || [];
+  document.getElementById('modalContent').innerHTML = `<div class="modal-header"><h2>Complément de documents</h2><button class="modal-close" onclick="closeModal()">✕</button></div>
+  <div class="modal-body">
+    <p style="font-size:13px;color:var(--text-muted);margin-bottom:12px">Le professionnel est notifié. Un refus d’identité ou de diplôme est rouvert automatiquement pour les pièces cochées.</p>
+    <div class="form-group"><label>Pièces demandées</label><div style="display:flex;flex-direction:column;gap:8px;margin-top:6px">${slots.map(s=>`<label style="display:flex;gap:8px;align-items:center;font-size:13px"><input type="checkbox" class="bo-ask-cat" value="${s.category}" ${selected.has(s.category)?'checked':''}> ${escB(s.title)}</label>`).join('')}</div></div>
+    <div class="form-group"><label>Message au professionnel</label><textarea id="bo-ask-msg" rows="4" placeholder="Ex. RIB illisible, merci d’envoyer un scan net. Carte Vitale manquante.">${escB(req.message||'')}</textarea></div>
+  </div>
+  <div class="modal-footer"><button class="btn btn-ghost" onclick="closeModal()">Annuler</button><button class="btn btn-primary" onclick="submitBoAskDocs(${Number(userId)})">Envoyer la demande</button></div>`;
+  document.getElementById('modal').classList.add('active');
+}
+async function submitBoAskDocs(userId){
+  const cats = Array.from(document.querySelectorAll('.bo-ask-cat:checked')).map(el=>el.value);
+  const message = (document.getElementById('bo-ask-msg')||{}).value || '';
+  try {
+    await UrgadApi.requestProfessionalDocuments(userId, cats, message);
+    closeModal();
+    window.urgadVerifQueue = await UrgadApi.verificationQueue();
+    toast('success','Complément','Le professionnel a été notifié.');
+    showBoScreen('verification');
+  } catch(e){ toast('error','Complément', e.message||'Échec'); }
 }
 
 function renderDashboard(){
@@ -2711,6 +2742,7 @@ ${list.length?list.map(e=>`<tr>
 <button class="bo-action-btn view" onclick="viewEstablishment(${e.id})">Voir</button>
 <button class="bo-action-btn" onclick="messageEtab(${e.id})">Message</button>
 ${e.status==='pending'?`<button class="bo-action-btn accept" onclick="validateEtab(${e.id})">Valider</button><button class="bo-action-btn reject" onclick="rejectEtab(${e.id})">Refuser</button>`:''}
+${e.status==='rejected'?`<button class="bo-action-btn accept" onclick="validateEtab(${e.id})">Passer en validé</button><button class="bo-action-btn view" onclick="boAskEtabDocs(${e.id})">Complément</button>`:''}
 ${e.status==='verified'?`<button class="bo-action-btn reject" onclick="suspendEtab(${e.id})">Suspendre</button>`:''}
 ${e.status==='suspended'?`<button class="bo-action-btn accept" onclick="unsuspendEtab(${e.id})">Réactiver</button>`:''}
 </td>
@@ -3315,6 +3347,7 @@ if(!e) return;
 let docs = [];
 try { docs = await UrgadApi.adminEstablishmentDocuments(id) || []; }
 catch (err) { docs = []; }
+window.boEtabDocs = docs;
 const etabMissions = missions.filter(m=>m.etabId===id);
 document.getElementById('modalContent').innerHTML = `<div class="modal-header"><h2>Fiche établissement</h2><button class="modal-close" onclick="closeModal()">✕</button></div>
 <div class="modal-body">
@@ -3336,7 +3369,17 @@ document.getElementById('modalContent').innerHTML = `<div class="modal-header"><
 <div class="detail-item"><div class="label">Téléphone</div><div class="value">${e.phone}</div></div>
 <div class="detail-item"><div class="label">Email</div><div class="value">${e.email}</div></div>
 <div class="detail-item"><div class="label">Abonnement</div><div class="value">${e.subscription?e.subscription.name+' · '+e.subscription.price+' € · '+e.subscription.status+' · non payé':'Aucun'}</div></div>
-<div class="detail-item"><div class="label">Documents</div><div class="value">${docs.length?docs.map(d=>d.name+' ('+ (d.type||'') +', '+d.status+', métadonnées)').join(' · '):'Aucune fiche (fichier non stocké)'}</div></div>
+<div class="detail-item"><div class="label">Documents</div><div class="value">${docs.length?docs.length+' fichier(s)':'Aucun'}</div></div>
+</div>
+${e.documentRequest?`<p style="font-size:13px;color:var(--amber);margin:12px 0 0">Complément demandé : ${escB(e.documentRequest.message)}</p>`:''}
+<div style="margin-top:16px">
+<h4 style="font-size:12px;color:var(--text-muted);text-transform:uppercase;letter-spacing:1.5px;margin-bottom:10px;font-weight:700">Justificatifs (${docs.length})</h4>
+<div class="verif-docs">${docs.length?docs.map(d=>{
+  const st = d.status==='approved'?'verified':d.status==='rejected'?'rejected':'pending';
+  const stTxt = d.status==='approved'?'Validé':d.status==='rejected'?'Refusé':'En attente';
+  const open = d.fileStored ? `<button class="bo-action-btn view" type="button" onclick="boPreviewEtabDoc(${e.id},${d.id})">👁 Voir le fichier</button>` : '<span style="font-size:11px;color:var(--text-dim)">Sans fichier</span>';
+  return `<div class="verif-doc"><h4>${escB(d.name||'Document')}</h4><p>${escB(d.type||'')} · ${escB(String(d.createdAt||'').slice(0,16))}${d.sizeBytes?' · '+Math.round(d.sizeBytes/1024)+' ko':''}</p><span class="bo-badge ${st}">${stTxt}</span><div class="verif-doc-actions" style="margin-top:8px">${open}${d.status!=='approved'?`<button class="bo-action-btn accept" onclick="boReviewEtabDoc(${d.id},'approve',${e.id})">✓ Valider</button>`:''}${d.status!=='rejected'?`<button class="bo-action-btn reject" onclick="boReviewEtabDoc(${d.id},'reject',${e.id})">✕ Refuser</button>`:''}</div></div>`;
+}).join(''):'<p style="font-size:12px;color:var(--text-dim)">Aucun justificatif déposé. Demandez un complément à l’établissement.</p>'}</div>
 </div>
 <div>
 <h4 style="font-size:12px;color:var(--text-muted);text-transform:uppercase;letter-spacing:1.5px;margin:16px 0 10px;font-weight:700">Missions récentes (${etabMissions.length})</h4>
@@ -3349,8 +3392,9 @@ ${etabMissions.length>0?etabMissions.map(m=>`<div style="padding:10px;background
 <div class="modal-footer">
 <button class="btn btn-ghost" onclick="closeModal()">Fermer</button>
 <button class="btn btn-secondary" onclick="messageEtab(${e.id})">Message</button>
-${e.status==='pending'?`<button class="btn btn-success" onclick="validateEtab(${e.id})">✓ Valider</button><button class="btn btn-danger" onclick="rejectEtab(${e.id})">✕ Rejeter</button>`:''}
-${e.status==='verified'?`<button class="btn btn-danger" onclick="suspendEtab(${e.id})">Suspendre</button>`:''}
+${e.status==='pending'||e.status==='rejected'?`<button class="btn btn-success" onclick="validateEtab(${e.id})">✓ ${e.status==='rejected'?'Passer en validé':'Valider'}</button><button class="btn btn-secondary" onclick="boAskEtabDocs(${e.id})">📎 Demander un complément</button>`:''}
+${e.status==='pending'?`<button class="btn btn-danger" onclick="rejectEtab(${e.id})">✕ Rejeter</button>`:''}
+${e.status==='verified'?`<button class="btn btn-danger" onclick="suspendEtab(${e.id})">Suspendre</button><button class="btn btn-secondary" onclick="boAskEtabDocs(${e.id})">📎 Demander un complément</button>`:''}
 ${e.status==='suspended'?`<button class="btn btn-success" onclick="unsuspendEtab(${e.id})">Réactiver</button>`:''}
 </div>`;
 document.getElementById('modal').classList.add('active');
@@ -3480,13 +3524,54 @@ async function validateEtab(id){
   closeModal();
 }
 async function rejectEtab(id){
+  const reason = prompt('Motif du refus (communiqué à l’établissement)');
+  if(reason===null) return;
   try {
-    await UrgadApi.rejectEstablishment(id, '');
+    await UrgadApi.rejectEstablishment(id, reason||'');
     await refreshAdmin();
-    toast('info','Établissement refusé','Statut mis à jour sur l\'API. Aucun e-mail n\'est envoyé.');
+    toast('info','Établissement refusé','Décision enregistrée. Vous pourrez la modifier plus tard.');
     showBoScreen(currentBoScreen);
   } catch(e) { toast('error','Établissement', e.message||'Échec'); }
   closeModal();
+}
+async function boPreviewEtabDoc(estId, docId){
+  try {
+    const meta = (window.boEtabDocs||[]).find(function(d){ return Number(d.id)===Number(docId); }) || {};
+    const file = await UrgadApi.openEstablishmentDocument(estId, docId);
+    const isImg = String(meta.mimeType||file.mime||'').indexOf('image/')===0;
+    document.getElementById('modalContent').innerHTML = `<div class="modal-header"><h2>${escB(meta.name||'Document établissement')}</h2><button class="modal-close" onclick="closeModal()">✕</button></div>
+    <div class="modal-body">${isImg?`<img class="doc-preview-img" alt="" src="${file.url}">`:`<iframe class="doc-preview" src="${file.url}" title="Document"></iframe>`}</div>
+    <div class="modal-footer"><button class="btn btn-ghost" onclick="closeModal()">Fermer</button><a class="btn btn-primary" href="${file.url}" target="_blank" rel="noopener">Ouvrir dans un onglet</a></div>`;
+    document.getElementById('modal').classList.add('active');
+  } catch(e){ toast('error','Document', e.message||'Impossible d’ouvrir le fichier'); }
+}
+async function boReviewEtabDoc(id, decision, estId){
+  let reason = '';
+  if(decision==='reject'){ reason = prompt('Motif du refus'); if(!reason) return; }
+  try {
+    await UrgadApi.reviewEstablishmentDocument(id, decision, reason);
+    toast('success','Document', decision==='approve'?'Validé':'Refusé');
+    await viewEstablishment(estId);
+  } catch(e){ toast('error','Document', e.message||'Échec'); }
+}
+function boAskEtabDocs(id){
+  const e = establishments.find(x=>x.id===id) || {};
+  const msg = (e.documentRequest && e.documentRequest.message) || '';
+  document.getElementById('modalContent').innerHTML = `<div class="modal-header"><h2>Complément — ${escB(e.name||'Établissement')}</h2><button class="modal-close" onclick="closeModal()">✕</button></div>
+  <div class="modal-body"><p style="font-size:13px;color:var(--text-muted);margin-bottom:12px">L’établissement est notifié. Un refus de compte est rouvert (statut « en attente »).</p>
+  <div class="form-group"><label>Document demandé</label><textarea id="bo-ask-etab-msg" rows="4" placeholder="Ex. KBIS illisible, attestation URSSAF manquante.">${escB(msg)}</textarea></div></div>
+  <div class="modal-footer"><button class="btn btn-ghost" onclick="closeModal()">Annuler</button><button class="btn btn-primary" onclick="submitBoAskEtabDocs(${Number(id)})">Envoyer</button></div>`;
+  document.getElementById('modal').classList.add('active');
+}
+async function submitBoAskEtabDocs(id){
+  const message = (document.getElementById('bo-ask-etab-msg')||{}).value || '';
+  try {
+    await UrgadApi.requestEstablishmentDocuments(id, message);
+    closeModal();
+    await refreshAdmin();
+    toast('success','Complément','L’établissement a été notifié.');
+    viewEstablishment(id);
+  } catch(e){ toast('error','Complément', e.message||'Échec'); }
 }
 async function boostMission(id, flash){
   try {

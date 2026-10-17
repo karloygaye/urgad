@@ -1025,8 +1025,11 @@ function renderProDocuments(){
   const known = {};
   slots.forEach(function(s){ known[s.category]=true; });
   const others = docs.filter(function(d){ return !known[d.category]; });
+  const ask = v.documentRequest;
+  const askBanner = ask ? '<div style="border:1px solid rgba(245,158,11,0.35);background:rgba(245,158,11,0.08);border-radius:16px;padding:14px 16px;margin-bottom:16px"><strong style="color:#fbbf24">URGAD demande un complément</strong><p style="font-size:13px;color:var(--text-muted);margin-top:6px;line-height:1.5">'+(ask.categories&&ask.categories.length?escP(ask.categories.map(function(c){ return (window.UrgadFeatures&&UrgadFeatures.docCategoryLabel(c))||c; }).join(', '))+'. ':'')+escP(ask.message||'')+'</p></div>' : '';
   return '<div class="profile-sub-header"><button class="back-btn" onclick="showProScreen(\'profile\')">←</button><h2>Mes documents</h2><div></div></div>'+
   '<div class="profile-sub-body fade-in">'+
+  askBanner+
   '<div style="background:linear-gradient(135deg,rgba(212,175,55,0.08),rgba(16,185,129,0.04));border:1px solid var(--border);border-radius:18px;padding:18px;margin-bottom:18px;text-align:center">'+
     '<div style="font-size:40px;margin-bottom:6px">'+(v.proposable?'✅':'📋')+'</div>'+
     '<div style="font-weight:700;color:var(--gold-soft);margin-bottom:4px">'+(v.proposable?'Profil vérifié':'Vérification en cours')+'</div>'+

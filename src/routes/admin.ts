@@ -5,6 +5,7 @@ import bcrypt from 'bcryptjs';
 import { dbRun, dbGet, dbAll } from '../db.js';
 import { config } from '../config.js';
 import { notify, notifySafe, pushStatus } from '../notify.js';
+import { resolveFileBytes } from '../uploads.js';
 import { backfillCoordinates, haversineKm, num } from '../geo.js';
 import { proUserIdForApplication } from './applications.js';
 import { notifyProsForMission } from '../matching.js';
@@ -192,11 +193,51 @@ router.get('/establishments/:id/documents', authMiddleware, requireAdmin, async 
   } catch (err) { next(err); }
 });
 
+router.get('/establishments/:id/documents/:docId/file', authMiddleware, requireAdmin, async (req: any, res: any, next: any) => {
+  try {
+    const d = await dbGet<any>('SELECT d.id, d.name, d.establishment_id FROM establishment_documents d WHERE d.id = ? AND d.establishment_id = ?', [req.params.docId, req.params.id]);
+    if (!d) return res.status(404).json({ message: 'Document introuvable.' });
+    const file = await dbGet<any>('SELECT stored_name, mime_type, file_bytes FROM document_files WHERE owner_type = ? AND document_id = ? ORDER BY id DESC LIMIT 1', ['establishment', d.id]);
+    const bytes = resolveFileBytes(file?.stored_name, file?.file_bytes);
+    if (!bytes) {
+      return res.status(404).json({
+        message: 'Fichier absent du serveur. Les justificatifs déposés avant la conservation en base ont été perdus : l’établissement doit les envoyer à nouveau.',
+      });
+    }
+    await dbRun('INSERT INTO audit_log (uuid, user_id, user_email, action, resource, details) VALUES (?, ?, ?, ?, ?, ?)',
+      [uuidv4(), req.user.id, req.user.email || null, 'document_view', 'establishment_document:' + d.id, d.name]);
+    res.setHeader('Content-Type', file?.mime_type || 'application/octet-stream');
+    res.setHeader('Content-Disposition', `inline; filename="etab-document-${d.id}"`);
+    res.setHeader('Cache-Control', 'no-store');
+    return res.send(bytes);
+  } catch (err) { next(err); }
+});
+
+router.post('/establishments/:id/request-documents', authMiddleware, requireAdmin, async (req: any, res: any, next: any) => {
+  try {
+    const estab = await dbGet<any>('SELECT * FROM establishments WHERE id = ?', [req.params.id]);
+    if (!estab) return res.status(404).json({ message: 'Établissement non trouvé.' });
+    const message = String(req.body?.message || '').trim().slice(0, 500);
+    if (!message) return res.status(422).json({ message: 'Indiquez le document manquant ou illisible.' });
+    const nextStatus = estab.status === 'rejected' ? 'pending' : estab.status;
+    await dbRun("UPDATE establishments SET document_request_message = ?, document_request_at = datetime('now'), document_request_by = ?, status = ? WHERE id = ?",
+      [message, String(req.user.email || 'admin#' + req.user.id), nextStatus, estab.id]);
+    const user = await dbGet<any>('SELECT verification_status FROM users WHERE id = ?', [estab.user_id]);
+    if (user && user.verification_status === 'rejected') {
+      await dbRun("UPDATE users SET verification_status = 'pending', verified = 0 WHERE id = ?", [estab.user_id]);
+    }
+    await notifySafe(Number(estab.user_id), 'Complément de documents demandé', message, { screen: 'documents' }, 'admin_document');
+    await dbRun('INSERT INTO audit_log (uuid, user_id, user_email, action, resource, details) VALUES (?, ?, ?, ?, ?, ?)',
+      [uuidv4(), req.user.id, req.user.email || null, 'establishment_request_documents', 'establishment:' + estab.id, message]);
+    return res.json({ message: 'Demande envoyée à l’établissement.' });
+  } catch (err) { next(err); }
+});
+
 router.post('/establishments/:id/approve', authMiddleware, requireAdmin, async (req: any, res: any, next: any) => {
   try {
     const estab = await dbGet('SELECT * FROM establishments WHERE id = ?', [req.params.id]) as any;
     if (!estab) return res.status(404).json({ message: 'Établissement non trouvé.' });
-    await dbRun('UPDATE establishments SET status = ? WHERE id = ?', ['approved', estab.id]);
+    await dbRun("UPDATE establishments SET status = ?, document_request_message = NULL, document_request_at = NULL, document_request_by = NULL WHERE id = ?", ['approved', estab.id]);
     await dbRun('UPDATE users SET verified = 1, verification_status = ? WHERE id = ?', ['approved', estab.user_id]);
     await dbRun("UPDATE establishment_documents SET status = 'approved' WHERE establishment_id = ? AND status = 'pending'", [estab.id]);
     await notifySafe(Number(estab.user_id), 'Établissement validé ✅', `${estab.name} est validé. Vous pouvez publier vos missions.`, { screen: 'dashboard' }, 'establishment_approved');

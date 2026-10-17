@@ -40,8 +40,29 @@ export function truthyFile(v: any): boolean {
   return v === true || v === 1 || v === '1' || v === 't' || v === 'true';
 }
 
+export function parseDocCategories(raw: unknown): DocCategory[] {
+  const parts = Array.isArray(raw) ? raw : String(raw || '').split(',');
+  const out: DocCategory[] = [];
+  for (const p of parts) {
+    const c = String(p || '').trim().toLowerCase() as DocCategory;
+    if ((DOC_CATEGORIES as readonly string[]).includes(c) && !out.includes(c)) out.push(c);
+  }
+  return out;
+}
+
+export function categoryLabel(cat: string): string {
+  return ({ identity: "pièce d'identité", diploma: 'diplôme', carte_vitale: 'carte Vitale', vaccins: 'vaccins', rib: 'RIB', other: 'autre document' } as Record<string, string>)[cat] || cat;
+}
+
+function documentRequestOf(p: any) {
+  const categories = parseDocCategories(p?.document_request_categories);
+  const message = String(p?.document_request_message || '').trim();
+  if (!categories.length && !message) return null;
+  return { categories, message, at: p.document_request_at || null, by: p.document_request_by || null };
+}
+
 export async function verificationOf(userId: number) {
-  const p = await dbGet<any>('SELECT identity_status, identity_reason, identity_reviewed_by, identity_reviewed_at, diploma_status, diploma_reason, diploma_reviewed_by, diploma_reviewed_at FROM professionals WHERE user_id = ?', [userId]);
+  const p = await dbGet<any>('SELECT identity_status, identity_reason, identity_reviewed_by, identity_reviewed_at, diploma_status, diploma_reason, diploma_reviewed_by, diploma_reviewed_at, document_request_categories, document_request_message, document_request_at, document_request_by FROM professionals WHERE user_id = ?', [userId]);
   const docs = await dbAll<any>("SELECT id, name, doc_type, category, id_kind, side, status, review_reason, reviewed_by, reviewed_at, created_at, file_purged_at, stored_name, mime_type, size_bytes FROM professional_documents WHERE user_id = ? ORDER BY id DESC", [userId]);
   const of = (cat: string) => docs.filter((d) => d.category === cat);
   const identityDocs = of('identity');
@@ -59,6 +80,7 @@ export async function verificationOf(userId: number) {
     vaccins: { documents: of('vaccins').length },
     rib: { documents: of('rib').length },
     proposable: statusOf(p?.identity_status) === 'verifie' && statusOf(p?.diploma_status) === 'verifie',
+    documentRequest: documentRequestOf(p),
     documents: docs.map((d) => ({
       id: d.id, name: d.name, type: d.doc_type || '', category: d.category || 'other', idKind: d.id_kind || null, side: d.side || null,
       status: d.status || 'pending', reason: d.review_reason || null, reviewedBy: d.reviewed_by || null, reviewedAt: d.reviewed_at || null,
@@ -72,28 +94,65 @@ export async function isProposable(userId: number | null | undefined): Promise<{
   if (!userId) return { ok: false, identity: 'en_attente', diploma: 'en_attente' };
   const p = await dbGet<any>("SELECT p.identity_status, p.diploma_status, u.deleted_at, u.verification_status FROM professionals p JOIN users u ON u.id = p.user_id WHERE p.user_id = ?", [userId]);
   const identity = statusOf(p?.identity_status), diploma = statusOf(p?.diploma_status);
-  const blocked = p?.verification_status === 'suspended' || p?.verification_status === 'rejected';
+  const blocked = p?.verification_status === 'suspended';
   return { ok: !!p && !p.deleted_at && !blocked && identity === 'verifie' && diploma === 'verifie', identity, diploma };
 }
 
-/** Décision admin sur l'identité ou le diplôme : statut, motif, qui et quand ; documents en attente alignés. */
-export async function applyReview(userId: number, kind: VerifKind, decision: 'verifie' | 'refuse', reason: string, reviewer: string) {
-  const prefix = kind === 'identity' ? 'identity' : 'diploma';
-  await dbRun(`UPDATE professionals SET ${prefix}_status = ?, ${prefix}_reason = ?, ${prefix}_reviewed_by = ?, ${prefix}_reviewed_at = datetime('now') WHERE user_id = ?`,
-    [decision, decision === 'refuse' ? reason : null, reviewer, userId]);
-  await dbRun("UPDATE professional_documents SET status = ?, review_reason = ?, reviewed_by = ?, reviewed_at = datetime('now') WHERE user_id = ? AND category = ? AND (status = 'pending' OR status IS NULL OR ? = 'refuse')",
-    [decision === 'verifie' ? 'approved' : 'rejected', decision === 'refuse' ? reason : null, reviewer, userId, kind, decision]);
+export async function syncAccountAfterReview(userId: number) {
+  const user = await dbGet<any>('SELECT verification_status FROM users WHERE id = ?', [userId]);
+  if (!user || user.verification_status === 'suspended' || user.verification_status === 'deleted') return await isProposable(userId);
   const v = await isProposable(userId);
   if (v.ok) await dbRun("UPDATE users SET verified = 1, verification_status = 'approved' WHERE id = ?", [userId]);
-  else if (decision === 'refuse') await dbRun("UPDATE users SET verification_status = 'rejected' WHERE id = ?", [userId]);
+  else await dbRun("UPDATE users SET verified = 0, verification_status = 'pending' WHERE id = ?", [userId]);
   return v;
+}
+
+/** Décision admin sur l'identité ou le diplôme. Un refus peut être annulé (en_attente) ou passé en vérifié. */
+export async function applyReview(userId: number, kind: VerifKind, decision: 'verifie' | 'refuse' | 'en_attente', reason: string, reviewer: string) {
+  const prefix = kind === 'identity' ? 'identity' : 'diploma';
+  const docStatus = decision === 'verifie' ? 'approved' : decision === 'refuse' ? 'rejected' : 'pending';
+  await dbRun(`UPDATE professionals SET ${prefix}_status = ?, ${prefix}_reason = ?, ${prefix}_reviewed_by = ?, ${prefix}_reviewed_at = datetime('now') WHERE user_id = ?`,
+    [decision, decision === 'refuse' ? reason : null, reviewer, userId]);
+  await dbRun("UPDATE professional_documents SET status = ?, review_reason = ?, reviewed_by = ?, reviewed_at = datetime('now') WHERE user_id = ? AND category = ?",
+    [docStatus, decision === 'refuse' ? reason : null, reviewer, userId, kind]);
+  return syncAccountAfterReview(userId);
+}
+
+export async function requestMoreDocuments(userId: number, categories: DocCategory[], message: string, reviewer: string) {
+  const cats = categories.length ? categories : (['identity', 'diploma', 'carte_vitale', 'vaccins', 'rib'] as DocCategory[]);
+  await dbRun("UPDATE professionals SET document_request_categories = ?, document_request_message = ?, document_request_at = datetime('now'), document_request_by = ? WHERE user_id = ?",
+    [cats.join(','), message, reviewer, userId]);
+  if (cats.includes('identity')) {
+    await dbRun("UPDATE professionals SET identity_status = 'en_attente' WHERE user_id = ? AND (identity_status IS NULL OR identity_status = 'refuse')", [userId]);
+  }
+  if (cats.includes('diploma')) {
+    await dbRun("UPDATE professionals SET diploma_status = 'en_attente' WHERE user_id = ? AND (diploma_status IS NULL OR diploma_status = 'refuse')", [userId]);
+  }
+  await syncAccountAfterReview(userId);
+  return verificationOf(userId);
+}
+
+export async function consumeDocumentRequest(userId: number, category: string) {
+  const p = await dbGet<any>('SELECT document_request_categories FROM professionals WHERE user_id = ?', [userId]);
+  const cats = parseDocCategories(p?.document_request_categories);
+  if (!cats.length) return;
+  const left = cats.filter((c) => c !== category);
+  if (left.length === cats.length) return;
+  if (!left.length) {
+    await dbRun('UPDATE professionals SET document_request_categories = NULL, document_request_message = NULL, document_request_at = NULL, document_request_by = NULL WHERE user_id = ?', [userId]);
+  } else {
+    await dbRun('UPDATE professionals SET document_request_categories = ? WHERE user_id = ?', [left.join(','), userId]);
+  }
 }
 
 /** Nouveau dépôt : la vérification correspondante repasse « en_attente » (sauf si déjà vérifiée). */
 export async function onDocumentUploaded(userId: number, category: string) {
-  if (category !== 'identity' && category !== 'diploma') return;
-  const col = category === 'identity' ? 'identity_status' : 'diploma_status';
-  await dbRun(`UPDATE professionals SET ${col} = 'en_attente' WHERE user_id = ? AND (${col} IS NULL OR ${col} = 'refuse')`, [userId]);
+  if (category === 'identity' || category === 'diploma') {
+    const col = category === 'identity' ? 'identity_status' : 'diploma_status';
+    await dbRun(`UPDATE professionals SET ${col} = 'en_attente' WHERE user_id = ? AND (${col} IS NULL OR ${col} = 'refuse')`, [userId]);
+    await syncAccountAfterReview(userId);
+  }
+  await consumeDocumentRequest(userId, category);
 }
 
 /** Durée de conservation du fichier d'identité après vérification (paramètre identity_file_retention_days, défaut 30 j, à valider). */
