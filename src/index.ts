@@ -198,7 +198,13 @@ for (const [file, mime] of faviconFiles) {
     res.sendFile(path.join(previewDir, file));
   });
 }
-app.use(express.static(previewDir));
+app.use(express.static(previewDir, {
+  setHeaders(res, filePath) {
+    if (/\.html?$/i.test(filePath)) {
+      res.setHeader('Cache-Control', 'no-store, no-cache, must-revalidate');
+    }
+  },
+}));
 app.get('/', (_req, res) => {
   res.sendFile(path.join(previewDir, 'index.html'));
 });
