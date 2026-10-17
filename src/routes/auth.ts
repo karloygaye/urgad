@@ -4,10 +4,8 @@ import jwt from 'jsonwebtoken';
 import { v4 as uuidv4 } from 'uuid';
 import { dbRun, dbGet, dbAll } from '../db.js';
 import { config } from '../config.js';
-import { consumePhoneCode, storePhoneCode } from '../phoneCode.js';
 import { geocodeEstablishment, geocodeProfessionalByUser } from '../geo.js';
 import { notifyAdmins } from '../notify.js';
-import { exposeVerificationCodes } from '../runtime.js';
 
 /** Les CGU et la politique de confidentialité doivent être acceptées à l'inscription. */
 export const TERMS_VERSION = '2026-10-08';
@@ -60,16 +58,15 @@ router.post('/register/professional', async (req, res, next) => {
       try { await geocodeProfessionalByUser(Number(userId)); } catch (e) { console.error('[GEO] pro:', e); }
     }
     void notifyAdmins('Nouveau professionnel inscrit', `${firstName} ${lastName} (${email}) — documents à vérifier.`, { userId, screen: 'verification' }, 'admin_new_pro');
-    const code = await storePhoneCode(Number(userId), String(phone));
-    const body: Record<string, unknown> = {
-      message: exposeVerificationCodes()
-        ? 'Compte créé. Code stocké côté serveur. Aucun SMS envoyé.'
-        : 'Compte créé. Un code de vérification a été enregistré. Il n’est pas renvoyé par l’API.',
+    const token = jwt.sign({ id: Number(userId), role: 'professional', email, isAdmin: false }, config.jwtSecret, { expiresIn: '7d' });
+    await dbRun('UPDATE users SET last_login = datetime(\'now\') WHERE id = ?', [userId]);
+    return res.json({
+      message: 'Compte créé. Téléphone enregistré.',
       userId,
+      token,
+      user: { id: Number(userId), email, role: 'professional', isAdmin: false, verified: false },
       smsSent: false,
-    };
-    if (exposeVerificationCodes()) body.verificationCode = code;
-    return res.json(body);
+    });
   } catch (err) { next(err); }
 });
 
@@ -237,46 +234,13 @@ router.get('/terms', (_req, res) => {
   res.json({ termsVersion: TERMS_VERSION, cgu: '/cgu.html', privacy: '/confidentialite.html' });
 });
 
-async function findUserForCode(body: any) {
-  const email = String(body?.email || '').trim().toLowerCase();
-  const phone = String(body?.phone || '').trim();
-  const userId = body?.userId;
-  if (userId != null && String(userId) !== '') {
-    return dbGet('SELECT * FROM users WHERE id = ?', [userId]);
-  }
-  if (email) return dbGet('SELECT * FROM users WHERE lower(email) = lower(?)', [email]);
-  if (phone) return dbGet('SELECT * FROM users WHERE phone = ?', [phone]);
-  return undefined;
-}
-
-/** Nouveau code, stocké, renvoyé dans la réponse. Aucun SMS. */
-router.post('/request-code', async (req, res, next) => {
-  try {
-    const user = await findUserForCode(req.body) as any;
-    if (!user) return res.status(404).json({ message: 'Utilisateur non trouvé.' });
-    const code = await storePhoneCode(Number(user.id), String(user.phone || req.body?.phone || ''));
-    const payload: Record<string, unknown> = {
-      message: exposeVerificationCodes()
-        ? 'Code stocké. Aucun SMS envoyé.'
-        : 'Code enregistré. Il n’est pas renvoyé par l’API (SMS à brancher).',
-      userId: user.id,
-      smsSent: false,
-      provider: 'none',
-    };
-    if (exposeVerificationCodes()) payload.verificationCode = code;
-    return res.json(payload);
-  } catch (err) { next(err); }
+/** Ancien flux SMS : le téléphone est enregistré à l'inscription, sans code. */
+router.post('/request-code', (_req, res) => {
+  res.status(410).json({ message: 'Pas de code SMS. Le téléphone est enregistré à l’inscription.', smsSent: false });
 });
 
-/** Vérifie le code stocké et marque le compte vérifié. */
-router.post('/verify', async (req, res, next) => {
-  try {
-    const user = await findUserForCode(req.body) as any;
-    if (!user) return res.status(404).json({ message: 'Utilisateur non trouvé.' });
-    const result = await consumePhoneCode(Number(user.id), String(req.body?.code || ''));
-    if (!result.ok) return res.status(result.status).json({ message: result.message });
-    return res.json({ message: 'Téléphone vérifié.', verified: true, userId: user.id, smsSent: false });
-  } catch (err) { next(err); }
+router.post('/verify', (_req, res) => {
+  res.status(410).json({ message: 'Pas de vérification SMS. Le téléphone est déjà enregistré.', smsSent: false });
 });
 
 export default router;

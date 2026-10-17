@@ -78,7 +78,10 @@
   }
   function browserNotify(n){
     if (!browserSupported() || Notification.permission !== 'granted') return;
-    try { new Notification(n.title || 'URGAD', { body: n.content || '', tag: 'urgad-' + n.id }); } catch (e) {}
+    try {
+      var urgent = /urgent|🚨/i.test(n.title || '');
+      new Notification(n.title || 'URGAD', { body: n.content || '', tag: 'urgad-' + n.id, requireInteraction: urgent });
+    } catch (e) {}
   }
 
   /* ---------- Push natif (Capacitor @capacitor/push-notifications) ---------- */

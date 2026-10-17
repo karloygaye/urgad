@@ -838,6 +838,7 @@ async function loginBo(){
   } catch(e) { toast('error','Connexion refusée', e.message||'Échec'); }
 }
 function showProScreen(screen){
+if(screen==='sms') screen='profession';
 const container = document.getElementById('pro-screen');
 const nav = document.getElementById('pro-nav');
 const navItems = nav.querySelectorAll('.nav-item');
@@ -880,7 +881,7 @@ html=`<div class="form-screen fade-in">
 </div>
 <div class="checkbox-row"><input type="checkbox" id="cgu"><label for="cgu">J'accepte les conditions générales d'utilisation</label></div>
 <div class="checkbox-row"><input type="checkbox" id="priv"><label for="priv">J'accepte la politique de confidentialité</label></div>
-<button class="btn btn-primary btn-block btn-lg" style="margin-top:20px" onclick="showProScreen('sms')">Continuer</button>
+<button class="btn btn-primary btn-block btn-lg" style="margin-top:20px" onclick="showProScreen('profession')">Continuer</button>
 </div>`;
 break;
 case 'login':
@@ -893,24 +894,6 @@ html=`<div class="form-screen fade-in">
 <div class="form-group"><label>Mot de passe</label><input type="password" placeholder="••••••••"></div>
 <button class="btn btn-primary btn-block btn-lg" style="margin-top:20px" onclick="showProScreen('home')">Se connecter</button>
 <p style="text-align:center;margin-top:16px;font-size:13px;color:var(--text-muted)">Pas de compte ? <a style="color:var(--gold-soft);font-weight:600;cursor:pointer" onclick="showProScreen('register')">Créer un compte</a></p>
-</div>`;
-break;
-case 'sms':
-showNav=false;
-html=`<div class="sms-screen fade-in">
-<div class="sms-icon">📱</div>
-<h1 style="font-family:'Playfair Display',serif;font-size:28px;margin-bottom:8px">Vérification SMS</h1>
-<p class="sub">Nous avons envoyé un code au<br><strong style="color:var(--text)">06 12 34 56 78</strong></p>
-<div class="sms-code">
-<input type="text" maxlength="1" value="5">
-<input type="text" maxlength="1" value="8">
-<input type="text" maxlength="1" value="4">
-<input type="text" maxlength="1" value="9">
-<input type="text" maxlength="1" value="2">
-<input type="text" maxlength="1" value="1">
-</div>
-<p style="font-size:12px;color:var(--text-muted);margin-bottom:20px">Votre code URGAD : <strong style="color:var(--gold-soft)">584921</strong></p>
-<button class="btn btn-primary btn-block btn-lg" onclick="showProScreen('profession')">Valider</button>
 </div>`;
 break;
 case 'profession':
@@ -1126,7 +1109,7 @@ html=`<div class="fade-in">
         <div class="profile-menu-icon amber">🔔</div>
         <div class="profile-menu-content">
           <h4>Notifications</h4>
-          <p>Push, email, SMS</p>
+          <p>Dans l’app et sur le téléphone</p>
         </div>
         <div class="profile-menu-arrow">›</div>
       </div>
@@ -1508,7 +1491,7 @@ html=`<div class="profile-sub-header">
     <div class="toggle-row">
       <div class="toggle-row-info">
         <h4>Missions urgentes FLASH</h4>
-        <p>Alertes prioritaires pour missions urgentes</p>
+        <p>Notification prioritaire (cloche + bandeau, et alerte écran si autorisée)</p>
       </div>
       <div class="toggle-switch on" onclick="this.classList.toggle('on')"></div>
     </div>
@@ -1557,24 +1540,6 @@ html=`<div class="profile-sub-header">
         <p>Actualités et conseils de la plateforme</p>
       </div>
       <div class="toggle-switch" onclick="this.classList.toggle('on')"></div>
-    </div>
-  </div>
-
-  <div class="profile-section">
-    <h3>Notifications SMS</h3>
-    <div class="toggle-row">
-      <div class="toggle-row-info">
-        <h4>Missions urgentes</h4>
-        <p>Recevoir les missions urgentes par SMS</p>
-      </div>
-      <div class="toggle-switch on" onclick="this.classList.toggle('on')"></div>
-    </div>
-    <div class="toggle-row">
-      <div class="toggle-row-info">
-        <h4>Confirmations de mission</h4>
-        <p>Rappel SMS avant chaque mission</p>
-      </div>
-      <div class="toggle-switch on" onclick="this.classList.toggle('on')"></div>
     </div>
   </div>
 

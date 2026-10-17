@@ -1,4 +1,4 @@
-/** Runtime flags. Demo seed and SMS codes stay off in production unless explicitly enabled. */
+/** Runtime flags. Demo seed stays off in production unless explicitly enabled. */
 
 export function isProduction(): boolean {
   return (process.env.NODE_ENV || '').trim() === 'production';

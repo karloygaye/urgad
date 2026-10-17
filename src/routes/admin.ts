@@ -4,7 +4,6 @@ import jwt from 'jsonwebtoken';
 import bcrypt from 'bcryptjs';
 import { dbRun, dbGet, dbAll } from '../db.js';
 import { config } from '../config.js';
-import { storePhoneCode } from '../phoneCode.js';
 import { notify, notifySafe, pushStatus } from '../notify.js';
 import { backfillCoordinates, haversineKm, num } from '../geo.js';
 import { proUserIdForApplication } from './applications.js';
@@ -104,8 +103,7 @@ router.post('/professionals/:id/resend-verification', authMiddleware, requireAdm
   try {
     const prof = await dbGet('SELECT * FROM users WHERE id = ?', [req.params.id]) as any;
     if (!prof) return res.status(404).json({ message: 'Professionnel non trouvé.' });
-    const code = await storePhoneCode(Number(prof.id), String(prof.phone || ''));
-    return res.json({ message: 'Nouveau code stocké. Aucun SMS envoyé.', code, smsSent: false });
+    return res.status(410).json({ message: 'Pas de SMS. Le téléphone du professionnel est celui saisi à l’inscription.', smsSent: false });
   } catch (err) { next(err); }
 });
 

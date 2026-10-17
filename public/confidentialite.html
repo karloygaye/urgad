@@ -66,7 +66,7 @@ footer a{color:var(--text-muted);margin:0 6px}
 <section id="donnees"><h2>2. Données collectées</h2>
 <h3>Professionnels de santé</h3>
 <ul>
-<li><strong>Identité et contact</strong> : nom, prénom, date de naissance si renseignée, e-mail, numéro de téléphone (vérifié par code SMS), photo si fournie.</li>
+<li><strong>Identité et contact</strong> : nom, prénom, date de naissance si renseignée, e-mail, numéro de téléphone saisi à l'inscription, photo si fournie.</li>
 <li><strong>Données professionnelles</strong> : profession, expérience, compétences, services, disponibilités, établissements précédents, présentation.</li>
 <li><strong>Justificatifs</strong> : diplômes, numéro RPPS ou ADELI, attestations. Ces documents servent à vérifier l'autorisation d'exercer.</li>
 <li><strong>Pièce d'identité</strong> (Professionnels) : carte nationale d'identité, passeport ou titre de séjour, recto et verso. Elle sert uniquement à vérifier que la personne proposée à un Établissement est bien celle qui a créé le compte et, pour un titre de séjour, son droit de travailler en France. Nous enregistrons aussi le résultat de la vérification (vérifié ou refusé, motif, date, membre de l'équipe).</li>
@@ -95,8 +95,7 @@ footer a{color:var(--text-muted);margin:0 6px}
 <tr><td>Vérification des diplômes et de l'autorisation d'exercer</td><td>Intérêt légitime (sécurité des établissements et des personnes soignées) et exécution du contrat</td></tr>
 <tr><td>Géolocalisation de l'adresse pour calculer les distances</td><td>Exécution du contrat</td></tr>
 <tr><td>Utilisation ponctuelle de la position actuelle de l'appareil</td><td>Consentement (autorisation de l'appareil, retirable à tout moment)</td></tr>
-<tr><td>Notifications push et notifications du navigateur</td><td>Consentement (autorisation de l'appareil ou du navigateur)</td></tr>
-<tr><td>Vérification du téléphone par SMS</td><td>Intérêt légitime (lutte contre la fraude)</td></tr>
+<tr><td>Notifications (application, navigateur, push) y compris missions urgentes</td><td>Consentement (autorisation de l'appareil ou du navigateur)</td></tr>
 <tr><td>Facturation et comptabilité des abonnements</td><td>Obligation légale</td></tr>
 <tr><td>Sécurité, journalisation, prévention des abus et gestion des litiges</td><td>Intérêt légitime</td></tr>
 <tr><td>Réponse aux demandes des autorités</td><td>Obligation légale</td></tr>
@@ -110,7 +109,6 @@ footer a{color:var(--text-muted);margin:0 6px}
 <tr><td>Pièce d'identité (fichier)</td><td>Le fichier est supprimé automatiquement <span class="ph">[30 jours — durée à valider]</span> après la vérification, et dans tous les cas à la suppression du compte. Seuls le résultat (vérifié / refusé), le type de document, la date et l'auteur de la vérification sont conservés pendant la vie du compte.</td></tr>
 <tr><td>Justificatifs (diplômes, RPPS/ADELI, attestations)</td><td>Pendant la vie du compte. Fichiers supprimés à la suppression du compte.</td></tr>
 <tr><td>Messages, candidatures, missions</td><td>Pendant la vie du compte. Anonymisés à la suppression. Conservation possible jusqu'à <span class="ph">[5 ans]</span> en archive intermédiaire en cas de litige.</td></tr>
-<tr><td>Codes de vérification SMS</td><td>Quelques minutes (expiration), supprimés à la suppression du compte.</td></tr>
 <tr><td>Jetons de notification</td><td>Jusqu'à la déconnexion, la suppression du compte ou l'invalidation par Google/Apple.</td></tr>
 <tr><td>Journaux de sécurité</td><td><span class="ph">[1 an]</span></td></tr>
 <tr><td>Pièces comptables (factures d'abonnement)</td><td>10 ans (article L123-22 du Code de commerce)</td></tr>
@@ -132,7 +130,6 @@ footer a{color:var(--text-muted);margin:0 6px}
 <section id="soustraitants"><h2>6. Hébergement et sous-traitants</h2>
 <div class="tw"><table><thead><tr><th>Service</th><th>Prestataire</th><th>Localisation</th></tr></thead><tbody>
 <tr><td>Hébergement de l'application et de la base de données</td><td><span class="ph">[HÉBERGEUR]</span></td><td><span class="ph">[PAYS / RÉGION]</span></td></tr>
-<tr><td>Envoi des SMS de vérification</td><td><span class="ph">[PRESTATAIRE SMS]</span></td><td><span class="ph">[PAYS]</span></td></tr>
 <tr><td>Paiement des abonnements</td><td><span class="ph">[Stripe Payments Europe Ltd. — à confirmer]</span></td><td><span class="ph">[UE / États-Unis]</span></td></tr>
 <tr><td>Notifications push Android/web</td><td>Google Firebase Cloud Messaging (Google Ireland Ltd.) <span class="ph">[à confirmer]</span></td><td>UE / États-Unis</td></tr>
 <tr><td>Notifications push iOS</td><td>Apple Push Notification service (Apple) <span class="ph">[à confirmer]</span></td><td>UE / États-Unis</td></tr>

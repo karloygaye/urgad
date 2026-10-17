@@ -745,34 +745,18 @@ async function saveProDraft(){
       created = await UrgadApi.registerProfessional(draft);
     } catch(e) {
       if (e.status !== 409) throw e;
-      created = await UrgadApi.requestCode({ email: draft.email, phone: draft.phone });
+      await UrgadApi.login(draft.email, draft.password, 'professional');
+      created = {};
     }
     U.draftPro.userId = created.userId || U.draftPro.userId;
-    U.draftPro.verificationCode = created.verificationCode || '';
-    showProScreen('sms');
-    toast('info','Code stocké','Aucun SMS envoyé. Saisissez le code affiché.');
+    if(!UrgadApi.token('professional') && draft.email && draft.password){
+      await UrgadApi.login(draft.email, draft.password, 'professional');
+    }
+    showProScreen('profession');
+    toast('success','Compte créé','Téléphone enregistré. Les alertes arriveront par notification.');
   } catch(e) {
     toast('error','Compte', e.message || 'Échec');
   }
-}
-function moveSms(el){
-  const box = document.getElementById('sms-code');
-  if(!box) return;
-  const inputs = Array.from(box.querySelectorAll('input'));
-  const i = inputs.indexOf(el);
-  if(el.value && inputs[i+1]) inputs[i+1].focus();
-}
-async function submitSmsCode(){
-  const box = document.getElementById('sms-code');
-  const code = box ? Array.from(box.querySelectorAll('input')).map(function(i){ return i.value; }).join('').trim() : '';
-  const draft = U.draftPro || {};
-  if(code.length !== 6){ toast('error','Code','Saisissez les 6 chiffres'); return; }
-  try {
-    await UrgadApi.verifyPhone({ code: code, email: draft.email, userId: draft.userId, phone: draft.phone });
-    if(draft.email && draft.password) await UrgadApi.login(draft.email, draft.password, 'professional');
-    showProScreen('profession');
-    toast('success','Téléphone vérifié','Compte marqué vérifié. Aucun SMS réel.');
-  } catch(e) { toast('error','Vérification', e.message || 'Échec'); }
 }
 function saveProProfession(){
   const h = document.querySelector('.prof-option.selected h4');
@@ -956,7 +940,7 @@ function markDocUploaded(name, category, idKind, side){
   input.onchange = async function(){
     const file = input.files && input.files[0];
     if(!file) return;
-    if(!UrgadApi.token('professional')){ toast('error','Document','Vérifiez le téléphone pour ouvrir la session, puis réessayez.'); return; }
+    if(!UrgadApi.token('professional')){ toast('error','Document','Connectez-vous pour transmettre un document.'); return; }
     try {
       const payload = await UrgadApi.readFile(file);
       await UrgadApi.addProfessionalDocument(Object.assign({ name: name || file.name, type: name || 'document', category: category || 'other', idKind: idKind || undefined, side: side || undefined }, payload));
@@ -1094,6 +1078,7 @@ function startProNotifications(){
   if(proNotifStarted) return;
   proNotifStarted = true;
   UrgadFeatures.registerNativePush('professional');
+  if(UrgadFeatures.browserPermission()==='default'){ UrgadFeatures.enableBrowserNotifications(); }
   UrgadFeatures.startNotifications('professional', function(rows, unread){
     notifications = rows.map(mapProNotif);
     UrgadFeatures.setBadge(document.getElementById('proNotifBadge'), unread);
@@ -1172,6 +1157,7 @@ async function bootPro(){
 }
 
 function showProScreen(screen){
+if(screen==='sms') screen='profession';
 const container = document.getElementById('pro-screen');
 const nav = document.getElementById('pro-nav');
 const navItems = nav.querySelectorAll('.nav-item');
@@ -1208,7 +1194,7 @@ html=`<div class="form-screen fade-in">
 <div class="form-group"><label>Prénom</label><input type="text" id="reg-first" placeholder="Jean"></div>
 <div class="form-group"><label>Nom</label><input type="text" id="reg-last" placeholder="Lomama"></div>
 </div>
-<div class="form-group"><label>Téléphone</label><input type="tel" id="reg-phone" placeholder="06 12 34 56 78"></div>
+<div class="form-group"><label>Téléphone</label><input type="tel" id="reg-phone" placeholder="06 12 34 56 78"><p style="font-size:12px;color:var(--text-muted);margin-top:6px">Enregistré pour vous joindre. Pas de code SMS.</p></div>
 <div class="form-group"><label>E-mail</label><input type="email" id="reg-email" placeholder="marie.dupont@email.fr"></div>
 <div class="form-group"><label>Mot de passe</label><input type="password" id="reg-pass" placeholder="••••••••"></div>
 <div class="form-group"><label>Date de naissance</label><input id="reg-birth" type="date"></div>
@@ -1237,27 +1223,6 @@ html=`<div class="form-screen fade-in">
 <p style="text-align:center;margin-top:10px;font-size:12px;color:var(--text-dim)">Établissement ? <a href="urgad-etab.html" style="color:var(--gold-soft)">Espace dédié</a></p>
 </div>`;
 break;
-case 'sms': {
-showNav=false;
-const shown = (U.draftPro && U.draftPro.verificationCode) ? U.draftPro.verificationCode : '';
-html=`<div class="sms-screen fade-in">
-<div class="sms-icon">📱</div>
-<h1 style="font-family:'Playfair Display',serif;font-size:28px;margin-bottom:8px">Vérification SMS</h1>
-<p class="sub">Aucun SMS réel (pas de fournisseur). Le code est stocké par l'API. Saisissez-le pour marquer le compte vérifié.</p>
-<div class="sms-code" id="sms-code">
-<input id="sms0" type="text" inputmode="numeric" maxlength="1" oninput="moveSms(this,1)">
-<input id="sms1" type="text" inputmode="numeric" maxlength="1" oninput="moveSms(this,1)">
-<input id="sms2" type="text" inputmode="numeric" maxlength="1" oninput="moveSms(this,1)">
-<input id="sms3" type="text" inputmode="numeric" maxlength="1" oninput="moveSms(this,1)">
-<input id="sms4" type="text" inputmode="numeric" maxlength="1" oninput="moveSms(this,1)">
-<input id="sms5" type="text" inputmode="numeric" maxlength="1" oninput="moveSms(this,1)">
-</div>
-<p style="font-size:13px;color:var(--gold-soft);margin-bottom:8px">Code API : <strong>${shown || '—'}</strong></p>
-<p style="font-size:12px;color:var(--text-muted);margin-bottom:20px">Rien n'est envoyé à un opérateur SMS.</p>
-<button class="btn btn-primary btn-block btn-lg" onclick="submitSmsCode()">Vérifier le code</button>
-</div>`;
-break;
-}
 case 'profession':
 showNav=false;
 html=`<div class="form-screen fade-in">
@@ -1435,7 +1400,7 @@ html=`<div class="fade-in">
         <div class="profile-menu-icon amber">🔔</div>
         <div class="profile-menu-content">
           <h4>Notifications</h4>
-          <p>Push, email, SMS</p>
+          <p>Dans l’app et sur le téléphone</p>
         </div>
         <div class="profile-menu-arrow">›</div>
       </div>
@@ -1756,7 +1721,7 @@ html=`<div class="profile-sub-header">
     <div class="toggle-row">
       <div class="toggle-row-info">
         <h4>Missions urgentes FLASH</h4>
-        <p>Alertes prioritaires pour missions urgentes</p>
+        <p>Notification prioritaire (cloche + bandeau, et alerte écran si autorisée)</p>
       </div>
       <div class="toggle-switch on" onclick="this.classList.toggle('on')"></div>
     </div>
@@ -1805,24 +1770,6 @@ html=`<div class="profile-sub-header">
         <p>Actualités et conseils de la plateforme</p>
       </div>
       <div class="toggle-switch" onclick="this.classList.toggle('on')"></div>
-    </div>
-  </div>
-
-  <div class="profile-section">
-    <h3>Notifications SMS</h3>
-    <div class="toggle-row">
-      <div class="toggle-row-info">
-        <h4>Missions urgentes</h4>
-        <p>Recevoir les missions urgentes par SMS</p>
-      </div>
-      <div class="toggle-switch on" onclick="this.classList.toggle('on')"></div>
-    </div>
-    <div class="toggle-row">
-      <div class="toggle-row-info">
-        <h4>Confirmations de mission</h4>
-        <p>Rappel SMS avant chaque mission</p>
-      </div>
-      <div class="toggle-switch on" onclick="this.classList.toggle('on')"></div>
     </div>
   </div>
 

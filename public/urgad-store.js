@@ -302,7 +302,7 @@
   }
 
   async function registerProfessional(draft){
-    return request(null, 'POST', '/api/auth/register/professional', {
+    var data = await request(null, 'POST', '/api/auth/register/professional', {
       email: draft.email,
       password: draft.password,
       phone: draft.phone,
@@ -314,6 +314,8 @@
       profession: draft.profession || '',
       acceptTerms: draft.acceptTerms === true
     });
+    if (data && data.token) setToken('professional', data.token);
+    return data;
   }
 
   async function registerEstablishment(draft){

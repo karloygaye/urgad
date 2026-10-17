@@ -1,7 +1,6 @@
 /**
- * Service SMS URGAD
- * Dans le MVP, les SMS sont envoyés via un service mock pour éviter les dépendances réseau.
- * Pour la production, remplacer par Twilio, Africa's Talking ou un autre provider SMS.
+ * SMS volontairement non utilisés : le téléphone est enregistré à l'inscription,
+ * les alertes (y compris missions urgentes) passent par notify() — in-app + push / navigateur.
  */
 
 export interface SMSSendResult {

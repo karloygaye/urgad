@@ -33,11 +33,10 @@ Dans le dashboard, **avant** d’ouvrir au public :
 | `JWT_SECRET` | Secret long (pas celui de démo) |
 | `NODE_ENV` | `production` |
 | `URGAD_SEED` | `0` |
-| `URGAD_EXPOSE_CODES` | `0` |
 | `URGAD_ADMIN_EMAIL` | Ton email |
 | `URGAD_ADMIN_PASSWORD` | ≥ 10 caractères, une fois pour créer l’admin |
 
-Stripe : `STRIPE_SECRET_KEY` active Checkout (199 / 249 / 299 € HT / mois). `STRIPE_WEBHOOK_SECRET` pour les renouvellements. Sans clé, le plan est enregistré sans débit. Les codes SMS ne sont plus renvoyés dans le JSON en production.
+Stripe : `STRIPE_SECRET_KEY` active Checkout (199 / 249 / 299 € HT / mois). `STRIPE_WEBHOOK_SECRET` pour les renouvellements. Sans clé, le plan est enregistré sans débit. Pas de SMS : le téléphone est enregistré à l’inscription ; les missions urgentes partent en notification (in-app, navigateur, push si configuré).
 
 Après paiement : confirmation in-app (établissement + admin), écriture finance, écran de succès. Portail Stripe (factures, carte, résiliation en fin de période). Demandes extra hors quota : 25 € HT (Essentiel) / 15 € HT (Pro), 0 € (Premium). Stripe envoie le reçu si **Settings → Customer emails** (Successful payments / Failed payments) est coché. Webhook : `checkout.session.completed`, `invoice.paid`, `invoice.payment_failed`, `customer.subscription.updated`, `customer.subscription.deleted`.
 
