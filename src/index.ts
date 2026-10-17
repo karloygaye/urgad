@@ -182,8 +182,9 @@ app.get('/', (_req, res) => {
   res.sendFile(path.join(previewDir, 'index.html'));
 });
 
-app.listen(PORT, () => {
-  console.log(`URGAD API running on http://localhost:${PORT}`);
+const HOST = process.env.HOST || '0.0.0.0';
+app.listen(Number(PORT), HOST, () => {
+  console.log(`URGAD API running on http://${HOST}:${PORT}`);
   console.log(`Health: http://localhost:${PORT}/api/health`);
   console.log(`UI:     http://localhost:${PORT}/ (preview HTML)`);
   console.log(`Pro:    http://localhost:${PORT}/urgad-pro.html`);

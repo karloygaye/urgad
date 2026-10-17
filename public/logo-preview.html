@@ -1,0 +1,37 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>URGAD — Identité</title>
+<link rel="icon" href="logo.svg" type="image/svg+xml">
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/fontsource/fonts/playfair-display@latest/latin-700-normal.css">
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/fontsource/fonts/inter@latest/latin-400-normal.css">
+<style>
+body{margin:0;font-family:Inter,system-ui,sans-serif;background:#0A0E1A;color:#F8FAFC;min-height:100vh}
+.wrap{max-width:920px;margin:0 auto;padding:48px 24px 80px}
+h1{font-family:'Playfair Display',serif;font-size:36px;margin:0 0 8px}
+p{color:#94A3B8;margin:0 0 36px;line-height:1.5}
+.grid{display:grid;grid-template-columns:1fr 1.4fr;gap:22px}
+.card{background:#111827;border:1px solid rgba(255,255,255,.08);border-radius:22px;padding:28px;display:flex;flex-direction:column;align-items:center;justify-content:center;min-height:220px}
+.card.light{background:#F4EFE4}
+.card img.mark{width:140px;height:auto}
+.card img.lock{width:100%;max-width:420px;height:auto}
+.card span{margin-top:16px;font-size:12px;letter-spacing:.18em;text-transform:uppercase;color:#94A3B8}
+.card.light span{color:#4B5563}
+@media(max-width:720px){.grid{grid-template-columns:1fr}}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <h1>Identité URGAD</h1>
+  <p>Épingle en U or : le lieu de soin. Le point : le soignant qui y arrive. Marine #0A1630 · or #D4AF37.</p>
+  <div class="grid">
+    <div class="card"><img class="mark" src="logo.svg" alt="Sigle URGAD"><span>Sigle</span></div>
+    <div class="card"><img class="lock" src="logo-lockup.svg" alt="URGAD"><span>Lockup</span></div>
+    <div class="card light"><img class="mark" src="logo-icon.svg" alt="Icône URGAD"><span>Icône app</span></div>
+    <div class="card" style="background:#07101f"><img class="lock" src="logo-lockup.svg" alt="URGAD"><span>Sur fond nuit</span></div>
+  </div>
+</div>
+</body>
+</html>

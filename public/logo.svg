@@ -1,0 +1,12 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 220" fill="none" role="img" aria-label="URGAD">
+  <defs>
+    <linearGradient id="urgadGold" x1="40" y1="20" x2="160" y2="200" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#F8E7A4"/>
+      <stop offset=".42" stop-color="#D4AF37"/>
+      <stop offset="1" stop-color="#8A6912"/>
+    </linearGradient>
+  </defs>
+  <path d="M58 34c4 58 22 112 42 164" stroke="url(#urgadGold)" stroke-width="22" stroke-linecap="round" fill="none"/>
+  <path d="M142 34c-4 58-22 112-42 164" stroke="url(#urgadGold)" stroke-width="22" stroke-linecap="round" fill="none"/>
+  <circle cx="100" cy="126" r="12" fill="url(#urgadGold)"/>
+</svg>

@@ -1,0 +1,16 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 560 160" fill="none" role="img" aria-label="URGAD">
+  <defs>
+    <linearGradient id="urgadGoldLockup" x1="0" y1="0" x2="560" y2="160" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#F8E7A4"/>
+      <stop offset=".42" stop-color="#D4AF37"/>
+      <stop offset="1" stop-color="#8A6912"/>
+    </linearGradient>
+  </defs>
+  <g transform="translate(8 4) scale(0.68)">
+    <path d="M58 34c4 58 22 112 42 164" stroke="url(#urgadGoldLockup)" stroke-width="22" stroke-linecap="round" fill="none"/>
+    <path d="M142 34c-4 58-22 112-42 164" stroke="url(#urgadGoldLockup)" stroke-width="22" stroke-linecap="round" fill="none"/>
+    <circle cx="100" cy="126" r="12" fill="url(#urgadGoldLockup)"/>
+  </g>
+  <text x="168" y="100" fill="url(#urgadGoldLockup)" font-family="'Playfair Display', Georgia, 'Times New Roman', serif" font-size="68" font-weight="700" letter-spacing="10">URGAD</text>
+  <line x1="172" y1="118" x2="536" y2="118" stroke="url(#urgadGoldLockup)" stroke-width="1.4" opacity=".8"/>
+</svg>

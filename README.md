@@ -19,6 +19,8 @@ npx tsx src/index.ts
 
 [http://127.0.0.1:3001](http://127.0.0.1:3001) — sans `DATABASE_URL`, sqlite `urgad.db`. Hors production, seed démo si la base est vide (`admin@urgad.fr` / `admin123`).
 
+Identité visuelle : épingle or (lieu de soin) + U gravé (soignant). Pack à télécharger : `public/urgad-logos.zip` ou la page `/logos.html`. Sources `public/logo.svg` (sigle), `public/logo-icon.svg` (icône app), `public/logo-lockup.svg` (sigle + mot).
+
 ## Production (Render)
 
 Dans le dashboard, **avant** d’ouvrir au public :
@@ -61,6 +63,12 @@ npx cap open ios       # Xcode, macOS uniquement
 ```
 
 Push : laisser `URGAD_NATIVE_PUSH` à `false` tant que Firebase n’est pas configuré (sinon Android peut crasher). Ensuite poser les fichiers Firebase et passer le flag à `true`.
+
+## Modèle économique et mails
+
+Playbook CA / mix d’abonnés : `docs/modele-economique.md`.  
+9 mails prêts à copier (établissements, soignants, match) : `mails/modeles.md`.  
+Expéditeur visé `contact@urgad.fr` après MX Plan OVH ; sinon Gmail + signature https://urgad.fr.
 
 ## Comptes
 

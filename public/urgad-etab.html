@@ -3,6 +3,9 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
+<link rel="icon" href="logo.svg" type="image/svg+xml">
+<link rel="apple-touch-icon" href="logo-icon.svg">
+
 <title>URGAD — Espace établissement</title>
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/fontsource/fonts/inter@latest/latin-400-normal.css">
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/fontsource/fonts/inter@latest/latin-500-normal.css">
@@ -33,7 +36,7 @@ button{cursor:pointer;border:none;font-family:inherit;background:none;color:inhe
 input,select,textarea{font-family:inherit}
 .splash{position:fixed;inset:0;background:radial-gradient(ellipse at top,#1a1f35 0%,#0A0E1A 70%);display:flex;align-items:center;justify-content:center;z-index:9999;flex-direction:column;overflow:hidden}
 .splash::before{content:'';position:absolute;width:600px;height:600px;background:radial-gradient(circle,rgba(212,175,55,0.15),transparent 70%);top:-200px;left:50%;transform:translateX(-50%);filter:blur(40px)}
-.splash-logo{font-family:'Playfair Display',serif;font-size:84px;font-weight:700;background:var(--gradient-gold);-webkit-background-clip:text;background-clip:text;-webkit-text-fill-color:transparent;letter-spacing:-3px;animation:logoIn 1.2s cubic-bezier(0.16,1,0.3,1);position:relative;z-index:2}
+.splash-logo{display:flex;align-items:center;justify-content:center;animation:logoIn 1.2s cubic-bezier(0.16,1,0.3,1);position:relative;z-index:2}
 .splash-logo::after{content:'';position:absolute;bottom:-8px;left:50%;transform:translateX(-50%);width:60px;height:2px;background:var(--gradient-gold);border-radius:2px}
 .splash-tagline{color:var(--text-muted);font-size:15px;margin-top:28px;letter-spacing:3px;text-transform:uppercase;font-weight:500;animation:fadeUp 1.4s ease;position:relative;z-index:2}
 .splash-loader{margin-top:60px;width:200px;height:1px;background:rgba(255,255,255,0.08);border-radius:2px;overflow:hidden;position:relative;z-index:2}
@@ -44,7 +47,7 @@ input,select,textarea{font-family:inherit}
 .landing{min-height:100vh;background:radial-gradient(ellipse at top left,rgba(212,175,55,0.08),transparent 50%),radial-gradient(ellipse at bottom right,rgba(16,185,129,0.06),transparent 50%),var(--bg);padding:60px 40px;display:flex;flex-direction:column;align-items:center;justify-content:center;position:relative;overflow:hidden}
 .landing::before{content:'';position:absolute;inset:0;background-image:radial-gradient(rgba(255,255,255,0.03) 1px,transparent 1px);background-size:40px 40px;pointer-events:none}
 .landing-header{display:flex;justify-content:space-between;align-items:center;width:100%;max-width:1200px;margin-bottom:80px;position:relative;z-index:2}
-.landing-brand{font-family:'Playfair Display',serif;font-size:32px;font-weight:700;background:var(--gradient-gold);-webkit-background-clip:text;background-clip:text;-webkit-text-fill-color:transparent;letter-spacing:-1px}
+.landing-brand{display:flex;align-items:center}
 .landing-badge{padding:8px 16px;border:1px solid var(--border-strong);border-radius:100px;font-size:12px;color:var(--text-muted);letter-spacing:1px;text-transform:uppercase;font-weight:500}
 .landing-hero{text-align:center;max-width:800px;margin-bottom:80px;position:relative;z-index:2}
 .landing-eyebrow{display:inline-block;padding:6px 14px;background:rgba(212,175,55,0.1);border:1px solid rgba(212,175,55,0.2);border-radius:100px;color:var(--gold-soft);font-size:12px;letter-spacing:2px;text-transform:uppercase;font-weight:600;margin-bottom:24px}
@@ -87,7 +90,7 @@ input,select,textarea{font-family:inherit}
 .btn-danger{background:rgba(239,68,68,0.1);color:var(--red);border:1px solid rgba(239,68,68,0.25)}
 .btn-sm{padding:10px 18px;font-size:13px;border-radius:10px}
 .welcome{padding:40px 28px;display:flex;flex-direction:column;min-height:100%}
-.welcome-logo{font-family:'Playfair Display',serif;font-size:44px;font-weight:700;background:var(--gradient-gold);-webkit-background-clip:text;background-clip:text;-webkit-text-fill-color:transparent;letter-spacing:-1.5px;margin-bottom:4px}
+.welcome-logo{margin-bottom:8px}
 .welcome-tag{color:var(--text-muted);font-size:12px;letter-spacing:2px;text-transform:uppercase;margin-bottom:36px;font-weight:500}
 .welcome-illustration{width:100%;height:240px;background:linear-gradient(135deg,#1a1f35,#0A0E1A);border-radius:28px;margin-bottom:36px;display:flex;align-items:center;justify-content:center;font-size:80px;position:relative;overflow:hidden;border:1px solid var(--border)}
 .welcome-illustration::before{content:'';position:absolute;inset:0;background:radial-gradient(circle at 30% 30%,rgba(212,175,55,0.2),transparent 60%)}
@@ -357,7 +360,7 @@ input,select,textarea{font-family:inherit}
 .etab-nav-overlay{display:none;position:fixed;inset:0;background:rgba(10,14,26,0.55);z-index:40}
 .etab-sidebar{width:280px;background:var(--bg-soft);border-right:1px solid var(--border);padding:28px 0;position:fixed;height:100vh;overflow-y:auto;display:flex;flex-direction:column;z-index:50}
 .etab-brand{padding:0 28px 28px;border-bottom:1px solid var(--border);margin-bottom:20px;flex-shrink:0}
-.etab-brand h2{font-family:'Playfair Display',serif;font-size:28px;font-weight:700;background:var(--gradient-gold);-webkit-background-clip:text;background-clip:text;-webkit-text-fill-color:transparent;letter-spacing:-1px}
+.etab-brand img{height:36px;width:auto;display:block}
 .etab-brand p{font-size:11px;color:var(--text-muted);margin-top:4px;letter-spacing:2px;text-transform:uppercase;font-weight:500}
 .etab-nav{padding:0 14px;flex:1}
 .etab-nav-item{padding:13px 18px;border-radius:12px;color:var(--text-muted);font-weight:500;font-size:14px;cursor:pointer;display:flex;align-items:center;gap:14px;margin-bottom:4px;transition:all 0.2s}
@@ -391,7 +394,7 @@ input,select,textarea{font-family:inherit}
 .bo-sidebar::-webkit-scrollbar{width:6px}
 .bo-sidebar::-webkit-scrollbar-thumb{background:var(--border-strong);border-radius:3px}
 .bo-brand{padding:24px 28px;border-bottom:1px solid var(--border);flex-shrink:0}
-.bo-brand h2{font-family:'Playfair Display',serif;font-size:28px;font-weight:700;background:var(--gradient-gold);-webkit-background-clip:text;background-clip:text;-webkit-text-fill-color:transparent;letter-spacing:-1px}
+.bo-brand img{height:36px;width:auto;display:block}
 .bo-brand p{font-size:10px;color:var(--text-muted);margin-top:4px;text-transform:uppercase;letter-spacing:2px;font-weight:600}
 .bo-brand-status{display:flex;align-items:center;gap:8px;margin-top:10px;padding:6px 10px;background:rgba(16,185,129,0.08);border:1px solid rgba(16,185,129,0.2);border-radius:8px;font-size:11px;color:var(--emerald-soft);font-weight:600}
 .bo-brand-status .dot{width:6px;height:6px;border-radius:50%;background:var(--emerald-soft);animation:pulse 2s infinite}
@@ -577,7 +580,7 @@ input,select,textarea{font-family:inherit}
 }
 .gate-shell{min-height:100vh;display:grid;grid-template-columns:minmax(0,1.15fr) minmax(0,0.95fr);background:radial-gradient(ellipse at top left,rgba(212,175,55,0.12),transparent 42%),radial-gradient(ellipse at bottom right,rgba(16,185,129,0.08),transparent 48%),var(--bg);min-width:0;max-width:100%;overflow-x:hidden}
 .gate-aside{padding:72px 64px;display:flex;flex-direction:column;justify-content:center;position:relative;z-index:1;min-width:0}
-.gate-brand{font-family:'Playfair Display',serif;font-size:28px;font-weight:700;background:var(--gradient-gold);-webkit-background-clip:text;background-clip:text;-webkit-text-fill-color:transparent;letter-spacing:-0.5px}
+.gate-brand{display:flex;align-items:center}
 .gate-aside h1{font-family:'Playfair Display',serif;font-size:44px;line-height:1.12;margin:18px 0 16px;letter-spacing:-1.2px}
 .gate-aside .lead{color:var(--text-muted);font-size:16px;line-height:1.6;max-width:460px;margin-bottom:28px}
 .welcome-points{display:flex;flex-direction:column;gap:10px;max-width:460px}
@@ -613,6 +616,13 @@ input,select,textarea{font-family:inherit}
 .hidden{display:none !important}
 .fade-in{animation:fadeIn 0.4s cubic-bezier(0.16,1,0.3,1)}
 @keyframes fadeIn{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:translateY(0)}}
+
+.brand-lockup,.landing-brand img,.welcome-logo img,.gate-brand img,.bo-brand img,.etab-brand img,.brand img{display:block;width:auto;height:40px}
+.welcome-logo{margin-bottom:8px}
+.welcome-logo img{height:44px}
+.gate-brand img{height:42px}
+.bo-brand img,.etab-brand img{height:36px}
+.splash-logo img{height:86px;width:auto;display:block;filter:drop-shadow(0 20px 40px rgba(212,175,55,.22))}
 </style>
 <script src="native-config.js"></script>
 <script src="urgad-store.js"></script>
@@ -623,7 +633,7 @@ input,select,textarea{font-family:inherit}
 <div id="role-gate" class="gate-shell">
   <aside class="gate-aside">
     <a class="gate-home" href="index.html">← Retour au site</a>
-    <div class="gate-brand">URGAD</div>
+    <div class="gate-brand"><img src="logo-lockup.svg" alt="URGAD" width="176" height="40"></div>
     <h1>Trouvez le bon soignant, sans perdre la nuit.</h1>
     <p class="lead">Pour les EHPAD, cliniques et maisons de retraite : vous décrivez le besoin, URGAD vous propose des profils déjà vérifiés, vous validez.</p>
     <div class="welcome-points">
@@ -670,7 +680,7 @@ input,select,textarea{font-family:inherit}
 <div class="etab-layout">
 <div class="etab-nav-overlay" id="etabNavOverlay" onclick="toggleEtabNav(false)"></div>
 <aside class="etab-sidebar" id="etab-sidebar">
-<div class="etab-brand"><h2>URGAD</h2><p>Espace Établissement</p></div>
+<div class="etab-brand"><img src="logo-lockup.svg" alt="URGAD" width="150" height="34"><p>Espace Établissement</p></div>
 <nav class="etab-nav">
 <div class="etab-nav-item active" data-screen="dashboard" onclick="showEtabScreen('dashboard',this)">📊 Tableau de bord</div>
 <div class="etab-nav-item" data-screen="create" onclick="showEtabScreen('create',this)">➕ Nouvelle demande</div>
