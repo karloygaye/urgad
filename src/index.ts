@@ -35,7 +35,11 @@ assertProductionConfig();
 const app = express();
 const PORT = process.env.PORT || 3001;
 
-app.use(helmet({ contentSecurityPolicy: false }));
+app.use(helmet({
+  contentSecurityPolicy: false,
+  // Google Search charge le favicon depuis google.com ; same-origin le bloque.
+  crossOriginResourcePolicy: { policy: 'cross-origin' },
+}));
 app.use(cors({ origin: true, credentials: true }));
 app.use((req, res, next) => {
   const host = (req.get('x-forwarded-host') || req.get('host') || '').split(',')[0].trim().toLowerCase().replace(/:\d+$/, '');
@@ -177,6 +181,23 @@ const previewCandidates = [
   path.resolve(__dirname, '..', '..', 'urgad-preview'),
 ].filter(Boolean) as string[];
 const previewDir = previewCandidates.find((d) => fs.existsSync(d)) || previewCandidates[1];
+const faviconFiles: Array<[string, string]> = [
+  ['favicon.ico', 'image/x-icon'],
+  ['favicon-32.png', 'image/png'],
+  ['favicon-48.png', 'image/png'],
+  ['favicon-96.png', 'image/png'],
+  ['favicon-192.png', 'image/png'],
+  ['apple-touch-icon.png', 'image/png'],
+  ['logo-icon.svg', 'image/svg+xml'],
+];
+for (const [file, mime] of faviconFiles) {
+  app.get('/' + file, (_req, res) => {
+    res.setHeader('Cross-Origin-Resource-Policy', 'cross-origin');
+    res.setHeader('Cache-Control', 'public, max-age=604800');
+    res.type(mime);
+    res.sendFile(path.join(previewDir, file));
+  });
+}
 app.use(express.static(previewDir));
 app.get('/', (_req, res) => {
   res.sendFile(path.join(previewDir, 'index.html'));
