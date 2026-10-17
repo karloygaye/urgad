@@ -173,7 +173,7 @@ router.get('/establishments/:id/documents', authMiddleware, requireAdmin, async 
     const rows = await dbAll('SELECT * FROM establishment_documents WHERE establishment_id = ? ORDER BY id DESC', [estab.id]);
     const out = [];
     for (const row of rows || []) {
-      const file = await dbGet('SELECT * FROM document_files WHERE owner_type = ? AND document_id = ? ORDER BY id DESC LIMIT 1', ['establishment', (row as any).id]) as any;
+      const file = await dbGet('SELECT id, stored_name, mime_type, size_bytes FROM document_files WHERE owner_type = ? AND document_id = ? ORDER BY id DESC LIMIT 1', ['establishment', (row as any).id]) as any;
       out.push({
         id: (row as any).id,
         establishmentId: (row as any).establishment_id,
@@ -182,7 +182,7 @@ router.get('/establishments/:id/documents', authMiddleware, requireAdmin, async 
         status: (row as any).status || 'pending',
         createdAt: (row as any).created_at || null,
         fileStored: !!file,
-        storage: file ? 'disk' : 'metadata',
+        storage: file ? 'database' : 'metadata',
         sizeBytes: file?.size_bytes || 0,
         storedName: file?.stored_name || null,
         mimeType: file?.mime_type || null
@@ -860,7 +860,7 @@ router.post('/documents/:kind/:id/:decision', authMiddleware, requireAdmin, asyn
     const reason = String(req.body?.reason || '').slice(0, 300);
     let ownerId: number | null = null, name = '';
     if (kind === 'professional') {
-      const d = await dbGet('SELECT * FROM professional_documents WHERE id = ?', [id]) as any;
+      const d = await dbGet('SELECT id, user_id, name FROM professional_documents WHERE id = ?', [id]) as any;
       if (!d) return res.status(404).json({ message: 'Document introuvable.' });
       await dbRun('UPDATE professional_documents SET status = ? WHERE id = ?', [status, id]);
       ownerId = Number(d.user_id); name = d.name;

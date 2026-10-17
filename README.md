@@ -42,6 +42,8 @@ Après paiement : confirmation in-app (établissement + admin), écriture financ
 
 Santé : `GET /api/health` (`production`, `db`, `stripe.chargesEnabled`).
 
+Justificatifs (identité, diplôme, Vitale, vaccins, RIB) : les octets sont enregistrés en Postgres (`file_bytes`) en plus du disque. Le disque Render est vidé à chaque déploiement ; « Voir le fichier » lit donc la base. Les fichiers déposés *avant* cette conservation doivent être renvoyés par le professionnel.
+
 ## Passer en production (à faire une fois)
 
 Le site tourne déjà en `NODE_ENV=production` sur Render. Pour encaisser vraiment et rester allumé :

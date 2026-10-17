@@ -337,6 +337,8 @@ const EXTRA_COLUMNS: Array<[string, string, string]> = [
   ['professional_documents', 'reviewed_by', 'TEXT'],
   ['professional_documents', 'reviewed_at', 'TEXT'],
   ['professional_documents', 'file_purged_at', 'TEXT'],
+  ['professional_documents', 'file_bytes', 'BLOB'],
+  ['document_files', 'file_bytes', 'BLOB'],
   ['establishment_subscriptions', 'stripe_customer_id', 'TEXT'],
   ['establishment_subscriptions', 'stripe_subscription_id', 'TEXT'],
   ['establishment_subscriptions', 'stripe_checkout_id', 'TEXT'],
@@ -347,7 +349,8 @@ const EXTRA_COLUMNS: Array<[string, string, string]> = [
 async function ensureColumns(): Promise<void> {
   for (const [table, column, type] of EXTRA_COLUMNS) {
     if (usePg) {
-      await pool!.query(`ALTER TABLE ${table} ADD COLUMN IF NOT EXISTS ${column} ${type === 'REAL' ? 'DOUBLE PRECISION' : type}`);
+      const pgType = type === 'REAL' ? 'DOUBLE PRECISION' : type === 'BLOB' ? 'BYTEA' : type;
+      await pool!.query(`ALTER TABLE ${table} ADD COLUMN IF NOT EXISTS ${column} ${pgType}`);
       continue;
     }
     const info = db.exec(`PRAGMA table_info(${table})`);
@@ -501,9 +504,13 @@ export function save(): void {
   saveSync();
 }
 
+function sqliteParams(params: any[]): any[] {
+  return params.map((p) => (Buffer.isBuffer(p) ? new Uint8Array(p) : p));
+}
+
 function sqliteRun(sql: string, params: any[]): { lastInsertRowid: number | null } {
   const stmt = db.prepare(sql);
-  stmt.bind(params);
+  stmt.bind(sqliteParams(params));
   stmt.step();
   const row = stmt.getAsObject();
   stmt.free();
@@ -521,7 +528,7 @@ function sqliteRun(sql: string, params: any[]): { lastInsertRowid: number | null
 
 function sqliteGet<T = any>(sql: string, params: any[]): T | undefined {
   const stmt = db.prepare(sql);
-  stmt.bind(params);
+  stmt.bind(sqliteParams(params));
   const hasRow = stmt.step();
   if (!hasRow) { stmt.free(); return undefined; }
   const row = stmt.getAsObject() as T;
@@ -531,7 +538,7 @@ function sqliteGet<T = any>(sql: string, params: any[]): T | undefined {
 
 function sqliteAll<T = any>(sql: string, params: any[]): T[] {
   const stmt = db.prepare(sql);
-  stmt.bind(params);
+  stmt.bind(sqliteParams(params));
   const rows: T[] = [];
   while (stmt.step()) {
     rows.push(stmt.getAsObject() as T);

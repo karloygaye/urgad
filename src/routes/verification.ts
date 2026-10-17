@@ -1,10 +1,8 @@
 import { Router } from 'express';
-import fs from 'fs';
-import path from 'path';
 import { v4 as uuidv4 } from 'uuid';
 import { dbAll, dbGet, dbRun } from '../db.js';
 import { authMiddleware } from './_auth.js';
-import { UPLOAD_DIR } from '../uploads.js';
+import { resolveFileBytes } from '../uploads.js';
 import { notifySafe } from '../notify.js';
 import { applyReview, identityRetentionDays, purgeVerifiedIdentityFiles, statusOf, verificationOf } from '../verification.js';
 
@@ -75,21 +73,25 @@ router.post('/:userId/review', authMiddleware, async (req: any, res: any, next: 
  */
 router.get('/documents/:id/file', authMiddleware, async (req: any, res: any, next: any) => {
   try {
-    const d = await dbGet<any>('SELECT * FROM professional_documents WHERE id = ?', [req.params.id]);
+    const d = await dbGet<any>('SELECT id, user_id, category, stored_name, mime_type, file_purged_at, file_bytes FROM professional_documents WHERE id = ?', [req.params.id]);
     if (!d) return res.status(404).json({ message: 'Document introuvable.' });
     const isOwner = req.user.role === 'professional' && Number(d.user_id) === Number(req.user.id);
     if (req.user.role === 'establishment' && !req.user.isAdmin) return res.status(403).json({ message: 'Les établissements n\'ont pas accès aux justificatifs des professionnels.' });
     const adminOnly = d.category === 'identity';
     if (adminOnly && !req.user.isAdmin) return res.status(403).json({ message: 'Pièce d\'identité : accès réservé à l\'équipe de vérification.' });
     if (!req.user.isAdmin && !isOwner) return res.status(403).json({ message: 'Non autorisé.' });
-    if (!d.stored_name) return res.status(410).json({ message: d.file_purged_at ? 'Fichier effacé après vérification (minimisation RGPD).' : 'Aucun fichier stocké.' });
-    const file = path.join(UPLOAD_DIR, path.basename(String(d.stored_name)));
-    if (!file.startsWith(UPLOAD_DIR) || !fs.existsSync(file)) return res.status(404).json({ message: 'Fichier absent du serveur.' });
+    if (!d.stored_name && !d.file_bytes) return res.status(410).json({ message: d.file_purged_at ? 'Fichier effacé après vérification (minimisation RGPD).' : 'Aucun fichier stocké.' });
+    const bytes = resolveFileBytes(d.stored_name, d.file_bytes);
+    if (!bytes) {
+      return res.status(404).json({
+        message: 'Fichier absent du serveur. Les justificatifs déposés avant cette mise à jour ont été perdus au redéploiement : le professionnel doit les envoyer à nouveau.',
+      });
+    }
     if (req.user.isAdmin) await audit(req, 'document_view', 'professional_document:' + d.id, `${d.category || 'other'} user#${d.user_id}`);
     res.setHeader('Content-Type', d.mime_type || 'application/octet-stream');
     res.setHeader('Content-Disposition', `inline; filename="document-${d.id}"`);
     res.setHeader('Cache-Control', 'no-store');
-    return res.sendFile(file);
+    return res.send(bytes);
   } catch (err) { next(err); }
 });
 

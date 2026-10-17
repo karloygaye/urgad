@@ -117,7 +117,7 @@ export async function purgeVerifiedIdentityFiles(): Promise<number> {
     if (!Number.isFinite(t) || t > limit) continue;
     const file = path.join(UPLOAD_DIR, path.basename(String(r.stored_name)));
     if (file.startsWith(UPLOAD_DIR)) { try { fs.unlinkSync(file); } catch { /* déjà absent */ } }
-    await dbRun("UPDATE professional_documents SET stored_name = NULL, file_purged_at = datetime('now') WHERE id = ?", [r.id]);
+    await dbRun("UPDATE professional_documents SET stored_name = NULL, file_bytes = NULL, file_purged_at = datetime('now') WHERE id = ?", [r.id]);
     purged++;
   }
   return purged;

@@ -73,7 +73,7 @@ async function ownEstablishment(userId: number) {
 
 async function publicDocument(row: any) {
   const file = row.id != null
-    ? await dbGet('SELECT * FROM document_files WHERE owner_type = ? AND document_id = ? ORDER BY id DESC LIMIT 1', ['establishment', row.id]) as any
+    ? await dbGet('SELECT id, stored_name, mime_type, size_bytes FROM document_files WHERE owner_type = ? AND document_id = ? ORDER BY id DESC LIMIT 1', ['establishment', row.id]) as any
     : null;
   return {
     id: row.id,
@@ -83,7 +83,7 @@ async function publicDocument(row: any) {
     status: row.status || 'pending',
     createdAt: row.created_at || null,
     fileStored: !!file,
-    storage: file ? 'disk' : 'metadata',
+    storage: file ? 'database' : 'metadata',
     sizeBytes: file?.size_bytes || 0,
     storedName: file?.stored_name || null,
     mimeType: file?.mime_type || null
@@ -151,13 +151,13 @@ router.post('/me/documents', authMiddleware, async (req: any, res: any, next: an
     }
     if (id == null) return res.status(500).json({ message: 'Document non enregistré.' });
     await dbRun(
-      'INSERT INTO document_files (owner_type, document_id, stored_name, mime_type, size_bytes) VALUES (?, ?, ?, ?, ?)',
-      ['establishment', id, saved.storedName, saved.mimeType, saved.sizeBytes]
+      'INSERT INTO document_files (owner_type, document_id, stored_name, mime_type, size_bytes, file_bytes) VALUES (?, ?, ?, ?, ?, ?)',
+      ['establishment', id, saved.storedName, saved.mimeType, saved.sizeBytes, saved.bytes]
     );
     void notifyAdmins('Document établissement à vérifier', `${estab.name} a déposé « ${name} » (${docType}).`, { establishmentId: estab.id, documentId: id, screen: 'establishments' }, 'admin_document');
     return res.status(201).json({
       ...(await publicDocument({ id, establishment_id: estab.id, name, doc_type: docType, status: 'pending', created_at: null })),
-      message: 'Fichier enregistré sur le disque du serveur.'
+      message: 'Fichier enregistré.'
     });
   } catch (err) { next(err); }
 });

@@ -45,7 +45,7 @@ function publicProDocument(row: any) {
     status: row.status || 'pending',
     createdAt: row.created_at || null,
     fileStored: stored,
-    storage: stored ? 'disk' : 'metadata',
+    storage: stored ? 'database' : 'metadata',
     sizeBytes: row.size_bytes || 0,
     storedName: row.stored_name || null,
     mimeType: row.mime_type || null
@@ -56,7 +56,7 @@ function publicProDocument(row: any) {
 router.get('/me/documents', authMiddleware, async (req: any, res: any, next: any) => {
   try {
     if (req.user.role !== 'professional' && !req.user.isAdmin) return res.status(403).json({ message: 'Compte professionnel requis.' });
-    const rows = await dbAll('SELECT * FROM professional_documents WHERE user_id = ? ORDER BY id DESC', [req.user.id]);
+    const rows = await dbAll('SELECT id, name, doc_type, status, stored_name, mime_type, size_bytes, category, id_kind, side, review_reason, file_purged_at, created_at FROM professional_documents WHERE user_id = ? ORDER BY id DESC', [req.user.id]);
     return res.json((rows || []).map(publicProDocument));
   } catch (err) { next(err); }
 });
@@ -80,8 +80,8 @@ router.post('/me/documents', authMiddleware, async (req: any, res: any, next: an
       return res.status(err.status || 422).json({ message: err.message || 'Fichier refusé.' });
     }
     const inserted = await dbRun(
-      'INSERT INTO professional_documents (user_id, name, doc_type, status, stored_name, mime_type, size_bytes, category, id_kind, side) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)',
-      [req.user.id, name, docType, 'pending', saved.storedName, saved.mimeType, saved.sizeBytes, category, idKind, side]
+      'INSERT INTO professional_documents (user_id, name, doc_type, status, stored_name, mime_type, size_bytes, category, id_kind, side, file_bytes) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)',
+      [req.user.id, name, docType, 'pending', saved.storedName, saved.mimeType, saved.sizeBytes, category, idKind, side, saved.bytes]
     );
     await onDocumentUploaded(Number(req.user.id), category);
     let id = inserted.lastInsertRowid;
@@ -97,7 +97,7 @@ router.post('/me/documents', authMiddleware, async (req: any, res: any, next: an
         id, name, doc_type: docType, status: 'pending', created_at: null, category, id_kind: idKind, side,
         stored_name: saved.storedName, mime_type: saved.mimeType, size_bytes: saved.sizeBytes
       }),
-      message: 'Document enregistré sur le disque du serveur.'
+      message: 'Document enregistré.'
     });
   } catch (err) { next(err); }
 });

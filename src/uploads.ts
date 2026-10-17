@@ -12,10 +12,49 @@ export function ensureUploadDir(): void {
   fs.mkdirSync(UPLOAD_DIR, { recursive: true });
 }
 
+export function toNodeBuffer(value: unknown): Buffer | null {
+  if (value == null) return null;
+  if (Buffer.isBuffer(value)) return value.length ? value : null;
+  if (value instanceof Uint8Array) return value.byteLength ? Buffer.from(value) : null;
+  if (Array.isArray(value) && value.length && typeof value[0] === 'number') return Buffer.from(value);
+  if (typeof value === 'string' && value.startsWith('\\x') && value.length > 4) {
+    try {
+      const buf = Buffer.from(value.slice(2), 'hex');
+      return buf.length ? buf : null;
+    } catch {
+      return null;
+    }
+  }
+  return null;
+}
+
+export function diskPathFor(storedName: unknown): string | null {
+  if (!storedName) return null;
+  const file = path.join(UPLOAD_DIR, path.basename(String(storedName)));
+  return file.startsWith(UPLOAD_DIR) ? file : null;
+}
+
+export function readDiskFile(storedName: unknown): Buffer | null {
+  const file = diskPathFor(storedName);
+  if (!file || !fs.existsSync(file)) return null;
+  try {
+    const buf = fs.readFileSync(file);
+    return buf.length ? buf : null;
+  } catch {
+    return null;
+  }
+}
+
+/** Octets du justificatif : colonne Postgres/sqlite d’abord, disque ensuite. */
+export function resolveFileBytes(storedName: unknown, fileBytes: unknown): Buffer | null {
+  return toNodeBuffer(fileBytes) || readDiskFile(storedName);
+}
+
 export function saveBase64File(input: { contentBase64?: string; fileName?: string; mimeType?: string }): {
   storedName: string;
   mimeType: string;
   sizeBytes: number;
+  bytes: Buffer;
 } {
   const raw = String(input?.contentBase64 || '').trim();
   if (!raw) {
@@ -54,5 +93,6 @@ export function saveBase64File(input: { contentBase64?: string; fileName?: strin
     storedName,
     mimeType: String(input.mimeType || 'application/octet-stream').slice(0, 120),
     sizeBytes: buf.length,
+    bytes: buf,
   };
 }
