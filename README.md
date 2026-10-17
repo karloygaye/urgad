@@ -21,6 +21,8 @@ npx tsx src/index.ts
 
 Identité visuelle : épingle or (lieu de soin) + U gravé (soignant). Pack à télécharger : `public/urgad-logos.zip` ou la page `/logos.html`. Sources `public/logo.svg` (sigle), `public/logo-icon.svg` (icône app), `public/logo-lockup.svg` (sigle + mot).
 
+Film 40 s (storyboard accueil réel) : `/motion.html`, fichiers `urgad-film-16x9.mp4` / `1x1` / `9x16`. Captures des espaces : `/captures.html`.
+
 ## Production (Render)
 
 Dans le dashboard, **avant** d’ouvrir au public :

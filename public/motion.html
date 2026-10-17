@@ -3,217 +3,164 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
+<title>URGAD — Film</title>
 <link rel="icon" type="image/png" sizes="48x48" href="/favicon-48.png">
-<link rel="icon" type="image/png" sizes="96x96" href="/favicon-96.png">
-<link rel="icon" type="image/png" sizes="192x192" href="/favicon-192.png">
-<link rel="shortcut icon" href="/favicon.ico">
-<link rel="apple-touch-icon" sizes="180x180" href="/apple-touch-icon.png">
-<link rel="manifest" href="/site.webmanifest">
-
-<title>URGAD — Motion</title>
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/fontsource/fonts/inter@latest/latin-400-normal.css">
-<link rel="stylesheet" href="https://cdn.jsdelivr.net/fontsource/fonts/inter@latest/latin-500-normal.css">
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/fontsource/fonts/inter@latest/latin-600-normal.css">
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/fontsource/fonts/playfair-display@latest/latin-700-italic.css">
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/fontsource/fonts/playfair-display@latest/latin-700-normal.css">
 <style>
-:root{
-  --bg:#07090f; --ink:#F4EFE4; --mute:#9AA3B5; --gold:#D4AF37; --gold2:#F3D58A;
-  --line:rgba(212,175,55,.35);
-}
+:root{--bg:#07090f;--ink:#F4EFE4;--mute:#9AA3B5;--gold:#D4AF37;--gold2:#F3D58A}
 *{box-sizing:border-box;margin:0;padding:0}
 html,body{height:100%;background:var(--bg);color:var(--ink);font-family:Inter,system-ui,sans-serif;overflow:hidden}
 body{cursor:none}
 .stage{position:relative;width:100%;height:100%;overflow:hidden;background:#07090f}
-.stage::before{
-  content:"";position:absolute;inset:-20%;
-  background:
-    radial-gradient(ellipse at 50% 18%,rgba(212,175,55,.16),transparent 42%),
-    radial-gradient(ellipse at 80% 90%,rgba(16,185,129,.07),transparent 36%),
-    radial-gradient(ellipse at 12% 80%,rgba(59,130,246,.05),transparent 32%);
-  animation:drift 22s ease-in-out infinite alternate;
-  pointer-events:none;
+canvas#fx{position:absolute;inset:0;width:100%;height:100%;z-index:1}
+.scene{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;opacity:0;z-index:2;padding:6vh 6vw;text-align:center;pointer-events:none;transition:opacity .7s ease}
+.scene.on{opacity:1}
+.caption{
+  position:absolute;left:50%;bottom:7vh;transform:translateX(-50%);
+  z-index:5;max-width:28ch;font-family:"Playfair Display",serif;font-size:clamp(20px,3vw,38px);
+  font-weight:700;letter-spacing:-.03em;line-height:1.15;text-align:center;
+  text-shadow:0 12px 40px rgba(0,0,0,.65);
 }
-@keyframes drift{from{transform:translate3d(-2%,-1%,0) scale(1)}to{transform:translate3d(2%,2%,0) scale(1.08)}}
-canvas#grain{position:absolute;inset:0;width:100%;height:100%;opacity:.11;pointer-events:none;mix-blend-mode:overlay}
-.scene{
-  position:absolute;inset:0;display:flex;align-items:center;justify-content:center;
-  opacity:0;transform:scale(1.04);filter:blur(8px);
-  transition:opacity .9s cubic-bezier(.16,1,.3,1), transform 1.2s cubic-bezier(.16,1,.3,1), filter .9s ease;
-  padding:7vh 8vw;text-align:center;pointer-events:none;
-}
-.scene.on{opacity:1;transform:scale(1);filter:none;z-index:2}
-.kicker{
-  letter-spacing:.42em;text-transform:uppercase;font-size:11px;color:var(--gold2);
-  font-weight:600;margin-bottom:22px;
-}
-.mark{
-  font-family:"Playfair Display",serif;font-weight:700;font-size:clamp(64px,11vw,148px);
-  letter-spacing:.04em;line-height:.9;
-  background:linear-gradient(180deg,#F8E7A4 0%,#D4AF37 46%,#9A7420 100%);
-  -webkit-background-clip:text;background-clip:text;color:transparent;
-  text-shadow:0 30px 80px rgba(212,175,55,.12);
-}
-.rule{width:64px;height:1px;margin:28px auto 0;background:linear-gradient(90deg,transparent,var(--gold),transparent)}
-.line{
-  font-family:"Playfair Display",serif;font-size:clamp(28px,4.6vw,58px);font-weight:700;
-  letter-spacing:-.03em;line-height:1.12;max-width:18ch;margin:0 auto;
-}
-.line em{font-style:italic;color:var(--gold2)}
-.sub{margin-top:22px;color:var(--mute);font-size:clamp(14px,1.3vw,18px);letter-spacing:.04em;max-width:42ch;line-height:1.55}
-.row{display:flex;gap:18px;justify-content:center;flex-wrap:wrap;margin-top:36px}
-.card{
-  min-width:180px;padding:22px 24px 20px;border:1px solid var(--line);
-  background:linear-gradient(180deg,rgba(255,255,255,.04),rgba(255,255,255,.015));
-  border-radius:18px;text-align:left;backdrop-filter:blur(16px);
-  transform:translateY(16px);opacity:0;
-}
-.scene.on .card{animation:up .7s cubic-bezier(.16,1,.3,1) forwards}
-.scene.on .card:nth-child(2){animation-delay:.12s}
-.scene.on .card:nth-child(3){animation-delay:.24s}
-@keyframes up{to{transform:none;opacity:1}}
-.card b{display:block;font-family:"Playfair Display",serif;font-size:22px;margin-bottom:6px}
-.card span{color:var(--mute);font-size:13px;letter-spacing:.03em}
-.price{font-family:"Playfair Display",serif;font-size:34px;color:var(--gold2)}
-.price small{font-family:Inter,sans-serif;font-size:12px;color:var(--mute);letter-spacing:.12em;text-transform:uppercase;margin-left:6px}
-.flash{
-  display:inline-flex;align-items:center;gap:10px;padding:8px 16px;border-radius:999px;
-  border:1px solid rgba(239,68,68,.4);color:#FECACA;letter-spacing:.28em;font-size:11px;text-transform:uppercase;
-  box-shadow:0 0 40px rgba(239,68,68,.18);margin-bottom:22px;
-}
-.dot{width:7px;height:7px;border-radius:50%;background:#EF4444;animation:pulse 1.1s ease-in-out infinite}
-@keyframes pulse{0%,100%{transform:scale(1);opacity:1}50%{transform:scale(1.7);opacity:.45}}
-.url{margin-top:28px;letter-spacing:.34em;text-transform:uppercase;font-size:13px;color:var(--gold2)}
-.bar{position:absolute;bottom:0;left:0;height:2px;width:0;background:linear-gradient(90deg,#8A6A1A,var(--gold2));z-index:9}
-.poster{
-  position:absolute;inset:0;background:center/cover no-repeat url("motion-poster.jpg");
-  opacity:.55;filter:saturate(.9) contrast(1.05);transform:scale(1.08);
-  animation:ken 8s ease-out forwards;
-}
+.caption small{display:block;margin-top:10px;font-family:Inter,sans-serif;font-size:13px;letter-spacing:.28em;text-transform:uppercase;color:var(--gold2);font-weight:600}
+.logo3d{width:min(28vw,220px);filter:drop-shadow(0 28px 50px rgba(212,175,55,.35));transform:perspective(600px) rotateY(-18deg) rotateX(8deg) scale(.86);opacity:0}
+.scene.on .logo3d{animation:reveal 1.6s cubic-bezier(.16,1,.3,1) forwards .4s}
+@keyframes reveal{to{opacity:1;transform:perspective(600px) rotateY(0) rotateX(0) scale(1)}}
+.devices{display:flex;align-items:flex-end;justify-content:center;gap:3vw;width:100%;max-width:1400px}
+.laptop,.phone{border:1px solid rgba(212,175,55,.28);border-radius:18px;overflow:hidden;background:#0A0E1A;box-shadow:0 40px 80px rgba(0,0,0,.45)}
+.laptop{width:min(58vw,920px);aspect-ratio:16/10}
+.phone{width:min(18vw,280px);aspect-ratio:390/844;border-radius:28px}
+.laptop img,.phone img,.shot{width:100%;height:100%;object-fit:cover;object-position:top center;display:block}
+.ken{transform:scale(1.08);animation:ken 8s ease-out forwards}
 @keyframes ken{to{transform:scale(1)}}
-.veil{position:absolute;inset:0;background:linear-gradient(180deg,rgba(7,9,15,.2),rgba(7,9,15,.78) 70%,#07090f)}
-.end .mark{font-size:clamp(48px,8vw,96px)}
-.mark-hit{display:flex;flex-direction:column;align-items:center;gap:18px}
-.mark-pin{width:min(22vw,148px);height:auto;filter:drop-shadow(0 28px 50px rgba(212,175,55,.28))}
-.end .mark-pin{width:min(16vw,96px)}
-@media (max-width:720px){
-  .scene{padding:8vh 7vw}
-  .card{min-width:100%}
-  body{cursor:auto}
-}
+.hero-zoom{width:min(90vw,1100px);border-radius:22px;overflow:hidden;border:1px solid rgba(212,175,55,.22);box-shadow:0 40px 90px rgba(0,0,0,.5)}
+.hero-zoom img{width:100%;height:auto;display:block;transform:scale(1.25) translateY(8%);animation:push 4s ease-out forwards}
+@keyframes push{to{transform:scale(1.05) translateY(0)}}
+.kin{display:flex;gap:28px;flex-wrap:wrap;justify-content:center}
+.kin b{font-family:"Playfair Display",serif;font-size:clamp(28px,4vw,56px);opacity:0;transform:translateY(24px);color:var(--gold2)}
+.scene.on .kin b{animation:up .6s cubic-bezier(.16,1,.3,1) forwards}
+.scene.on .kin b:nth-child(2){animation-delay:.45s}
+.scene.on .kin b:nth-child(3){animation-delay:.9s}
+@keyframes up{to{opacity:1;transform:none}}
+.split{display:flex;gap:24px;align-items:stretch;justify-content:center;width:100%;max-width:1200px}
+.split .card{flex:1;border-radius:20px;overflow:hidden;border:1px solid rgba(212,175,55,.22);max-width:520px;height:min(58vh,560px)}
+.split .card img{width:100%;height:100%;object-fit:cover;object-position:top}
+.navhint{position:absolute;bottom:18vh;left:50%;transform:translateX(-50%);display:flex;gap:18px;font-size:11px;letter-spacing:.2em;text-transform:uppercase;color:var(--gold2)}
+.constellation{position:relative;width:min(92vw,1200px);height:min(62vh,620px)}
+.node{position:absolute;width:min(28vw,340px);border-radius:16px;overflow:hidden;border:1px solid rgba(212,175,55,.25);box-shadow:0 20px 50px rgba(0,0,0,.4)}
+.node img{width:100%;height:180px;object-fit:cover;object-position:top;display:block}
+.n1{left:4%;top:8%}.n2{right:6%;top:0}.n3{left:32%;bottom:4%;width:min(34vw,420px)}
+.endlogo{width:min(22vw,180px);margin-bottom:18px;filter:drop-shadow(0 20px 40px rgba(212,175,55,.4))}
+.sweep{position:absolute;inset:0;background:linear-gradient(100deg,transparent 40%,rgba(243,213,138,.18),transparent 60%);transform:translateX(-120%);animation:sweep 1.8s ease .4s forwards;pointer-events:none;z-index:4}
+@keyframes sweep{to{transform:translateX(120%)}}
+.bar{position:absolute;bottom:0;left:0;height:2px;width:0;background:linear-gradient(90deg,#8A6A1A,var(--gold2));z-index:9}
 </style>
 </head>
 <body>
 <div class="stage" id="stage">
-  <div class="poster" id="poster"></div>
-  <div class="veil"></div>
-  <canvas id="grain"></canvas>
+  <canvas id="fx"></canvas>
   <div class="bar" id="bar"></div>
+  <div class="caption" id="cap"></div>
 
-  <section class="scene on" data-scene="0">
-    <div>
-      <div class="kicker">Film</div>
-      <div class="mark-hit">
-        <img class="mark-pin" src="logo.svg" alt="">
-        <div class="mark">URGAD</div>
-      </div>
-      <div class="rule"></div>
+  <section class="scene on" data-i="0">
+    <img class="logo3d" src="logo.svg" alt="">
+  </section>
+  <section class="scene" data-i="1">
+    <div class="devices">
+      <div class="laptop ken"><img src="motion-stills/accueil-desktop.jpg" alt=""></div>
+      <div class="phone ken"><img src="motion-stills/accueil-mobile.jpg" alt=""></div>
     </div>
   </section>
-
-  <section class="scene" data-scene="1">
-    <div>
-      <p class="line">Le soin au bon endroit,<br><em>au bon moment.</em></p>
-      <p class="sub">Les établissements publient un besoin. L’équipe propose un profil vérifié. Le soignant reste gratuit.</p>
+  <section class="scene" data-i="2">
+    <div class="hero-zoom"><img src="motion-stills/accueil-desktop.jpg" alt=""></div>
+  </section>
+  <section class="scene" data-i="3">
+    <div class="kin"><b>1 compte</b><b>Près de vous</b><b>Vérifié</b></div>
+  </section>
+  <section class="scene" data-i="4">
+    <div class="split">
+      <div class="card"><img src="motion-stills/accueil-cartes.jpg" alt=""></div>
+      <div class="card"><img src="motion-stills/pro-connecte-missions.jpg" alt=""></div>
+    </div>
+    <div class="navhint">Missions · Alertes · Messages</div>
+  </section>
+  <section class="scene" data-i="5">
+    <div class="constellation">
+      <div class="node n1"><img src="motion-stills/pro-connecte-accueil.jpg" alt=""></div>
+      <div class="node n2"><img src="motion-stills/etab-connecte-dashboard.jpg" alt=""></div>
+      <div class="node n3"><img src="motion-stills/bo-connecte.jpg" alt=""></div>
     </div>
   </section>
-
-  <section class="scene" data-scene="2">
+  <section class="scene" data-i="6">
     <div>
-      <div class="kicker">La chaîne</div>
-      <p class="line" style="max-width:22ch">Trois espaces.<br><em>Une seule vérité.</em></p>
-      <div class="row">
-        <div class="card"><b>Établissement</b><span>Demande, validation du profil, abonnement.</span></div>
-        <div class="card"><b>Professionnel</b><span>Identité, diplôme, disponibilités datées.</span></div>
-        <div class="card"><b>Back-office</b><span>Vérifier, proposer, notifier, trancher.</span></div>
-      </div>
-    </div>
-  </section>
-
-  <section class="scene" data-scene="3">
-    <div>
-      <div class="flash"><span class="dot"></span> Flash</div>
-      <p class="line">L’urgence ne part plus<br><em>en liste d’attente.</em></p>
-      <p class="sub">Une mission Flash n’est lancée que sur Pro ou Premium payé. Les professionnels dans le rayon sont prévenus dans l’application. Pas de SMS. Pas d’e-mail URGAD.</p>
-    </div>
-  </section>
-
-  <section class="scene" data-scene="4">
-    <div>
-      <div class="kicker">Modèle</div>
-      <p class="line" style="margin-bottom:8px">Cinq demandes offertes.<br>Ensuite, un abonnement.</p>
-      <div class="row">
-        <div class="card"><span>Essentiel</span><div class="price">199€<small>HT / mois</small></div></div>
-        <div class="card"><span>Pro · cœur de cible</span><div class="price">249€<small>HT / mois</small></div></div>
-        <div class="card"><span>Premium</span><div class="price">299€<small>HT / mois</small></div></div>
-      </div>
-    </div>
-  </section>
-
-  <section class="scene end" data-scene="5">
-    <div>
-      <div class="mark-hit">
-        <img class="mark-pin" src="logo.svg" alt="">
-        <div class="mark">URGAD</div>
-      </div>
-      <div class="rule"></div>
-      <p class="sub" style="margin-top:26px">urgad.fr · soignants gratuits · établissements abonnés</p>
-      <p class="url">Le soin, au bon endroit</p>
+      <img class="endlogo" src="logo.svg" alt="">
+      <div class="sweep"></div>
     </div>
   </section>
 </div>
 <script>
 (function(){
-  const canvas = document.getElementById('grain');
-  const ctx = canvas.getContext('2d');
-  let w, h, frame = 0;
-  function size(){
-    w = canvas.width = innerWidth * devicePixelRatio;
-    h = canvas.height = innerHeight * devicePixelRatio;
+  const cues=[
+    [0,'Découvrez URGAD.fr'],
+    [5,'Le soin au bon endroit, au bon moment.'],
+    [12,'Mise en relation soignants ↔ établissements'],
+    [16,'1 compte  ·  Près de vous  ·  Vérifié'],
+    [20,'Je suis professionnel  /  Je gère un établissement'],
+    [25,'EHPAD, cliniques, maisons de retraite'],
+    [30,'Documents vérifiés, réponses dans la journée'],
+    [35,'URGAD.fr']
+  ];
+  const scenes=[...document.querySelectorAll('.scene')];
+  const cap=document.getElementById('cap');
+  const bar=document.getElementById('bar');
+  const D=40000;
+  const sceneAt=t=>{
+    if(t<5000)return 0; if(t<12000)return 1; if(t<16000)return 2; if(t<20000)return 3;
+    if(t<25000)return 4; if(t<35000)return 5; return 6;
+  };
+  let start=performance.now();
+  function tick(now){
+    const t=Math.min(now-start, D);
+    bar.style.width=(t/D*100)+'%';
+    const i=sceneAt(t);
+    scenes.forEach((s,n)=>s.classList.toggle('on', n===i));
+    let text='';
+    for(const [at,tx] of cues){ if(t>=at*1000) text=tx; }
+    cap.innerHTML=text+(t>=35000?'<small>Le soin, au bon endroit</small>':'');
+    if(t<D) requestAnimationFrame(tick);
   }
-  size(); addEventListener('resize', size);
-  function grain(){
-    const id = ctx.createImageData(w, h);
-    const d = id.data;
-    for (let i = 0; i < d.length; i += 4) {
-      const v = 80 + Math.random() * 90;
-      d[i] = d[i+1] = d[i+2] = v;
-      d[i+3] = 28;
-    }
-    ctx.putImageData(id, 0, 0);
-  }
-  (function tick(){
-    if ((frame++ % 3) === 0) grain();
-    requestAnimationFrame(tick);
-  })();
+  requestAnimationFrame(tick);
 
-  const scenes = [...document.querySelectorAll('.scene')];
-  const marks = [0, 3200, 8200, 14200, 20200, 25800];
-  const duration = 32000;
-  const start = performance.now();
-  const bar = document.getElementById('bar');
-  const poster = document.getElementById('poster');
-  function at(now){
-    const t = (now - start);
-    bar.style.width = Math.min(100, (t / duration) * 100) + '%';
-    if (t > 2800) poster.style.transition = 'opacity .8s ease';
-    if (t > 3000) poster.style.opacity = '0';
-    let idx = 0;
-    for (let i = 0; i < marks.length; i++) if (t >= marks[i]) idx = i;
-    scenes.forEach((s, i) => s.classList.toggle('on', i === idx));
-    if (t < duration + 400) requestAnimationFrame(at);
-  }
-  requestAnimationFrame(at);
+  const c=document.getElementById('fx'), ctx=c.getContext('2d');
+  function resize(){c.width=innerWidth;c.height=innerHeight}
+  resize(); addEventListener('resize',resize);
+  const N=90, pts=Array.from({length:N},()=>({
+    x:Math.random(), y:Math.random(),
+    vx:(Math.random()-.5)*.0004, vy:(Math.random()-.5)*.0004
+  }));
+  (function draw(){
+    ctx.clearRect(0,0,c.width,c.height);
+    const cx=.5, cy=.42;
+    pts.forEach(p=>{
+      p.x+=(cx-p.x)*0.004+p.vx; p.y+=(cy-p.y)*0.004+p.vy;
+      const x=p.x*c.width, y=p.y*c.height;
+      ctx.fillStyle='rgba(212,175,55,.55)';
+      ctx.beginPath(); ctx.arc(x,y,1.3,0,6.28); ctx.fill();
+    });
+    for(let i=0;i<N;i++) for(let j=i+1;j<N;j++){
+      const dx=pts[i].x-pts[j].x, dy=pts[i].y-pts[j].y, d=dx*dx+dy*dy;
+      if(d<.012){
+        ctx.strokeStyle='rgba(212,175,55,'+(0.12*(1-d/.012))+')';
+        ctx.beginPath();
+        ctx.moveTo(pts[i].x*c.width, pts[i].y*c.height);
+        ctx.lineTo(pts[j].x*c.width, pts[j].y*c.height);
+        ctx.stroke();
+      }
+    }
+    requestAnimationFrame(draw);
+  })();
 })();
 </script>
 </body>

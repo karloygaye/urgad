@@ -1,0 +1,53 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Captures URGAD</title>
+<link rel="icon" type="image/png" sizes="48x48" href="/favicon-48.png">
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/fontsource/fonts/playfair-display@latest/latin-700-normal.css">
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/fontsource/fonts/inter@latest/latin-400-normal.css">
+<style>
+body{margin:0;font-family:Inter,system-ui,sans-serif;background:#0A0E1A;color:#F8FAFC}
+.wrap{max-width:1100px;margin:0 auto;padding:40px 20px 80px}
+h1{font-family:'Playfair Display',serif;font-size:36px;margin:0 0 8px}
+p{color:#94A3B8;margin:0 0 28px}
+a.top{color:#E8C866;text-decoration:none;font-size:13px}
+.grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:16px}
+figure{margin:0;background:#111827;border:1px solid rgba(255,255,255,.08);border-radius:16px;overflow:hidden}
+figure img{width:100%;height:160px;object-fit:cover;object-position:top;display:block}
+figcaption{padding:10px 12px 14px;font-size:13px}
+figcaption a{color:#D4AF37;text-decoration:none;font-weight:600}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <a class="top" href="index.html">← Accueil</a>
+  <h1>Captures des espaces</h1>
+  <p>Écrans réels : accueil, inscriptions, connexion, espaces connectés. Films : <a href="urgad-film-16x9.mp4" download style="color:#D4AF37">16:9</a> · <a href="urgad-film-1x1.mp4" download style="color:#D4AF37">1:1</a> · <a href="urgad-film-9x16.mp4" download style="color:#D4AF37">9:16</a> · <a href="motion.html" style="color:#D4AF37">lire le film</a>.</p>
+  <div class="grid" id="g"></div>
+</div>
+<script>
+const items=[
+  ['accueil-desktop.jpg','Accueil desktop'],
+  ['accueil-mobile.jpg','Accueil mobile'],
+  ['accueil-cartes.jpg','Cartes pro / établissement'],
+  ['pro-avant-welcome.jpg','Pro — avant connexion'],
+  ['pro-avant-login.jpg','Pro — connexion'],
+  ['pro-inscription.jpg','Pro — inscription'],
+  ['pro-connecte-accueil.jpg','Pro — connecté, accueil'],
+  ['pro-connecte-missions.jpg','Pro — missions + barre app'],
+  ['pro-connecte-alertes.jpg','Pro — alertes'],
+  ['pro-connecte-messages.jpg','Pro — messages'],
+  ['etab-avant-login.jpg','Établissement — connexion'],
+  ['etab-inscription.jpg','Établissement — inscription'],
+  ['etab-connecte-dashboard.jpg','Établissement — tableau de bord'],
+  ['etab-connecte-demande.jpg','Établissement — nouvelle demande'],
+  ['etab-connecte-demandes.jpg','Établissement — demandes'],
+  ['bo-avant-login.jpg','Back-office — connexion'],
+  ['bo-connecte.jpg','Back-office — connecté']
+];
+document.getElementById('g').innerHTML=items.map(([f,l])=>`<figure><img src="motion-stills/${f}" alt="${l}"><figcaption>${l}<br><a href="motion-stills/${f}" download>Télécharger</a></figcaption></figure>`).join('');
+</script>
+</body>
+</html>
