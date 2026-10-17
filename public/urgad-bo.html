@@ -2947,7 +2947,7 @@ return `<div class="bo-card" style="margin-bottom:16px"><strong>Envoi groupé</s
 </div>
 <div class="bo-card">
 <div class="bo-card-header"><div><h3>📤 Envoyer une notification</h3></div></div>
-<div class="form-group"><label>Destinataires</label><select id="bulk-audience"><option value="professionals">Tous les professionnels</option><option value="establishments">Tous les établissements</option><option value="verified_professionals">Professionnels vérifiés</option><option value="all">Pros et établissements</option></select></div>
+<div class="form-group"><label>Destinataires</label><select id="bulk-audience"><option value="professionals">Tous les professionnels</option><option value="establishments">Tous les établissements</option><option value="verified_professionals">Professionnels identité + diplôme vérifiés</option><option value="all">Pros et établissements</option></select></div>
 <div class="form-group"><label>Titre</label><input id="bulk-title" type="text" placeholder="Ex: Nouvelle mission disponible"></div>
 <div class="form-group"><label>Message</label><textarea id="bulk-content" rows="3" placeholder="Ex: Une nouvelle mission est disponible..."></textarea></div>
 <div style="display:flex;gap:10px;margin-top:10px">
@@ -3307,7 +3307,7 @@ document.getElementById('modalContent').innerHTML = `<div class="modal-header"><
 <div class="modal-footer" style="flex-wrap:wrap;gap:8px">
 <button class="btn btn-ghost" onclick="closeModal()">Fermer</button>
 <button class="btn btn-secondary" onclick="setMissionStatus(${m.id},'published')">Publier</button>
-<button class="btn btn-urgent" onclick="boostMission(${m.id}, true)">FLASH — notifier</button>
+<button class="btn btn-urgent" onclick="boostMission(${m.id}, true)">FLASH — notifier (app, pas SMS)</button>
 <button class="btn btn-success" onclick="setMissionStatus(${m.id},'completed')">Terminer</button>
 <button class="btn btn-danger" onclick="setMissionStatus(${m.id},'cancelled')">Annuler</button>
 </div>`;
@@ -3417,7 +3417,7 @@ async function boostMission(id, flash){
     const res = await UrgadApi.notifyMissionPros(id, flash !== false);
     await refreshAdmin();
     closeModal();
-    toast('success', flash===false?'Notification':'FLASH', (res && res.message) || 'Pros notifiés.');
+    toast('success', flash===false?'Notification':'FLASH', (res && res.message) || 'Soignants notifiés dans l’app (pas de SMS).');
     showBoScreen('missions');
   } catch(e) { toast('error','Mission', e.message||'Échec'); }
 }

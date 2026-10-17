@@ -401,7 +401,7 @@ router.post('/notifications/bulk', authMiddleware, requireAdmin, async (req: any
       for (const row of rows || []) userIds.push(Number(row.user_id));
     }
     if (audience === 'verified_professionals') {
-      const rows = await dbAll("SELECT p.user_id FROM professionals p JOIN users u ON u.id = p.user_id WHERE u.verified = 1 AND u.deleted_at IS NULL") as any[];
+      const rows = await dbAll("SELECT p.user_id FROM professionals p JOIN users u ON u.id = p.user_id WHERE u.deleted_at IS NULL AND u.verification_status NOT IN ('suspended','rejected') AND p.identity_status = 'verifie' AND p.diploma_status = 'verifie'") as any[];
       for (const row of rows || []) userIds.push(Number(row.user_id));
     }
     if (audience === 'establishments' || audience === 'all') {
@@ -787,7 +787,7 @@ router.post('/matching/simulate', authMiddleware, requireAdmin, async (req: any,
     const center = missionId != null ? await dbGet('SELECT latitude, longitude FROM mission_coordinates WHERE mission_id = ?', [missionId]) as any : null;
     const cLat = num(center?.latitude), cLng = num(center?.longitude);
     const pros = await dbAll(
-      'SELECT u.id as user_id, u.first_name, u.last_name, u.email, p.skills, p.mobility_radius, p.latitude, p.longitude, p.city FROM users u LEFT JOIN professionals p ON p.user_id = u.id WHERE u.role = \'professional\' AND u.deleted_at IS NULL AND (u.verified = 1 OR u.verification_status = \'approved\')'
+      "SELECT u.id as user_id, u.first_name, u.last_name, u.email, p.skills, p.mobility_radius, p.latitude, p.longitude, p.city FROM users u LEFT JOIN professionals p ON p.user_id = u.id WHERE u.role = 'professional' AND u.deleted_at IS NULL AND u.verification_status NOT IN ('suspended','rejected') AND p.identity_status = 'verifie' AND p.diploma_status = 'verifie'"
     ) as any[];
     const tokens = skills.split(/[,;]+/).map((part: string) => part.trim().toLowerCase()).filter(Boolean);
     let withoutCoordinates = 0;
