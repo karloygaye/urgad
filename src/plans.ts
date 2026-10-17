@@ -147,7 +147,30 @@ export async function trialInfo(establishmentId: number, paid: boolean): Promise
   return { limit: FREE_TRIAL_MISSIONS, used, remaining, active: !paid && remaining > 0 };
 }
 
+export async function assertEstablishmentActive(establishmentId: number): Promise<void> {
+  const est = await dbGet<{ status: string; verification_status: string }>('SELECT e.status, u.verification_status FROM establishments e JOIN users u ON u.id = e.user_id WHERE e.id = ?', [establishmentId]);
+  if (!est) {
+    const err: any = new Error('Établissement introuvable.');
+    err.status = 404;
+    err.code = 'not_found';
+    throw err;
+  }
+  if (est.status === 'suspended' || est.verification_status === 'suspended') {
+    const err: any = new Error('Compte établissement suspendu. Contactez URGAD.');
+    err.status = 403;
+    err.code = 'account_suspended';
+    throw err;
+  }
+  if (est.status === 'rejected' || est.verification_status === 'rejected') {
+    const err: any = new Error('Compte établissement non validé. Vous ne pouvez pas publier de demande.');
+    err.status = 403;
+    err.code = 'account_rejected';
+    throw err;
+  }
+}
+
 export async function assertEstablishmentPublish(establishmentId: number, opts: { urgent?: boolean } = {}): Promise<Plan | null> {
+  await assertEstablishmentActive(establishmentId);
   const row = await dbGet<{ id: number; name: string; status: string; extra_credits: number | null }>('SELECT id, name, status, extra_credits FROM establishment_subscriptions WHERE establishment_id = ? ORDER BY id DESC LIMIT 1', [establishmentId]);
   const plan = row?.name ? planByName(row.name) : undefined;
   const stripeOn = !!(process.env.STRIPE_SECRET_KEY || '').trim();

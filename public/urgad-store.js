@@ -176,7 +176,9 @@
       name: name,
       role: row.profession || 'Aide-soignant',
       city: row.city || '—',
-      status: verified ? 'verified' : (row.verification_status === 'rejected' ? 'rejected' : 'pending'),
+      status: row.verification_status === 'suspended' ? 'rejected' : (verified ? 'verified' : (row.verification_status === 'rejected' ? 'rejected' : 'pending')),
+      suspended: row.verification_status === 'suspended',
+      verificationStatus: row.verification_status || '',
       exp: '—',
       distance: '—',
       email: row.email || '',
@@ -201,6 +203,7 @@
     if (raw === 'approved' || raw === 'verified') status = 'verified';
     else if (raw === 'rejected') status = 'rejected';
     else if (raw === 'prospect') status = 'prospect';
+    else if (raw === 'suspended' || row.user_verification_status === 'suspended' || row.verification_status === 'suspended') status = 'suspended';
     var subscription = null;
     if (row.subscription && row.subscription.name) subscription = row.subscription;
     else if (row.subscription_name) {
@@ -479,6 +482,32 @@
     },
     approveProfessional: function(userId){ return request('admin', 'POST', '/api/admin/professionals/' + userId + '/approve-verification', {}); },
     rejectProfessional: function(userId, reason){ return request('admin', 'POST', '/api/admin/professionals/' + userId + '/reject-verification', { reason: reason || '' }); },
+    suspendProfessional: function(userId){ return request('admin', 'POST', '/api/admin/professionals/' + userId + '/suspend', {}); },
+    unsuspendProfessional: function(userId){ return request('admin', 'POST', '/api/admin/professionals/' + userId + '/unsuspend', {}); },
+    patchMissionStatus: function(id, status){ return request('admin', 'PATCH', '/api/admin/missions/' + id + '/status', { status: status }); },
+    notifyMissionPros: function(id, flash){ return request('admin', 'POST', '/api/admin/missions/' + id + '/notify', { flash: !!flash }); },
+    deactivateAdmin: function(id){ return request('admin', 'POST', '/api/admin/admins/' + id + '/deactivate', {}); },
+    sendNotification: function(body){ return request('admin', 'POST', '/api/admin/notifications/send', body); },
+    updateApplication: function(id, status, reason){ return request('admin', 'PUT', '/api/admin/applications/' + id, { status: status, reason: reason || '' }); },
+    suspendEstablishment: function(id){ return request('admin', 'POST', '/api/admin/establishments/' + id + '/suspend', {}); },
+    unsuspendEstablishment: function(id){ return request('admin', 'POST', '/api/admin/establishments/' + id + '/unsuspend', {}); },
+    downloadCsv: function(filename, headers, rows){
+      function cell(c){
+        var s = String(c == null ? '' : c);
+        if (/[",\n;]/.test(s)) return '"' + s.replace(/"/g, '""') + '"';
+        return s;
+      }
+      var csv = [headers.map(cell).join(';')].concat((rows || []).map(function(r){ return r.map(cell).join(';'); })).join('\n');
+      var blob = new Blob(['\ufeff' + csv], { type: 'text/csv;charset=utf-8' });
+      var url = URL.createObjectURL(blob);
+      var a = document.createElement('a');
+      a.href = url;
+      a.download = filename || 'urgad.csv';
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+      setTimeout(function(){ URL.revokeObjectURL(url); }, 1500);
+    },
     adminEstablishmentDocuments: function(id){ return request('admin', 'GET', '/api/admin/establishments/' + id + '/documents'); },
     approveEstablishment: function(id){ return request('admin', 'POST', '/api/admin/establishments/' + id + '/approve', {}); },
     rejectEstablishment: function(id, reason){ return request('admin', 'POST', '/api/admin/establishments/' + id + '/reject', { reason: reason || '' }); },

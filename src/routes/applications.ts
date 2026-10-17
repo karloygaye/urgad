@@ -41,8 +41,9 @@ router.post('/', authMiddleware, async (req: any, res: any, next: any) => {
     if (mission.status === 'cancelled') return res.status(409).json({ message: 'Mission annulée.' });
     if (mission.status === 'completed') return res.status(409).json({ message: 'Mission terminée.' });
     if (['validee', 'realisee', 'annulee'].includes(effectiveStatus(mission))) return res.status(409).json({ message: 'Mission déjà pourvue.' });
-    const prof = await dbGet('SELECT p.id, p.profession, u.first_name, u.last_name, u.email, u.phone FROM professionals p JOIN users u ON u.id = p.user_id WHERE p.user_id = ?', [req.user.id]) as any;
+    const prof = await dbGet('SELECT p.id, p.profession, u.first_name, u.last_name, u.email, u.phone, u.verification_status FROM professionals p JOIN users u ON u.id = p.user_id WHERE p.user_id = ?', [req.user.id]) as any;
     if (!prof) return res.status(404).json({ message: 'Professionnel non trouvé.' });
+    if (prof.verification_status === 'suspended') return res.status(403).json({ message: 'Compte suspendu. Contactez URGAD.' });
     const existing = await dbGet('SELECT id FROM applications WHERE mission_id = ? AND professional_id = ?', [missionId, prof.id]);
     if (existing) return res.status(409).json({ message: 'Vous avez déjà candidaté.' });
     const appUuid = uuidv4();

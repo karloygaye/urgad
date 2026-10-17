@@ -26,7 +26,7 @@ function authMiddleware(req: any, res: any, next: any) {
 /** Profil établissement courant */
 router.get('/me', authMiddleware, async (req: any, res: any, next: any) => {
   try {
-    const est = await dbGet('SELECT e.*, u.email, u.phone, u.first_name, u.last_name, u.created_at FROM establishments e JOIN users u ON u.id = e.user_id WHERE e.user_id = ?', [req.user.id]) as any;
+    const est = await dbGet('SELECT e.*, u.email, u.phone, u.first_name, u.last_name, u.created_at, u.verification_status AS user_verification_status FROM establishments e JOIN users u ON u.id = e.user_id WHERE e.user_id = ?', [req.user.id]) as any;
     if (!est) return res.status(404).json({ message: 'Établissement non trouvé.' });
     return res.json(est);
   } catch (err) { next(err); }

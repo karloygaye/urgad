@@ -18,7 +18,7 @@ export async function prosWithinRadiusOfMission(missionId: number): Promise<Arra
   const lat = num(c?.latitude), lng = num(c?.longitude);
   if (lat == null || lng == null) return [];
   const fallback = await defaultRadiusKm();
-  const pros = await dbAll<any>("SELECT p.user_id, p.latitude, p.longitude, p.mobility_radius FROM professionals p JOIN users u ON u.id = p.user_id WHERE u.role = 'professional' AND u.deleted_at IS NULL AND p.latitude IS NOT NULL AND p.longitude IS NOT NULL");
+  const pros = await dbAll<any>("SELECT p.user_id, p.latitude, p.longitude, p.mobility_radius FROM professionals p JOIN users u ON u.id = p.user_id WHERE u.role = 'professional' AND u.deleted_at IS NULL AND u.verification_status NOT IN ('suspended','rejected') AND p.latitude IS NOT NULL AND p.longitude IS NOT NULL");
   const out: Array<{ userId: number; distanceKm: number; radiusKm: number }> = [];
   for (const p of pros) {
     const radius = num(p.mobility_radius) || fallback;
@@ -28,10 +28,11 @@ export async function prosWithinRadiusOfMission(missionId: number): Promise<Arra
   return out;
 }
 
-/** "Nouvelle mission près de chez vous" — une seule fois par mission, seulement si elle est à venir. */
-export async function notifyProsForMission(missionId: number): Promise<number> {
+/** "Nouvelle mission près de chez vous". force=true : relance même si déjà notifié (FLASH BO). */
+export async function notifyProsForMission(missionId: number, opts: { force?: boolean } = {}): Promise<number> {
   const m = await dbGet<any>('SELECT id, title, establishment_name, start_date, start_hour, status, visible, notified_at, urgent FROM missions WHERE id = ?', [missionId]);
-  if (!m || m.notified_at || Number(m.visible) !== 1 || m.status === 'cancelled' || m.status === 'completed') return 0;
+  if (!m || Number(m.visible) !== 1 || m.status === 'cancelled' || m.status === 'completed') return 0;
+  if (!opts.force && m.notified_at) return 0;
   if (String(m.start_date || '').slice(0, 10) < todayIso()) return 0;
   await dbRun("UPDATE missions SET notified_at = datetime('now') WHERE id = ?", [missionId]);
   const targets = await prosWithinRadiusOfMission(missionId);

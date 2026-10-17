@@ -915,7 +915,7 @@ function showEtabScreen(screen, el){
       <div><h1>Bonjour ${a.name} 👋</h1><p style="color:var(--text-muted);margin-top:4px;font-size:13px">${a.city||''} · ${a.type||'Établissement'}</p></div>
       <div class="etab-user"><div style="text-align:right"><strong style="font-size:14px">${a.contact||a.name}</strong><p style="font-size:12px;color:var(--text-muted)">Responsable</p></div><div class="etab-user-avatar">${(a.contact||a.name).split(' ').map(w=>w[0]).join('').slice(0,2).toUpperCase()}</div></div>
     </div>
-    ${a.status==='verified'?'':`<div class="bo-card" style="margin-bottom:16px"><strong>${a.status==='rejected'?'Compte refusé':'Compte en attente de validation'}</strong><p style="color:var(--text-muted);font-size:13px;margin-top:6px">Le statut vient de l'API. Le back-office peut approuver ou refuser ce compte.</p></div>`}
+    ${a.status==='verified'?'':`<div class="bo-card" style="margin-bottom:16px;${a.status==='suspended'?'border-color:rgba(239,68,68,0.45)':''}"><strong>${a.status==='rejected'?'Compte refusé':a.status==='suspended'?'Compte suspendu':'Compte en attente de validation'}</strong><p style="color:var(--text-muted);font-size:13px;margin-top:6px">${a.status==='suspended'?'Vous ne pouvez plus publier de demandes tant que URGAD n’a pas réactivé le compte.':'Le statut vient de l’API. Le back-office peut approuver, refuser ou suspendre ce compte.'}</p></div>`}
     ${trialBannerHtml()}
     <div class="stat-grid">
       <div class="stat-card"><div class="stat-label">Missions en attente</div><div class="stat-value" style="color:var(--amber)">${pending}</div><div class="stat-sub pending">À pourvoir</div></div>

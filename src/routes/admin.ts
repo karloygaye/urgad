@@ -8,6 +8,7 @@ import { storePhoneCode } from '../phoneCode.js';
 import { notify, notifySafe, pushStatus } from '../notify.js';
 import { backfillCoordinates, haversineKm, num } from '../geo.js';
 import { proUserIdForApplication } from './applications.js';
+import { notifyProsForMission } from '../matching.js';
 
 const router = Router();
 
@@ -119,6 +120,30 @@ router.post('/professionals/:id/approve-verification', authMiddleware, requireAd
   } catch (err) { next(err); }
 });
 
+router.post('/professionals/:id/suspend', authMiddleware, requireAdmin, async (req: any, res: any, next: any) => {
+  try {
+    const user = await dbGet('SELECT * FROM users WHERE id = ? AND role = \'professional\'', [req.params.id]) as any;
+    if (!user) return res.status(404).json({ message: 'Professionnel non trouvé.' });
+    await dbRun("UPDATE users SET verification_status = 'suspended', verified = 0 WHERE id = ?", [req.params.id]);
+    await notifySafe(Number(req.params.id), 'Compte suspendu', 'Votre compte professionnel est suspendu. Vous ne pouvez plus postuler. Contactez URGAD.', { screen: 'profile' }, 'verification_rejected');
+    await dbRun('INSERT INTO audit_log (uuid, user_id, user_email, action, resource, details) VALUES (?, ?, ?, ?, ?, ?)',
+      [uuidv4(), req.user.id, req.user.email, 'suspend_professional', 'user:' + req.params.id, user.email]);
+    return res.json({ message: 'Professionnel suspendu.' });
+  } catch (err) { next(err); }
+});
+
+router.post('/professionals/:id/unsuspend', authMiddleware, requireAdmin, async (req: any, res: any, next: any) => {
+  try {
+    const user = await dbGet('SELECT * FROM users WHERE id = ? AND role = \'professional\'', [req.params.id]) as any;
+    if (!user) return res.status(404).json({ message: 'Professionnel non trouvé.' });
+    await dbRun("UPDATE users SET verification_status = 'approved', verified = 1 WHERE id = ?", [req.params.id]);
+    await notifySafe(Number(req.params.id), 'Compte réactivé', 'Votre compte professionnel est de nouveau actif.', { screen: 'home' }, 'verification_approved');
+    await dbRun('INSERT INTO audit_log (uuid, user_id, user_email, action, resource, details) VALUES (?, ?, ?, ?, ?, ?)',
+      [uuidv4(), req.user.id, req.user.email, 'unsuspend_professional', 'user:' + req.params.id, user.email]);
+    return res.json({ message: 'Professionnel réactivé.' });
+  } catch (err) { next(err); }
+});
+
 // Refuser (admin)
 router.post('/professionals/:id/reject-verification', authMiddleware, requireAdmin, async (req: any, res: any, next: any) => {
   try {
@@ -132,7 +157,7 @@ router.post('/professionals/:id/reject-verification', authMiddleware, requireAdm
 // Établissements (admin)
 router.get('/establishments', authMiddleware, requireAdmin, async (req: any, res: any, next: any) => {
   try {
-    const ests = await dbAll(`SELECT e.*, u.email, u.phone, u.first_name, u.last_name,
+    const ests = await dbAll(`SELECT e.*, u.email, u.phone, u.first_name, u.last_name, u.verification_status AS user_verification_status,
       (SELECT name FROM establishment_subscriptions WHERE establishment_id = e.id ORDER BY id DESC LIMIT 1) AS subscription_name,
       (SELECT status FROM establishment_subscriptions WHERE establishment_id = e.id ORDER BY id DESC LIMIT 1) AS subscription_status,
       (SELECT price FROM establishment_subscriptions WHERE establishment_id = e.id ORDER BY id DESC LIMIT 1) AS subscription_price,
@@ -182,6 +207,32 @@ router.post('/establishments/:id/approve', authMiddleware, requireAdmin, async (
   } catch (err) { next(err); }
 });
 
+router.post('/establishments/:id/suspend', authMiddleware, requireAdmin, async (req: any, res: any, next: any) => {
+  try {
+    const estab = await dbGet('SELECT * FROM establishments WHERE id = ?', [req.params.id]) as any;
+    if (!estab) return res.status(404).json({ message: 'Établissement non trouvé.' });
+    await dbRun("UPDATE establishments SET status = 'suspended' WHERE id = ?", [estab.id]);
+    await dbRun("UPDATE users SET verification_status = 'suspended', verified = 0 WHERE id = ?", [estab.user_id]);
+    await notifySafe(Number(estab.user_id), 'Compte suspendu', `${estab.name} est suspendu. Vous ne pouvez plus publier de demandes. Contactez URGAD.`, { screen: 'profile' }, 'establishment_rejected');
+    await dbRun('INSERT INTO audit_log (uuid, user_id, user_email, action, resource, details) VALUES (?, ?, ?, ?, ?, ?)',
+      [uuidv4(), req.user.id, req.user.email, 'suspend_establishment', 'establishment:' + estab.id, estab.name]);
+    return res.json({ message: 'Établissement suspendu.' });
+  } catch (err) { next(err); }
+});
+
+router.post('/establishments/:id/unsuspend', authMiddleware, requireAdmin, async (req: any, res: any, next: any) => {
+  try {
+    const estab = await dbGet('SELECT * FROM establishments WHERE id = ?', [req.params.id]) as any;
+    if (!estab) return res.status(404).json({ message: 'Établissement non trouvé.' });
+    await dbRun("UPDATE establishments SET status = 'approved' WHERE id = ?", [estab.id]);
+    await dbRun("UPDATE users SET verification_status = 'approved', verified = 1 WHERE id = ?", [estab.user_id]);
+    await notifySafe(Number(estab.user_id), 'Compte réactivé', `${estab.name} est de nouveau actif. Vous pouvez publier des demandes.`, { screen: 'dashboard' }, 'establishment_approved');
+    await dbRun('INSERT INTO audit_log (uuid, user_id, user_email, action, resource, details) VALUES (?, ?, ?, ?, ?, ?)',
+      [uuidv4(), req.user.id, req.user.email, 'unsuspend_establishment', 'establishment:' + estab.id, estab.name]);
+    return res.json({ message: 'Établissement réactivé.' });
+  } catch (err) { next(err); }
+});
+
 router.post('/establishments/:id/reject', authMiddleware, requireAdmin, async (req: any, res: any, next: any) => {
   try {
     const estab = await dbGet('SELECT * FROM establishments WHERE id = ?', [req.params.id]) as any;
@@ -217,13 +268,43 @@ router.get('/missions/:id', authMiddleware, requireAdmin, async (req: any, res: 
   } catch (err) { next(err); }
 });
 
+router.post('/missions/:id/notify', authMiddleware, requireAdmin, async (req: any, res: any, next: any) => {
+  try {
+    const mission = await dbGet('SELECT * FROM missions WHERE id = ?', [req.params.id]) as any;
+    if (!mission) return res.status(404).json({ message: 'Mission non trouvée.' });
+    if (req.body?.flash) {
+      await dbRun('UPDATE missions SET urgent = 1, visible = 1 WHERE id = ?', [req.params.id]);
+    } else {
+      await dbRun('UPDATE missions SET visible = 1 WHERE id = ?', [req.params.id]);
+    }
+    const notified = await notifyProsForMission(Number(req.params.id), { force: true });
+    await dbRun('INSERT INTO audit_log (uuid, user_id, user_email, action, resource, details) VALUES (?, ?, ?, ?, ?, ?)',
+      [uuidv4(), req.user.id, req.user.email, req.body?.flash ? 'mission_flash' : 'mission_notify', 'mission:' + req.params.id, String(notified)]);
+    return res.json({ message: notified ? `${notified} professionnel(s) notifié(s) dans le rayon.` : 'Aucun professionnel dans le rayon (adresse manquante ou hors zone).', notified });
+  } catch (err) { next(err); }
+});
+
 // Modifier statut mission (admin)
 router.patch('/missions/:id/status', authMiddleware, requireAdmin, async (req: any, res: any, next: any) => {
   try {
     const { status } = req.body;
-    if (!['published', 'completed', 'cancelled', 'pending'].includes(status)) return res.status(422).json({ message: 'Statut invalide.' });
-    await dbRun('UPDATE missions SET status = ? WHERE id = ?', [status, req.params.id]);
-    return res.json({ message: `Mission mise à jour avec statut "${status}".` });
+    if (!['published', 'completed', 'cancelled', 'pending', 'open'].includes(status)) return res.status(422).json({ message: 'Statut invalide.' });
+    const mapped = status === 'open' ? 'published' : status;
+    const mission = await dbGet('SELECT * FROM missions WHERE id = ?', [req.params.id]) as any;
+    if (!mission) return res.status(404).json({ message: 'Mission non trouvée.' });
+    await dbRun('UPDATE missions SET status = ? WHERE id = ?', [mapped, req.params.id]);
+    if (mapped === 'published') await dbRun('UPDATE missions SET visible = 1 WHERE id = ?', [req.params.id]);
+    if (mapped === 'cancelled') await dbRun('UPDATE missions SET visible = 0 WHERE id = ?', [req.params.id]);
+    await dbRun('INSERT INTO audit_log (uuid, user_id, user_email, action, resource, details) VALUES (?, ?, ?, ?, ?, ?)',
+      [uuidv4(), req.user.id, req.user.email, 'mission_status', 'mission:' + req.params.id, mapped]);
+    const est = await dbGet('SELECT user_id FROM establishments WHERE id = ?', [mission.establishment_id]) as any;
+    if (est?.user_id) {
+      const labels: Record<string, string> = { published: 'Mission publiée', completed: 'Mission marquée terminée', cancelled: 'Mission annulée', pending: 'Mission en attente' };
+      await notifySafe(Number(est.user_id), labels[mapped] || 'Mission mise à jour',
+        `${mission.establishment_name || ''} — « ${mission.title || ''} » (${String(mission.start_date || '').slice(0, 10)})`,
+        { missionId: mission.id, screen: 'missions' }, 'mission_status');
+    }
+    return res.json({ message: `Mission mise à jour avec statut "${mapped}".` });
   } catch (err) { next(err); }
 });
 
@@ -239,12 +320,19 @@ router.get('/applications', authMiddleware, requireAdmin, async (req: any, res: 
 router.put('/applications/:id', authMiddleware, requireAdmin, async (req: any, res: any, next: any) => {
   try {
     const { status, reason } = req.body;
+    if (status && !['pending', 'accepted', 'rejected', 'withdrawn', 'proposed'].includes(String(status))) {
+      return res.status(422).json({ message: 'Statut de candidature invalide.' });
+    }
     const before = await dbGet('SELECT a.*, m.title, m.establishment_name, m.start_date FROM applications a LEFT JOIN missions m ON m.id = a.mission_id WHERE a.id = ?', [req.params.id]) as any;
+    if (!before) return res.status(404).json({ message: 'Candidature introuvable.' });
     await dbRun('UPDATE applications SET status = ?, reason = ? WHERE id = ?', [status || 'pending', reason || '', req.params.id]);
     if (before && before.status !== status && (status === 'accepted' || status === 'rejected')) {
-      await notifySafe(await proUserIdForApplication(before), status === 'accepted' ? 'Candidature acceptée ✅' : 'Candidature non retenue',
-        `${before.establishment_name || 'L\'établissement'} — « ${before.title || 'mission'} » (${String(before.start_date || '').slice(0, 10)})`,
-        { missionId: before.mission_id, applicationId: before.id, screen: 'missions' }, status === 'accepted' ? 'application_accepted' : 'application_rejected');
+      const uid = await proUserIdForApplication(before);
+      if (uid) {
+        await notifySafe(uid, status === 'accepted' ? 'Candidature acceptée ✅' : 'Candidature non retenue',
+          `${before.establishment_name || 'L\'établissement'} — « ${before.title || 'mission'} » (${String(before.start_date || '').slice(0, 10)})`,
+          { missionId: before.mission_id, applicationId: before.id, screen: 'missions' }, status === 'accepted' ? 'application_accepted' : 'application_rejected');
+      }
     }
     return res.json({ message: 'Candidature mise à jour.' });
   } catch (err) { next(err); }
@@ -372,6 +460,21 @@ router.post('/admins', authMiddleware, requireAdmin, async (req: any, res: any, 
       isAdmin: true,
       message: 'Compte admin créé. Mot de passe hashé.'
     });
+  } catch (err) { next(err); }
+});
+
+router.post('/admins/:id/deactivate', authMiddleware, requireAdmin, async (req: any, res: any, next: any) => {
+  try {
+    const id = Number(req.params.id);
+    if (id === Number(req.user.id)) return res.status(409).json({ message: 'Vous ne pouvez pas désactiver votre propre compte.' });
+    const target = await dbGet('SELECT * FROM users WHERE id = ?', [id]) as any;
+    if (!target || Number(target.is_admin) !== 1) return res.status(404).json({ message: 'Administrateur introuvable.' });
+    const others = await dbGet("SELECT COUNT(*) as c FROM users WHERE is_admin = 1 AND id != ?", [id]) as any;
+    if (Number(others?.c || 0) < 1) return res.status(409).json({ message: 'Il doit rester au moins un administrateur.' });
+    await dbRun('UPDATE users SET is_admin = 0 WHERE id = ?', [id]);
+    await dbRun('INSERT INTO audit_log (uuid, user_id, user_email, action, resource, details) VALUES (?, ?, ?, ?, ?, ?)',
+      [uuidv4(), req.user.id, req.user.email, 'deactivate_admin', 'user:' + id, target.email]);
+    return res.json({ message: 'Administrateur désactivé.' });
   } catch (err) { next(err); }
 });
 

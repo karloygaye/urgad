@@ -42,7 +42,15 @@ router.post('/', authMiddleware, async (req: any, res: any, next: any) => {
     const { conversationId, recipientId, recipientType, content } = req.body;
     if (!conversationId || !content) return res.status(422).json({ message: 'Conversation et contenu requis.' });
     const senderType = req.user.role;
-    const senderName = req.user.role === 'professional' ? `${(await dbGet('SELECT first_name FROM users WHERE id = ?', [req.user.id]))?.first_name} ${(await dbGet('SELECT last_name FROM users WHERE id = ?', [req.user.id]))?.last_name}` : (await dbGet('SELECT name FROM establishments WHERE user_id = ?', [req.user.id]))?.name || 'Établissement';
+    let senderName = 'URGAD';
+    if (req.user.isAdmin) senderName = 'URGAD';
+    else if (req.user.role === 'professional') {
+      const u = await dbGet('SELECT first_name, last_name FROM users WHERE id = ?', [req.user.id]) as any;
+      senderName = `${u?.first_name || ''} ${u?.last_name || ''}`.trim() || 'Professionnel';
+    } else {
+      const e = await dbGet('SELECT name FROM establishments WHERE user_id = ?', [req.user.id]) as any;
+      senderName = e?.name || 'Établissement';
+    }
     await dbRun('INSERT INTO messages (uuid, conversation_id, sender_id, sender_type, sender_name, content) VALUES (?, ?, ?, ?, ?, ?)',
       [uuidv4(), conversationId, req.user.id, senderType, senderName, content]);
     // Destinataires : les autres participants de la conversation (+ recipientId s'il désigne un utilisateur).

@@ -767,6 +767,8 @@ async function refreshPro(){
   userProfile.geocodePrecision = profile.geocode_precision || '';
   userProfile.availability = UrgadFeatures.parseAvailability(card.availability || profile.availability);
   userProfile.joined = String(profile.created_at || '').slice(0,10);
+  userProfile.verificationStatus = profile.verification_status || card.verification_status || '';
+  userProfile.suspended = userProfile.verificationStatus === 'suspended';
   U.sessions.pro = { loggedIn:true, email: userProfile.email, userId: userId };
   const near = await UrgadApi.nearbyMissions('professional', proDevicePosition || {});
   U.nearby = near || {};
@@ -1214,6 +1216,7 @@ navItems[0].classList.add('active');
 html=`<div class="home-screen fade-in">
 <div class="greeting">Bonjour ${userProfile.firstName||'vous'} 👋</div>
 <div class="greeting-sub">${UrgadFeatures.esc(proNearbySummary())}</div>
+${userProfile.suspended?'<div class="bo-card" style="margin:12px 0 16px;border-color:rgba(239,68,68,0.45)"><strong>Compte suspendu</strong><p style="color:var(--text-muted);font-size:13px;margin-top:6px">Vous ne pouvez plus postuler. Contactez URGAD.</p></div>':''}
 <div class="section-title">Carte des missions <a onclick="useDevicePosition()">📡 Ma position</a></div>
 <div id="proNearMap" style="height:240px;border-radius:16px;overflow:hidden;border:1px solid var(--border);margin-bottom:18px"></div>
 ${(function(){var u=missions.find(function(m){return m.urgent}); if(!u) return ""; return '<div class="flash-banner" onclick="showProScreen(\'detail-'+u.id+'\')"><div class="flash-banner-icon">🚨</div><div style="flex:1"><h4>Mission urgente</h4><p>'+u.etab+'</p></div><div style="font-size:20px">→</div></div>';})()}

@@ -53,9 +53,10 @@ export async function verificationOf(userId: number) {
 
 export async function isProposable(userId: number | null | undefined): Promise<{ ok: boolean; identity: string; diploma: string }> {
   if (!userId) return { ok: false, identity: 'en_attente', diploma: 'en_attente' };
-  const p = await dbGet<any>("SELECT p.identity_status, p.diploma_status, u.deleted_at FROM professionals p JOIN users u ON u.id = p.user_id WHERE p.user_id = ?", [userId]);
+  const p = await dbGet<any>("SELECT p.identity_status, p.diploma_status, u.deleted_at, u.verification_status FROM professionals p JOIN users u ON u.id = p.user_id WHERE p.user_id = ?", [userId]);
   const identity = statusOf(p?.identity_status), diploma = statusOf(p?.diploma_status);
-  return { ok: !!p && !p.deleted_at && identity === 'verifie' && diploma === 'verifie', identity, diploma };
+  const blocked = p?.verification_status === 'suspended' || p?.verification_status === 'rejected';
+  return { ok: !!p && !p.deleted_at && !blocked && identity === 'verifie' && diploma === 'verifie', identity, diploma };
 }
 
 /** Décision admin sur l'identité ou le diplôme : statut, motif, qui et quand ; documents en attente alignés. */

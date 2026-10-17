@@ -600,7 +600,7 @@ input,select,textarea{font-family:inherit}
     <div style="font-family:'Playfair Display',serif;font-size:32px;background:var(--gradient-gold);-webkit-background-clip:text;background-clip:text;-webkit-text-fill-color:transparent">URGAD</div>
     <p style="color:var(--text-muted);font-size:12px;letter-spacing:2px;text-transform:uppercase;margin:6px 0 18px">Back-office</p>
     <h2 style="font-family:'Playfair Display',serif;margin-bottom:8px">Connexion administrateur</h2>
-    <p style="color:var(--text-muted);font-size:13px;margin-bottom:16px">Connexion HTTP. Le jeton admin reste dans sessionStorage. Les écrans sans endpoint restent marqués aperçu local.</p>
+    <p style="color:var(--text-muted);font-size:13px;margin-bottom:16px">Connexion HTTP. Le jeton admin reste dans sessionStorage. Les actions (valider, notifier, exporter, suspendre) appellent l’API.</p>
     <div class="form-group"><label>E-mail</label><input id="bo-email" type="email" autocomplete="username" placeholder="votre e-mail admin"></div>
     <div class="form-group"><label>Mot de passe</label><input id="bo-pass" type="password" autocomplete="current-password" placeholder="mot de passe"></div>
     <button class="btn btn-primary btn-block btn-lg" onclick="loginBo()">Entrer dans le back-office</button>
@@ -2242,7 +2242,7 @@ stats:['Statistiques','Indicateurs de performance globaux'],
 notifications:['Notifications','Configuration des notifications système'],
 support:['Support','Gestion des tickets et assistance'],
 admins:['Administrateurs','Gestion des accès et permissions'],
-audit:['Journal d\'audit','Tableau API — graphiques en aperçu local'],
+audit:['Journal d\'audit','Actions enregistrées en base'],
 reports:['Rapports','Génération et export de rapports'],
 settings:['Paramètres','Configuration de la plateforme']
 };
@@ -2573,93 +2573,139 @@ const show = type==='all' ? ['missions','urgent','professionals','establishments
 Object.keys(liveLayers).forEach(function(k){ if(show.indexOf(k)>=0) liveLayers[k].addTo(liveMap); else liveMap.removeLayer(liveLayers[k]); });
 }
 function focusMap(lat,lng){if(liveMap)liveMap.setView([lat,lng],14)}
+function proStatusLabel(p){
+  if(p.suspended) return '<span class="bo-badge rejected">Suspendu</span>';
+  if(p.status==='verified') return '<span class="bo-badge verified">Vérifié</span>';
+  if(p.status==='rejected') return '<span class="bo-badge rejected">Refusé</span>';
+  return '<span class="bo-badge pending">En attente</span>';
+}
+function filteredProfessionals(){
+  const f = window.boProFilter || 'all';
+  return professionals.filter(function(p){
+    if(f==='verified') return p.status==='verified' && !p.suspended;
+    if(f==='pending') return p.status==='pending';
+    if(f==='suspended') return !!p.suspended;
+    return true;
+  });
+}
 function renderProfessionals(){
+const list = filteredProfessionals();
+const f = window.boProFilter || 'all';
 return `<div class="filters-bar">
-<button class="filter-chip active">👥 Tous (${professionals.length})</button>
-<button class="filter-chip">✅ Vérifiés (${professionals.filter(p=>p.status==='verified').length})</button>
-<button class="filter-chip">⏳ En attente (${professionals.filter(p=>p.status==='pending').length})</button>
-<select class="filter-select"><option>Toutes les villes</option><option>Paris 15e</option><option>Paris 11e</option></select>
+<button class="filter-chip ${f==='all'?'active':''}" onclick="window.boProFilter='all';showBoScreen('professionals')">Tous (${professionals.length})</button>
+<button class="filter-chip ${f==='verified'?'active':''}" onclick="window.boProFilter='verified';showBoScreen('professionals')">Vérifiés (${professionals.filter(p=>p.status==='verified'&&!p.suspended).length})</button>
+<button class="filter-chip ${f==='pending'?'active':''}" onclick="window.boProFilter='pending';showBoScreen('professionals')">En attente (${professionals.filter(p=>p.status==='pending').length})</button>
+<button class="filter-chip ${f==='suspended'?'active':''}" onclick="window.boProFilter='suspended';showBoScreen('professionals')">Suspendus (${professionals.filter(p=>p.suspended).length})</button>
 <div style="margin-left:auto;display:flex;gap:8px">
-<button class="btn btn-ghost btn-sm" onclick="toast('success','Export','professionals.csv téléchargé')">📥 Exporter CSV</button>
+<button class="btn btn-ghost btn-sm" onclick="exportProsCsv()">Exporter CSV</button>
+<button class="btn btn-primary btn-sm" onclick="bulkValidatePendingPros()">Valider les comptes en attente</button>
 </div>
 </div>
 <div class="bo-card">
 <table class="bo-table">
-<thead><tr><th><input type="checkbox"></th><th>Professionnel</th><th>Profession</th><th>Ville</th><th>Exp.</th><th>Note</th><th>Missions</th><th>Statut</th><th>Actions</th></tr></thead>
+<thead><tr><th>Professionnel</th><th>Profession</th><th>Ville</th><th>E-mail</th><th>Statut</th><th>Actions</th></tr></thead>
 <tbody>
-${professionals.map(p=>`<tr>
-<td><input type="checkbox"></td>
-<td><div class="bo-user-cell"><div class="bo-user-avatar">${p.name.split(' ').map(n=>n[0]).join('')}</div><div><strong style="cursor:pointer" onclick="viewProfessional(${p.id})">${p.name}</strong><div style="font-size:11px;color:var(--text-dim)">${p.email}</div></div></div></td>
-<td>${p.role}</td><td>${p.city}</td><td>${p.exp}</td>
-<td>${p.rating>0?'⭐ '+p.rating+' <span style="color:var(--text-dim);font-size:11px">('+p.reviews+')</span>':'—'}</td>
-<td><strong>${p.missions}</strong></td>
-<td><span class="bo-badge ${p.status}">${p.status==='verified'?'🟢 Vérifié':'🟠 En attente'}</span></td>
+${list.length?list.map(p=>`<tr>
+<td><div class="bo-user-cell"><div class="bo-user-avatar">${escB((p.name||'?').split(' ').map(n=>n[0]).join('').slice(0,2))}</div><div><strong style="cursor:pointer" onclick="viewProfessional(${p.id})">${escB(p.name)}</strong></div></div></td>
+<td>${escB(p.role)}</td><td>${escB(p.city)}</td>
+<td style="font-size:12px">${escB(p.email)}</td>
+<td>${proStatusLabel(p)}</td>
 <td>
 <button class="bo-action-btn view" onclick="viewProfessional(${p.id})">Voir</button>
-${p.status==='pending'?`<button class="bo-action-btn accept" onclick="validatePro(${p.id})">✓</button><button class="bo-action-btn reject" onclick="rejectPro(${p.id})">✕</button>`:''}
+${p.status==='pending'?`<button class="bo-action-btn accept" onclick="validatePro(${p.id})">Valider</button><button class="bo-action-btn reject" onclick="rejectPro(${p.id})">Refuser</button>`:''}
+${p.status==='verified'&&!p.suspended?`<button class="bo-action-btn reject" onclick="suspendPro(${p.id})">Suspendre</button>`:''}
+${p.suspended?`<button class="bo-action-btn accept" onclick="unsuspendPro(${p.id})">Réactiver</button>`:''}
 </td>
-</tr>`).join('')}
+</tr>`).join(''):'<tr><td colspan="6" style="color:var(--text-muted)">Aucun professionnel pour ce filtre.</td></tr>'}
 </tbody>
 </table>
 </div>`;
+}
+function filteredEstablishments(){
+  const f = window.boEtabFilter || 'all';
+  return establishments.filter(function(e){
+    if(f==='verified') return e.status==='verified';
+    if(f==='pending') return e.status==='pending';
+    if(f==='rejected') return e.status==='rejected';
+    if(f==='suspended') return e.status==='suspended';
+    if(f==='prospect') return e.status==='prospect';
+    return true;
+  });
 }
 function renderEstablishments(){
+const list = filteredEstablishments();
+const f = window.boEtabFilter || 'all';
 return `<div class="filters-bar">
-<button class="filter-chip active">🏢 Tous (${establishments.length})</button>
-<button class="filter-chip">✅ Vérifiés</button>
-<button class="filter-chip">⏳ En attente</button>
-<select class="filter-select"><option>Tous types</option><option>EHPAD</option><option>Clinique</option></select>
-<div style="margin-left:auto"><button class="btn btn-ghost btn-sm" onclick="toast('success','Export','establishments.csv téléchargé')">📥 Exporter</button></div>
+<button class="filter-chip ${f==='all'?'active':''}" onclick="window.boEtabFilter='all';showBoScreen('establishments')">Tous (${establishments.length})</button>
+<button class="filter-chip ${f==='verified'?'active':''}" onclick="window.boEtabFilter='verified';showBoScreen('establishments')">Validés (${establishments.filter(e=>e.status==='verified').length})</button>
+<button class="filter-chip ${f==='pending'?'active':''}" onclick="window.boEtabFilter='pending';showBoScreen('establishments')">En attente (${establishments.filter(e=>e.status==='pending').length})</button>
+<button class="filter-chip ${f==='suspended'?'active':''}" onclick="window.boEtabFilter='suspended';showBoScreen('establishments')">Suspendus (${establishments.filter(e=>e.status==='suspended').length})</button>
+<button class="filter-chip ${f==='prospect'?'active':''}" onclick="window.boEtabFilter='prospect';showBoScreen('establishments')">Prospects (${establishments.filter(e=>e.status==='prospect').length})</button>
+<div style="margin-left:auto"><button class="btn btn-ghost btn-sm" onclick="exportEtabsCsv()">Exporter CSV</button></div>
 </div>
 <div class="bo-card">
 <table class="bo-table">
-<thead><tr><th>Établissement</th><th>Type</th><th>Ville</th><th>Lits</th><th>Missions</th><th>Contact</th><th>Statut</th><th>Actions</th></tr></thead>
+<thead><tr><th>Établissement</th><th>Type</th><th>Ville</th><th>Missions</th><th>Contact</th><th>Statut</th><th>Actions</th></tr></thead>
 <tbody>
-${establishments.map(e=>`<tr>
-<td><div class="bo-user-cell"><div class="bo-user-avatar emerald">${e.name.split(' ').map(n=>n[0]).join('').slice(0,2)}</div><div><strong style="cursor:pointer" onclick="viewEstablishment(${e.id})">${e.name}</strong><div style="font-size:11px;color:var(--text-dim)">SIRET: ${e.siret}</div></div></div></td>
-<td><span class="tag">${e.type}</span></td><td>${e.city}</td><td>${e.beds}</td><td><strong>${e.missions}</strong></td>
-<td><div style="font-size:12px">${e.contact}<div style="color:var(--text-dim);font-size:11px">${e.phone}</div></div></td>
-<td><span class="bo-badge ${e.status}">${e.status==='verified'?'🟢 Vérifié':e.status==='rejected'?'❌ Refusé':e.status==='prospect'?'🔵 Prospect':'🟠 En attente'}</span>${e.subscription?`<div style="font-size:11px;color:var(--text-dim);margin-top:4px">${e.subscription.name} · ${e.subscription.price} € · ${e.subscription.status} · non payé</div>`:''}</td>
+${list.length?list.map(e=>`<tr>
+<td><div class="bo-user-cell"><div class="bo-user-avatar emerald">${escB((e.name||'?').split(' ').map(n=>n[0]).join('').slice(0,2))}</div><div><strong style="cursor:pointer" onclick="viewEstablishment(${e.id})">${escB(e.name)}</strong><div style="font-size:11px;color:var(--text-dim)">SIRET: ${escB(e.siret)}</div></div></div></td>
+<td><span class="tag">${escB(e.type)}</span></td><td>${escB(e.city)}</td><td><strong>${e.missions||0}</strong></td>
+<td><div style="font-size:12px">${escB(e.contact||'')}<div style="color:var(--text-dim);font-size:11px">${escB(e.phone||'')}</div></div></td>
+<td><span class="bo-badge ${e.status==='verified'?'verified':e.status==='rejected'||e.status==='suspended'?'rejected':e.status==='prospect'?'info':'pending'}">${e.status==='verified'?'Validé':e.status==='rejected'?'Refusé':e.status==='suspended'?'Suspendu':e.status==='prospect'?'Prospect':'En attente'}</span>${e.subscription?`<div style="font-size:11px;color:var(--text-dim);margin-top:4px">${escB(e.subscription.name)} · ${escB(e.subscription.price)} €</div>`:''}</td>
 <td>
 <button class="bo-action-btn view" onclick="viewEstablishment(${e.id})">Voir</button>
-<button class="bo-action-btn">💬</button>
+<button class="bo-action-btn" onclick="messageEtab(${e.id})">Message</button>
+${e.status==='pending'?`<button class="bo-action-btn accept" onclick="validateEtab(${e.id})">Valider</button><button class="bo-action-btn reject" onclick="rejectEtab(${e.id})">Refuser</button>`:''}
+${e.status==='verified'?`<button class="bo-action-btn reject" onclick="suspendEtab(${e.id})">Suspendre</button>`:''}
+${e.status==='suspended'?`<button class="bo-action-btn accept" onclick="unsuspendEtab(${e.id})">Réactiver</button>`:''}
 </td>
-</tr>`).join('')}
+</tr>`).join(''):'<tr><td colspan="7" style="color:var(--text-muted)">Aucun établissement pour ce filtre.</td></tr>'}
 </tbody>
 </table>
 </div>`;
 }
+function filteredMissions(){
+  const f = window.boMissionFilter || 'all';
+  return missions.filter(function(m){
+    if(f==='urgent') return !!m.urgent;
+    if(f==='pending') return m.apiStatus==='pending' || m.status==='pending';
+    if(f==='cancelled') return m.apiStatus==='cancelled' || m.status==='cancelled';
+    if(f==='completed') return m.apiStatus==='completed' || m.status==='completed';
+    return true;
+  });
+}
 function renderMissions(){
+const list = filteredMissions();
+const f = window.boMissionFilter || 'all';
 return `<div class="tabs">
-<div class="tab active">Toutes (${missions.length})</div>
-<div class="tab">🚨 Urgentes (${missions.filter(m=>m.urgent).length})</div>
-<div class="tab">✅ Confirmées (${missions.filter(m=>m.status==='confirmed').length})</div>
-<div class="tab">⏳ En attente (${missions.filter(m=>m.status==='pending').length})</div>
+<div class="tab ${f==='all'?'active':''}" onclick="window.boMissionFilter='all';showBoScreen('missions')">Toutes (${missions.length})</div>
+<div class="tab ${f==='urgent'?'active':''}" onclick="window.boMissionFilter='urgent';showBoScreen('missions')">Urgentes (${missions.filter(m=>m.urgent).length})</div>
+<div class="tab ${f==='pending'?'active':''}" onclick="window.boMissionFilter='pending';showBoScreen('missions')">En attente (${missions.filter(m=>m.apiStatus==='pending'||m.status==='pending').length})</div>
+<div class="tab ${f==='completed'?'active':''}" onclick="window.boMissionFilter='completed';showBoScreen('missions')">Terminées (${missions.filter(m=>m.apiStatus==='completed').length})</div>
+<button class="btn btn-ghost btn-sm" style="margin-left:auto" onclick="exportMissionsCsv()">Exporter CSV</button>
 </div>
 <div class="bo-card">
 <table class="bo-table">
-<thead><tr><th>Mission</th><th>Établissement</th><th>Date</th><th>Horaires</th><th>Prix</th><th>Candidats</th><th>Assigné</th><th>Statut</th><th>Actions</th></tr></thead>
+<thead><tr><th>Mission</th><th>Établissement</th><th>Date</th><th>Horaires</th><th>Candidats</th><th>Statut</th><th>Actions</th></tr></thead>
 <tbody>
-${missions.map(m=>`<tr>
-<td><strong>#${m.id}</strong> <span class="tag" style="margin-left:4px">${m.type}</span></td>
-<td style="cursor:pointer" onclick="viewEstablishment(${m.etabId})">${m.etab}</td>
-<td>${m.date}</td>
-<td>${m.start}→${m.end}<div style="font-size:10px;color:var(--text-dim)">${m.service}</div></td>
-<td><strong style="color:var(--emerald-soft)">${m.price}</strong></td>
-<td style="color:${m.candidates===0?'var(--red)':'var(--text)'};font-weight:700">${m.candidates}</td>
-<td>${m.assigned||'<span style="color:var(--text-dim)">—</span>'}</td>
-<td><span class="bo-badge ${m.status==='completed'?'verified':m.status==='cancelled'?'rejected':'pending'}">${m.urgent?'🚨 ':''}${m.apiStatus||m.status}</span></td>
+${list.length?list.map(m=>`<tr>
+<td><strong>#${m.id}</strong> <span class="tag" style="margin-left:4px">${escB(m.type)}</span></td>
+<td style="cursor:pointer" onclick="viewEstablishment(${m.etabId})">${escB(m.etab)}</td>
+<td>${escB(m.date)}</td>
+<td>${escB(m.start)}→${escB(m.end)}</td>
+<td style="font-weight:700">${m.candidates||0}</td>
+<td><span class="bo-badge ${m.apiStatus==='completed'?'verified':m.apiStatus==='cancelled'?'rejected':'pending'}">${m.urgent?'FLASH · ':''}${escB(m.apiStatus||m.status)}</span></td>
 <td>
 <button class="bo-action-btn view" onclick="viewMission(${m.id})">Voir</button>
-${m.urgent && m.status!=='confirmed'?`<button class="bo-action-btn accept" onclick="boostMission(${m.id})">🚀</button>`:''}
+<button class="bo-action-btn accept" onclick="boostMission(${m.id})">Notifier les pros</button>
 </td>
-</tr>`).join('')}
+</tr>`).join(''):'<tr><td colspan="7" style="color:var(--text-muted)">Aucune mission pour ce filtre.</td></tr>'}
 </tbody>
 </table>
 </div>
 <div class="bo-card"><h3>Candidatures partagées (${(U.candidatures||[]).length})</h3>
 <table class="bo-table"><thead><tr><th>Professionnel</th><th>Établissement</th><th>Mission</th><th>Statut</th></tr></thead><tbody>
-${(U.candidatures||[]).length?(U.candidatures||[]).map(c=>`<tr><td><strong>${c.proName}</strong><div style="font-size:11px;color:var(--text-dim)">${c.proEmail||''}</div></td><td>${c.etab}</td><td>${c.date||''} ${c.start||''}→${c.end||''}</td><td><span class="bo-badge ${c.status==='accepted'?'verified':c.status==='rejected'?'rejected':'pending'}">${c.status}</span></td></tr>`).join(''):'<tr><td colspan="4">Aucune candidature pour le moment</td></tr>'}
+${(U.candidatures||[]).length?(U.candidatures||[]).map(c=>`<tr><td><strong>${escB(c.proName)}</strong><div style="font-size:11px;color:var(--text-dim)">${escB(c.proEmail||'')}</div></td><td>${escB(c.etab)}</td><td>${escB(c.date||'')} ${escB(c.start||'')}→${escB(c.end||'')}</td><td><span class="bo-badge ${c.status==='accepted'?'verified':c.status==='rejected'||c.status==='withdrawn'?'rejected':'pending'}">${escB(c.statusLabel||c.status)}</span>${c.status==='pending'?`<div style="margin-top:6px"><button class="bo-action-btn accept" onclick="setApplicationStatus(${c.id},'accepted')">Accepter</button> <button class="bo-action-btn reject" onclick="setApplicationStatus(${c.id},'rejected')">Refuser</button></div>`:''}</td></tr>`).join(''):'<tr><td colspan="4">Aucune candidature pour le moment</td></tr>'}
 </tbody></table></div>
 <div class="bo-card"><h3>Messages (${(U.threads||[]).length})</h3>
 ${(U.threads||[]).map(t=>`<div class="feed-item"><div class="feed-icon gold">💬</div><div class="feed-content"><p><strong>${t.etab}</strong> · ${t.proName||'Professionnel'}</p><p>${(t.thread&&t.thread.length)?t.thread[t.thread.length-1].text:t.preview||''}</p><div class="feed-time">${t.time||''}</div></div></div>`).join('')||'<p style="color:var(--text-muted)">Aucun message</p>'}
@@ -2997,32 +3043,13 @@ ${admins.map(a=>`<tr>
 <td style="font-size:12px">${a.lastLogin}</td>
 <td><span class="bo-badge ${a.status==='active'?'verified':'rejected'}">${a.status==='active'?'🟢 Actif':'⚫ Inactif'}</span></td>
 <td>
-<button class="bo-action-btn view">Modifier</button>
-<button class="bo-action-btn">🔐 Droits</button>
-${a.id!==1?'<button class="bo-action-btn reject" onclick="toast(\'info\',\'Info\',\'Admin désactivé\')">Désactiver</button>':''}
+<button class="bo-action-btn reject" onclick="deactivateAdminAccount(${a.id})">Désactiver</button>
 </td>
 </tr>`).join('')}
 </tbody>
 </table>
 </div>
-<div class="grid-2">
-<div class="bo-card">
-<div class="bo-card-header"><div><h3>🔐 Rôles & permissions</h3></div></div>
-${[['Super administrateur','Tous les droits','emerald',1],['Vérification','Validation documents','gold',2],['Support client','Gestion tickets','blue',2],['Finance','Facturation','purple',1],['Opérations','Missions & matching','emerald',1]].map(([role,desc,color,count])=>`<div style="display:flex;align-items:center;gap:12px;padding:12px;background:var(--surface);border-radius:10px;margin-bottom:8px">
-<div style="width:36px;height:36px;border-radius:10px;background:rgba(${color==='emerald'?'16,185,129':color==='gold'?'212,175,55':color==='blue'?'59,130,246':'139,92,246'},0.12);display:flex;align-items:center;justify-content:center;font-size:16px">${role.split(' ')[0]==='Super'?'👑':role.split(' ')[0]==='Vérification'?'✅':role.split(' ')[0]==='Support'?'🎧':role.split(' ')[0]==='Finance'?'💰':'⚙️'}</div>
-<div style="flex:1"><strong style="font-size:13px">${role}</strong><div style="font-size:11px;color:var(--text-muted)">${desc}</div></div>
-<strong style="color:var(--text-muted);font-size:12px">${count} admin</strong>
-</div>`).join('')}
-</div>
-<div class="bo-card">
-<div class="bo-card-header"><div><h3>🔒 Sécurité</h3></div></div>
-<div style="display:flex;flex-direction:column;gap:12px">
-<div style="padding:14px;background:rgba(16,185,129,0.05);border:1px solid rgba(16,185,129,0.2);border-radius:12px"><div style="display:flex;justify-content:space-between;margin-bottom:6px"><strong style="font-size:13px">Authentification 2FA</strong><span class="bo-badge verified">Activé</span></div><div style="font-size:12px;color:var(--text-muted)">Obligatoire pour tous les admins</div></div>
-<div style="padding:14px;background:rgba(16,185,129,0.05);border:1px solid rgba(16,185,129,0.2);border-radius:12px"><div style="display:flex;justify-content:space-between;margin-bottom:6px"><strong style="font-size:13px">Journal d'audit</strong><span class="bo-badge verified">Actif</span></div><div style="font-size:12px;color:var(--text-muted)">Toutes les actions sont tracées</div></div>
-<div style="padding:14px;background:rgba(16,185,129,0.05);border:1px solid rgba(16,185,129,0.2);border-radius:12px"><div style="display:flex;justify-content:space-between;margin-bottom:6px"><strong style="font-size:13px">Sessions sécurisées</strong><span class="bo-badge verified">SSL/TLS</span></div><div style="font-size:12px;color:var(--text-muted)">Chiffrement de bout en bout</div></div>
-</div>
-</div>
-</div>`;
+<div class="bo-card"><p style="color:var(--text-muted);font-size:13px">Tous les administrateurs ont les mêmes droits. Désactiver retire is_admin (il doit rester au moins un compte). Vous ne pouvez pas vous désactiver vous-même.</p></div>`;
 }
 function addAdmin(){
 document.getElementById('modalContent').innerHTML = `<div class="modal-header"><h2>Nouvel administrateur</h2><button class="modal-close" onclick="closeModal()">✕</button></div>
@@ -3056,41 +3083,23 @@ async function createAdminAccount(){
 }
 function renderAudit(){
 return `<div class="filters-bar">
-<select class="filter-select"><option>Toutes actions</option><option>Validation</option><option>Rejet</option><option>Connexion</option></select>
-<select class="filter-select"><option>Tous utilisateurs</option>${admins.map(a=>`<option>${a.name}</option>`).join('')}<option>Système</option></select>
-<input type="date" class="filter-select" value="2026-09-17">
-<input type="date" class="filter-select" value="2026-09-23">
 <div style="margin-left:auto;display:flex;gap:8px">
-<button class="btn btn-ghost btn-sm" onclick="toast('success','Export','audit.csv téléchargé')">📥 Exporter</button>
+<button class="btn btn-ghost btn-sm" onclick="exportAuditCsv()">📥 Exporter CSV</button>
 </div>
 </div>
 <div class="bo-card">
-<div class="bo-card-header"><div><h3>📜 Journal d'audit</h3><div class="bo-card-subtitle">Historique complet des actions</div></div></div>
+<div class="bo-card-header"><div><h3>📜 Journal d'audit</h3><div class="bo-card-subtitle">${(auditLog||[]).length} ligne(s) — GET /api/admin/audit</div></div></div>
 <table class="bo-table">
-<thead><tr><th>Heure</th><th>Utilisateur</th><th>Action</th><th>Cible</th><th>Type</th></tr></thead>
+<thead><tr><th>Heure</th><th>Utilisateur</th><th>Action</th><th>Cible</th></tr></thead>
 <tbody>
-${auditLog.map(l=>`<tr>
-<td style="font-family:monospace;font-size:12px">${l.time}</td>
-<td><strong>${l.user}</strong></td>
-<td>${l.action}</td>
-<td style="color:var(--text-muted)">${l.target}</td>
-<td><span class="bo-badge ${l.type==='success'?'verified':l.type==='warning'?'pending':l.type==='urgent'?'rejected':l.type==='danger'?'rejected':'info'}">${l.type==='success'?'✅':l.type==='warning'?'⚠️':l.type==='urgent'?'🚨':l.type==='danger'?'⛔':'ℹ️'} ${l.type}</span></td>
-</tr>`).join('')}
+${(auditLog||[]).length?auditLog.map(l=>`<tr>
+<td style="font-family:monospace;font-size:12px">${escB(l.time)}</td>
+<td><strong>${escB(l.user)}</strong></td>
+<td>${escB(l.action)}</td>
+<td style="color:var(--text-muted)">${escB(l.target)}</td>
+</tr>`).join(''):'<tr><td colspan="4" style="color:var(--text-muted)">Aucune action enregistrée.</td></tr>'}
 </tbody>
 </table>
-</div>
-<div class="grid-3">
-<div class="bo-card"><div class="bo-card-header"><div><h3>👥 Actions par utilisateur</h3></div></div>
-${admins.slice(0,4).map(a=>`<div style="display:flex;justify-content:space-between;padding:8px 0;border-bottom:1px solid var(--border);font-size:12px"><span>${a.name}</span><strong>${Math.floor(Math.random()*50+10)}</strong></div>`).join('')}
-</div>
-<div class="bo-card"><div class="bo-card-header"><div><h3>🎯 Types d'actions</h3></div></div>
-${[['Validation','42%','emerald'],['Modification','28%','gold'],['Connexion','18%','blue'],['Suppression','12%','red']].map(([t,v,c])=>`<div style="margin-bottom:10px"><div style="display:flex;justify-content:space-between;font-size:12px;margin-bottom:4px"><span>${t}</span><strong>${v}</strong></div><div class="progress-bar"><div class="progress-fill ${c}" style="width:${v}"></div></div></div>`).join('')}
-</div>
-<div class="bo-card"><div class="bo-card-header"><div><h3>📊 Stats audit</h3></div></div>
-<div class="detail-item" style="margin-bottom:8px"><div class="label">Total actions (24h)</div><div class="value">1 247</div></div>
-<div class="detail-item" style="margin-bottom:8px"><div class="label">Actions critiques</div><div class="value" style="color:var(--red)">23</div></div>
-<div class="detail-item"><div class="label">Connexions admin</div><div class="value" style="color:var(--emerald-soft)">48</div></div>
-</div>
 </div>`;
 }
 function renderReports(){
@@ -3120,13 +3129,14 @@ ${[['📊','Rapport d\'activité','Vue complète de la plateforme','PDF, Excel']
 </table>
 </div>
 <div class="bo-card">
-<div class="bo-card-header"><div><h3>📅 Rapports programmés</h3><button class="btn btn-primary btn-sm" onclick="toast('info','Programmation','Nouveau rapport programmé')">+ Programmer</button></div></div>
-<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:12px">
-${[['📊','Rapport hebdomadaire','Tous les lundis à 8h','Actif'],['💰','Rapport financier mensuel','1er du mois à 9h','Actif'],['📈','Revue KPI trimestrielle','1er jour du trimestre','Actif']].map(([icon,title,freq,status])=>`<div style="padding:16px;background:var(--surface);border:1px solid var(--border);border-radius:12px">
-<div style="display:flex;justify-content:space-between;margin-bottom:10px"><span style="font-size:24px">${icon}</span><span class="bo-badge verified">${status}</span></div>
-<strong style="font-size:13px;display:block;margin-bottom:4px">${title}</strong>
-<div style="font-size:11px;color:var(--text-muted)">${freq}</div>
-</div>`).join('')}
+<div class="bo-card-header"><div><h3>Exports</h3><div class="bo-card-subtitle">Fichiers générés maintenant, pas d'envoi programmé.</div></div></div>
+<div style="display:flex;flex-wrap:wrap;gap:8px">
+<button class="btn btn-ghost" onclick="generateReport('Synthèse')">Synthèse CSV</button>
+<button class="btn btn-ghost" onclick="exportProsCsv()">Professionnels</button>
+<button class="btn btn-ghost" onclick="exportEtabsCsv()">Établissements</button>
+<button class="btn btn-ghost" onclick="exportMissionsCsv()">Missions</button>
+<button class="btn btn-ghost" onclick="exportFinanceCsv()">Finance</button>
+<button class="btn btn-ghost" onclick="exportAuditCsv()">Journal d'audit</button>
 </div>
 </div>`;
 }
@@ -3238,7 +3248,9 @@ ${UrgadFeatures.availabilityGridHtml(p.availability, { clickable: false })}
 </div>
 <div class="modal-footer">
 <button class="btn btn-ghost" onclick="closeModal()">Fermer</button>
-${p.status==='pending'?`<button class="btn btn-danger" onclick="rejectPro(${p.id})">✕ Rejeter</button><button class="btn btn-success" onclick="validatePro(${p.id})">✓ Valider</button>`:`<button class="btn btn-danger" onclick="toast('info','Aperçu local','Pas d\'endpoint de suspension')">⏸ Suspendre</button>`}
+<button class="btn btn-secondary" onclick="messagePro(${p.id})">Message</button>
+${p.status==='pending'?`<button class="btn btn-danger" onclick="rejectPro(${p.id})">Refuser</button><button class="btn btn-success" onclick="validatePro(${p.id})">Valider</button>`:''}
+${p.suspended?`<button class="btn btn-success" onclick="unsuspendPro(${p.id})">Réactiver</button>`:`<button class="btn btn-danger" onclick="suspendPro(${p.id})">Suspendre</button>`}
 </div>`;
 document.getElementById('modal').classList.add('active');
 }
@@ -3257,7 +3269,7 @@ document.getElementById('modalContent').innerHTML = `<div class="modal-header"><
 <h3>${e.name}</h3>
 <p>${e.type} • ${e.city}</p>
 <div class="detail-meta">
-<div class="detail-meta-item"><span class="bo-badge ${e.status}">${e.status==='verified'?'🟢 Vérifié':e.status==='rejected'?'❌ Refusé':e.status==='prospect'?'🔵 Prospect':'🟠 En attente'}</span></div>
+<div class="detail-meta-item"><span class="bo-badge ${e.status==='verified'?'verified':e.status==='rejected'||e.status==='suspended'?'rejected':e.status==='prospect'?'info':'pending'}">${e.status==='verified'?'🟢 Vérifié':e.status==='rejected'?'❌ Refusé':e.status==='suspended'?'⛔ Suspendu':e.status==='prospect'?'🔵 Prospect':'🟠 En attente'}</span></div>
 <div class="detail-meta-item">🏥 ${e.beds} lits</div>
 <div class="detail-meta-item">📋 ${e.missions} missions</div>
 </div>
@@ -3281,7 +3293,10 @@ ${etabMissions.length>0?etabMissions.map(m=>`<div style="padding:10px;background
 </div>
 <div class="modal-footer">
 <button class="btn btn-ghost" onclick="closeModal()">Fermer</button>
-${e.status!=='verified'?`<button class="btn btn-success" onclick="validateEtab(${e.id})">✓ Valider</button>`:''}${e.status!=='rejected'?`<button class="btn btn-danger" onclick="rejectEtab(${e.id})">✕ Rejeter</button>`:''}
+<button class="btn btn-secondary" onclick="messageEtab(${e.id})">Message</button>
+${e.status==='pending'?`<button class="btn btn-success" onclick="validateEtab(${e.id})">✓ Valider</button><button class="btn btn-danger" onclick="rejectEtab(${e.id})">✕ Rejeter</button>`:''}
+${e.status==='verified'?`<button class="btn btn-danger" onclick="suspendEtab(${e.id})">Suspendre</button>`:''}
+${e.status==='suspended'?`<button class="btn btn-success" onclick="unsuspendEtab(${e.id})">Réactiver</button>`:''}
 </div>`;
 document.getElementById('modal').classList.add('active');
 }
@@ -3310,43 +3325,20 @@ document.getElementById('modalContent').innerHTML = `<div class="modal-header"><
 <div class="detail-item"><div class="label">Assigné</div><div class="value">${m.assigned||'—'}</div></div>
 </div>
 </div>
-<div class="modal-footer">
+<div class="modal-footer" style="flex-wrap:wrap;gap:8px">
 <button class="btn btn-ghost" onclick="closeModal()">Fermer</button>
-${m.urgent && m.status!=='confirmed'?`<button class="btn btn-urgent" onclick="boostMission(${m.id})">🚀 Booster (FLASH)</button>`:''}
-<button class="btn btn-primary" onclick="closeModal();toast('success','Action','Mission mise à jour')">💾 Actions</button>
+<button class="btn btn-secondary" onclick="setMissionStatus(${m.id},'published')">Publier</button>
+<button class="btn btn-urgent" onclick="boostMission(${m.id}, true)">FLASH — notifier</button>
+<button class="btn btn-success" onclick="setMissionStatus(${m.id},'completed')">Terminer</button>
+<button class="btn btn-danger" onclick="setMissionStatus(${m.id},'cancelled')">Annuler</button>
 </div>`;
 document.getElementById('modal').classList.add('active');
 }
 function viewVerification(id){
-const p = professionals.find(x=>x.id===id);
-if(!p) return;
-document.getElementById('modalContent').innerHTML = `<div class="modal-header"><h2>Vérification - ${p.name}</h2><button class="modal-close" onclick="closeModal()">✕</button></div>
-<div class="modal-body">
-<div class="detail-hero-bo">
-<div class="detail-avatar-bo">${p.name.split(' ').map(n=>n[0]).join('')}</div>
-<div class="detail-info-bo"><h3>${p.name}</h3><p>${p.role} • Inscrit le ${p.joined}</p></div>
-</div>
-<h4 style="font-size:12px;color:var(--text-muted);text-transform:uppercase;letter-spacing:1.5px;margin-bottom:12px;font-weight:700">Documents soumis</h4>
-<div style="display:flex;flex-direction:column;gap:10px;margin-bottom:20px">
-<div style="padding:14px;background:rgba(16,185,129,0.05);border:1px solid rgba(16,185,129,0.2);border-radius:12px;display:flex;align-items:center;gap:12px;cursor:pointer">
-<div style="width:44px;height:44px;border-radius:10px;background:rgba(16,185,129,0.15);display:flex;align-items:center;justify-content:center;font-size:20px">📄</div>
-<div style="flex:1"><strong style="font-size:13px">Diplôme d'État AS</strong><div style="font-size:11px;color:var(--text-muted)">diplome_${p.name.toLowerCase().replace(' ','_')}.pdf • 1.2 MB</div></div>
-<span class="bo-badge verified">✅ Validé</span>
-</div>
-<div style="padding:14px;background:rgba(245,158,11,0.05);border:1px solid rgba(245,158,11,0.2);border-radius:12px;display:flex;align-items:center;gap:12px;cursor:pointer">
-<div style="width:44px;height:44px;border-radius:10px;background:rgba(245,158,11,0.15);display:flex;align-items:center;justify-content:center;font-size:20px">🆔</div>
-<div style="flex:1"><strong style="font-size:13px">Pièce d'identité</strong><div style="font-size:11px;color:var(--text-muted)">id_${p.name.toLowerCase().replace(' ','_')}.pdf • 842 KB</div></div>
-<span class="bo-badge pending">🟠 À vérifier</span>
-</div>
-</div>
-<div class="form-group"><label>Note de vérification</label><textarea rows="3" placeholder="Commentaire sur la vérification..."></textarea></div>
-</div>
-<div class="modal-footer">
-<button class="btn btn-ghost" onclick="closeModal()">Annuler</button>
-<button class="btn btn-danger" onclick="rejectPro(${p.id})">✕ Demander correction</button>
-<button class="btn btn-success" onclick="validatePro(${p.id})">✓ Valider le compte</button>
-</div>`;
-document.getElementById('modal').classList.add('active');
+  closeModal();
+  showBoScreen('verification');
+  const p = professionals.find(x=>x.id===id);
+  toast('info','Vérifications', p ? ('Identité et diplôme de '+p.name+' — ouvrez les fichiers dans le tableau.') : 'Identité et diplôme se vérifient dans cet écran.');
 }
 function viewDispute(id){
 const d = disputes.find(x=>x.id===id);
@@ -3441,9 +3433,151 @@ async function rejectEtab(id){
   } catch(e) { toast('error','Établissement', e.message||'Échec'); }
   closeModal();
 }
-function boostMission(id){ toast('info','Aperçu local','Aucun endpoint pour booster une mission.'); closeModal(); }
-function resolveDispute(id){ toast('info','Aperçu local','Litige non enregistré.'); closeModal(); }
-function resolveTicket(id){ toast('info','Aperçu local','Ticket non enregistré.'); closeModal(); }
+async function boostMission(id, flash){
+  try {
+    const res = await UrgadApi.notifyMissionPros(id, flash !== false);
+    await refreshAdmin();
+    closeModal();
+    toast('success', flash===false?'Notification':'FLASH', (res && res.message) || 'Pros notifiés.');
+    showBoScreen('missions');
+  } catch(e) { toast('error','Mission', e.message||'Échec'); }
+}
+async function setMissionStatus(id, status){
+  try {
+    await UrgadApi.patchMissionStatus(id, status);
+    await refreshAdmin();
+    closeModal();
+    toast('success','Mission','Statut : '+status);
+    showBoScreen('missions');
+  } catch(e) { toast('error','Mission', e.message||'Échec'); }
+}
+async function suspendPro(id){
+  const p = professionals.find(x=>x.id===id);
+  if(!p) return;
+  if(!confirm('Suspendre '+p.name+' ? Il ne pourra plus postuler.')) return;
+  try {
+    await UrgadApi.suspendProfessional(p.userId||p.id);
+    await refreshAdmin();
+    closeModal();
+    toast('success','Compte','Professionnel suspendu.');
+    showBoScreen(currentBoScreen||'professionals');
+  } catch(e) { toast('error','Suspension', e.message||'Échec'); }
+}
+async function unsuspendPro(id){
+  const p = professionals.find(x=>x.id===id);
+  if(!p) return;
+  try {
+    await UrgadApi.unsuspendProfessional(p.userId||p.id);
+    await refreshAdmin();
+    closeModal();
+    toast('success','Compte','Professionnel réactivé.');
+    showBoScreen(currentBoScreen||'professionals');
+  } catch(e) { toast('error','Réactivation', e.message||'Échec'); }
+}
+async function bulkValidatePendingPros(){
+  const pending = professionals.filter(function(p){ return p.status==='pending'; });
+  if(!pending.length){ toast('info','Validation','Aucun compte en attente.'); return; }
+  if(!confirm('Valider '+pending.length+' compte(s) en attente ?')) return;
+  let ok=0, fail=0;
+  for(const p of pending){
+    try { await UrgadApi.approveProfessional(p.userId||p.id); ok++; }
+    catch(e){ fail++; }
+  }
+  await refreshAdmin();
+  toast(fail?'info':'success','Validation', ok+' validé(s)'+(fail?', '+fail+' échec(s)':''));
+  showBoScreen('professionals');
+}
+function exportProsCsv(){
+  UrgadApi.downloadCsv('urgad-professionnels.csv', ['id','nom','email','telephone','ville','statut','profession'],
+    professionals.map(function(p){ return [p.id, p.name, p.email, p.phone, p.city, p.suspended?'suspendu':p.status, p.role]; }));
+  toast('success','Export', professionals.length+' professionnel(s)');
+}
+function exportEtabsCsv(){
+  UrgadApi.downloadCsv('urgad-etablissements.csv', ['id','nom','type','ville','siret','statut','email'],
+    establishments.map(function(e){ return [e.id, e.name, e.type, e.city, e.siret, e.status, e.email||'']; }));
+  toast('success','Export', establishments.length+' établissement(s)');
+}
+function exportMissionsCsv(){
+  UrgadApi.downloadCsv('urgad-missions.csv', ['id','etablissement','titre','date','statut','urgent','candidats'],
+    missions.map(function(m){ return [m.id, m.etab, m.title||m.type, m.startDate||m.date, m.apiStatus||m.status, m.urgent?'oui':'non', m.candidates||0]; }));
+  toast('success','Export', missions.length+' mission(s)');
+}
+function exportAuditCsv(){
+  UrgadApi.downloadCsv('urgad-audit.csv', ['date','utilisateur','action','cible'],
+    (auditLog||[]).map(function(l){ return [l.time, l.user, l.action, l.target]; }));
+  toast('success','Export', (auditLog||[]).length+' ligne(s)');
+}
+function exportFinanceCsv(){
+  const rows = window.urgadFinance || [];
+  UrgadApi.downloadCsv('urgad-finance.csv', ['id','date','libelle','montant','statut'],
+    rows.map(function(r){ return [r.id, r.record_date||r.created_at||'', r.label||r.description||r.type||'', r.amount||'', r.status||'']; }));
+  toast('success','Export', rows.length+' écriture(s)');
+}
+async function messageEtab(id){
+  const e = establishments.find(x=>x.id===id);
+  if(!e) return;
+  if(!e.userId){ toast('error','Message','Compte utilisateur introuvable pour cet établissement.'); return; }
+  const content = prompt('Message in-app à '+e.name+' :');
+  if(content==null || !String(content).trim()) return;
+  try {
+    await UrgadApi.sendNotification({ userId: e.userId, recipientType: 'establishment', recipientId: e.id, title: 'Message URGAD', content: String(content).trim(), type: 'admin' });
+    await UrgadApi.createTicket({ userName: e.name, type: 'message', subject: 'Message URGAD', priority: 'medium', status: 'open', reply: String(content).trim() });
+    toast('success','Message','Notification enregistrée pour '+e.name+' (aucun SMS, aucun e-mail).');
+    await refreshAdmin();
+  } catch(err) { toast('error','Message', err.message||'Échec'); }
+}
+async function messagePro(id){
+  const p = professionals.find(x=>x.id===id);
+  if(!p) return;
+  const uid = p.userId || p.id;
+  const content = prompt('Message in-app à '+p.name+' :');
+  if(content==null || !String(content).trim()) return;
+  try {
+    await UrgadApi.sendNotification({ userId: uid, recipientType: 'professional', recipientId: uid, title: 'Message URGAD', content: String(content).trim(), type: 'admin' });
+    toast('success','Message','Notification enregistrée pour '+p.name+' (aucun SMS, aucun e-mail).');
+    await refreshAdmin();
+  } catch(err) { toast('error','Message', err.message||'Échec'); }
+}
+async function suspendEtab(id){
+  const e = establishments.find(x=>x.id===id);
+  if(!e) return;
+  if(!confirm('Suspendre '+e.name+' ? Plus aucune demande ne pourra être publiée.')) return;
+  try {
+    await UrgadApi.suspendEstablishment(id);
+    await refreshAdmin();
+    closeModal();
+    toast('success','Compte','Établissement suspendu.');
+    showBoScreen(currentBoScreen||'establishments');
+  } catch(err) { toast('error','Suspension', err.message||'Échec'); }
+}
+async function unsuspendEtab(id){
+  try {
+    await UrgadApi.unsuspendEstablishment(id);
+    await refreshAdmin();
+    closeModal();
+    toast('success','Compte','Établissement réactivé.');
+    showBoScreen(currentBoScreen||'establishments');
+  } catch(err) { toast('error','Réactivation', err.message||'Échec'); }
+}
+async function setApplicationStatus(id, status){
+  let reason = '';
+  if(status==='rejected'){ reason = prompt('Motif (facultatif, visible par le professionnel) :') || ''; if(reason===null) return; }
+  try {
+    await UrgadApi.updateApplication(id, status, reason);
+    await refreshAdmin();
+    toast('success','Candidature', status==='accepted'?'Acceptée — le professionnel est notifié.':'Refusée — le professionnel est notifié.');
+    showBoScreen('missions');
+  } catch(err) { toast('error','Candidature', err.message||'Échec'); }
+}
+async function deactivateAdminAccount(id){
+  if(!confirm('Retirer les droits administrateur de ce compte ?')) return;
+  try {
+    await UrgadApi.deactivateAdmin(id);
+    await refreshAdmin();
+    toast('success','Admin','Compte désactivé.');
+    showBoScreen('admins');
+  } catch(e) { toast('error','Admin', e.message||'Échec'); }
+}
 function openQuickAction(){
 document.getElementById('modalContent').innerHTML = `<div class="modal-header"><h2>⚡ Action rapide</h2><button class="modal-close" onclick="closeModal()">✕</button></div>
 <div class="modal-body">
@@ -3455,11 +3589,28 @@ document.getElementById('modalContent').innerHTML = `<div class="modal-header"><
 <button class="btn btn-secondary" onclick="closeModal();showBoScreen('reports')">📑 Générer rapport</button>
 <button class="btn btn-secondary" onclick="closeModal();showBoScreen('finance')">💰 Voir finances</button>
 </div>
-<div class="form-group" style="margin-top:16px"><label>Recherche rapide</label><input type="text" placeholder="Nom, email, ID, SIRET..." autofocus></div>
+<div class="form-group" style="margin-top:16px"><label>Recherche rapide</label><input type="text" placeholder="Nom, email, ID, SIRET..." autofocus onkeydown="handleGlobalSearch(event)"></div>
 </div>`;
 document.getElementById('modal').classList.add('active');
 }
-function handleGlobalSearch(e){if(e.key==='Enter'){const q = e.target.value.trim();if(q) toast('info','Recherche','Résultats pour: '+q)}}
+function handleGlobalSearch(e){
+  if(e.key!=='Enter') return;
+  const q = (e.target.value||'').trim().toLowerCase();
+  if(!q) return;
+  const hits = [];
+  professionals.forEach(function(p){ if((p.name+' '+p.email+' '+p.city).toLowerCase().indexOf(q)>=0) hits.push({kind:'pro', id:p.id, label:p.name+' · '+p.email}); });
+  establishments.forEach(function(x){ if((x.name+' '+(x.siret||'')+' '+(x.city||'')).toLowerCase().indexOf(q)>=0) hits.push({kind:'etab', id:x.id, label:x.name}); });
+  missions.forEach(function(m){ if(('#'+m.id+' '+(m.etab||'')+' '+(m.title||'')).toLowerCase().indexOf(q)>=0) hits.push({kind:'mission', id:m.id, label:'#'+m.id+' '+m.etab}); });
+  document.getElementById('modalContent').innerHTML = `<div class="modal-header"><h2>Recherche</h2><button class="modal-close" onclick="closeModal()">✕</button></div>
+<div class="modal-body">${hits.length?hits.slice(0,30).map(function(h){ return '<div class="profile-menu-item" style="margin-bottom:8px;cursor:pointer" onclick="openSearchHit(\''+h.kind+'\','+h.id+')"><strong>'+escB(h.kind)+'</strong> · '+escB(h.label)+'</div>'; }).join(''):'<p style="color:var(--text-muted)">Aucun résultat pour « '+escB(q)+' ».</p>'}</div>`;
+  document.getElementById('modal').classList.add('active');
+}
+function openSearchHit(kind, id){
+  closeModal();
+  if(kind==='pro'){ showBoScreen('professionals'); viewProfessional(id); }
+  else if(kind==='etab'){ showBoScreen('establishments'); viewEstablishment(id); }
+  else { showBoScreen('missions'); viewMission(id); }
+}
 function toggleNotifPanel(){
 const panel = document.getElementById('notifPanel');
 panel.classList.toggle('active');
@@ -3857,7 +4008,19 @@ function renderSettings(){
 <button class="btn btn-primary" style="margin-top:14px" onclick="saveSecuritySettings()">Enregistrer</button>
 </div>
 </div>
-<div class="bo-card"><p style="color:var(--text-muted);font-size:13px">Vider le cache, régénérer un index ou envoyer une notification de maintenance n'a pas d'endpoint. Ces actions ne sont plus proposées comme réussies.</p></div>`;
+<div class="bo-card">
+<div class="bo-card-header"><div><h3>Notification de maintenance</h3><div class="bo-card-subtitle">In-app uniquement, vers tous les pros et établissements.</div></div></div>
+<div class="form-group"><label>Message</label><textarea id="set-maint-msg" rows="3" placeholder="Ex. Maintenance prévue ce soir de 22h à 23h."></textarea></div>
+<button class="btn btn-primary" onclick="sendMaintenanceNotice()">Envoyer</button>
+</div>`;
+}
+async function sendMaintenanceNotice(){
+  const content = ((document.getElementById('set-maint-msg')||{}).value||'').trim();
+  if(!content){ toast('error','Maintenance','Message requis'); return; }
+  try {
+    const res = await UrgadApi.bulkNotify({ audience: 'all', title: 'Maintenance URGAD', content: content, type: 'admin' });
+    toast('success','Maintenance', (res&&res.count!=null?res.count:0)+' notification(s) enregistrée(s).');
+  } catch(e) { toast('error','Maintenance', e.message||'Échec'); }
 }
 async function saveSettings(partial){
   const data = await UrgadApi.saveSettings(partial);
