@@ -188,6 +188,7 @@
       skills: row.skills ? String(row.skills).split(',').map(function(s){ return s.trim(); }).filter(Boolean) : [],
       lat: coord(row.latitude != null ? row.latitude : row.lat),
       lng: coord(row.longitude != null ? row.longitude : row.lng),
+      availability: row.availability || null,
       phoneVerified: row.verified === 1 || row.verified === true,
       source: 'api'
     };

@@ -246,6 +246,114 @@
     setTimeout(function(){ var i = back.querySelector('#urgad-del-pass'); if (i) i.focus(); }, 50);
   }
 
+  /* ---------- Disponibilités : jours + dates (14 prochains jours) ---------- */
+  var WEEKDAYS_FR = ['Dimanche','Lundi','Mardi','Mercredi','Jeudi','Vendredi','Samedi'];
+  function emptyAvailSlot(){ return { matin: false, apres_midi: false, nuit: false }; }
+  function isoLocalDate(d){
+    var y = d.getFullYear();
+    var m = String(d.getMonth() + 1).padStart(2, '0');
+    var day = String(d.getDate()).padStart(2, '0');
+    return y + '-' + m + '-' + day;
+  }
+  function parseAvailability(raw){
+    var obj = raw;
+    if (!raw) return { weekly: {}, dates: {} };
+    if (typeof raw === 'string') {
+      try { obj = JSON.parse(raw); } catch (e) { return { weekly: {}, dates: {} }; }
+    }
+    if (!obj || typeof obj !== 'object' || Array.isArray(obj)) return { weekly: {}, dates: {} };
+    var weekly = {};
+    var dates = {};
+    if (obj.weekly && typeof obj.weekly === 'object') weekly = Object.assign({}, obj.weekly);
+    if (obj.dates && typeof obj.dates === 'object') dates = Object.assign({}, obj.dates);
+    WEEKDAYS_FR.forEach(function(d){
+      if (obj[d] && !weekly[d]) weekly[d] = obj[d];
+    });
+    Object.keys(obj).forEach(function(k){
+      if (/^\d{4}-\d{2}-\d{2}$/.test(k)) dates[k] = obj[k];
+    });
+    return { weekly: weekly, dates: dates };
+  }
+  function normalizeAvailSlot(s){
+    s = s || {};
+    return {
+      matin: !!(s.matin || s.morning),
+      apres_midi: !!(s.apres_midi || s.afternoon),
+      nuit: !!(s.nuit || s.night)
+    };
+  }
+  function upcomingAvailDays(n){
+    n = n || 14;
+    var start = new Date();
+    start.setHours(12, 0, 0, 0);
+    var out = [];
+    for (var i = 0; i < n; i++) {
+      var d = new Date(start.getTime());
+      d.setDate(start.getDate() + i);
+      out.push({
+        iso: isoLocalDate(d),
+        weekday: WEEKDAYS_FR[d.getDay()],
+        dateLabel: d.toLocaleDateString('fr-FR', { day: 'numeric', month: 'short' }),
+        fullLabel: d.toLocaleDateString('fr-FR', { weekday: 'long', day: 'numeric', month: 'long' }),
+        isToday: i === 0,
+        isWeekend: d.getDay() === 0 || d.getDay() === 6
+      });
+    }
+    return out;
+  }
+  function availSlotFor(avail, day){
+    var a = parseAvailability(avail);
+    return normalizeAvailSlot(a.dates[day.iso] || a.weekly[day.weekday] || emptyAvailSlot());
+  }
+  function availToggleHtml(iso, slot, on, clickable){
+    var cls = on ? 'on' : 'off';
+    var handler = clickable ? ' onclick="toggleAvail(this)"' : '';
+    return '<div class="avail-cell"><div class="avail-toggle ' + cls + '" data-iso="' + iso + '" data-slot="' + slot + '"' + handler + '>' + (on ? '✓' : '✕') + '</div></div>';
+  }
+  function availabilityGridHtml(avail, opts){
+    opts = opts || {};
+    var clickable = opts.clickable !== false;
+    var days = upcomingAvailDays(opts.days || 14);
+    var rows = days.map(function(day){
+      var s = availSlotFor(avail, day);
+      var name = day.isToday ? "Aujourd'hui" : day.weekday;
+      return '<div class="avail-row' + (day.isToday ? ' today' : '') + (day.isWeekend ? ' weekend' : '') + '">' +
+        '<div class="avail-day"><div class="avail-day-name">' + esc(name) + '</div><div class="avail-day-date">' + esc(day.dateLabel) + '</div></div>' +
+        availToggleHtml(day.iso, 'matin', s.matin, clickable) +
+        availToggleHtml(day.iso, 'apres_midi', s.apres_midi, clickable) +
+        availToggleHtml(day.iso, 'nuit', s.nuit, clickable) +
+        '</div>';
+    }).join('');
+    return '<div class="avail-grid">' +
+      '<div class="avail-row header"><div>Date</div><div>Matin</div><div>Après-midi</div><div>Nuit</div></div>' +
+      rows + '</div>';
+  }
+  function collectAvailabilityFromGrid(root){
+    var dates = {};
+    var weekly = {};
+    var nodes = (root || document).querySelectorAll('.avail-toggle[data-iso]');
+    nodes.forEach(function(el){
+      var iso = el.getAttribute('data-iso');
+      var slot = el.getAttribute('data-slot');
+      if (!dates[iso]) dates[iso] = emptyAvailSlot();
+      if (slot && Object.prototype.hasOwnProperty.call(dates[iso], slot)) dates[iso][slot] = el.classList.contains('on');
+    });
+    upcomingAvailDays(14).forEach(function(day){
+      if (dates[day.iso]) weekly[day.weekday] = dates[day.iso];
+    });
+    return { weekly: weekly, dates: dates };
+  }
+  function availabilityMenuHint(avail){
+    var days = upcomingAvailDays(14);
+    var on = 0;
+    days.forEach(function(d){
+      var s = availSlotFor(avail, d);
+      if (s.matin || s.apres_midi || s.nuit) on++;
+    });
+    if (!on) return '14 prochains jours — aucun créneau';
+    return on + ' jour(s) avec créneau sur 14';
+  }
+
   window.UrgadFeatures = {
     esc: esc, timeAgo: timeAgo, iconFor: iconFor,
     startNotifications: startNotifications, stopNotifications: stopNotifications, refreshNotifications: refreshNotifications,
@@ -256,6 +364,11 @@
     legalLinksHtml: legalLinksHtml, legalFooter: legalFooter,
     downloadMyData: downloadMyData, confirmDeleteAccount: confirmDeleteAccount,
     getNotifications: function(role){ var st = pollers[role]; return st ? st.list : []; },
-    getUnread: function(role){ var st = pollers[role]; return st ? st.unread : 0; }
+    getUnread: function(role){ var st = pollers[role]; return st ? st.unread : 0; },
+    parseAvailability: parseAvailability,
+    upcomingAvailDays: upcomingAvailDays,
+    availabilityGridHtml: availabilityGridHtml,
+    collectAvailabilityFromGrid: collectAvailabilityFromGrid,
+    availabilityMenuHint: availabilityMenuHint
   };
 })();

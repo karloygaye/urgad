@@ -237,7 +237,11 @@ input,select,textarea{font-family:inherit}
 
 .avail-screen{padding:20px 24px}
 .avail-grid{background:var(--bg-card);border:1px solid var(--border);border-radius:18px;padding:16px;margin-bottom:16px}
-.avail-row{display:grid;grid-template-columns:80px 1fr 1fr 1fr;gap:8px;padding:10px 0;border-bottom:1px solid var(--border);align-items:center;font-size:13px}
+.avail-row{display:grid;grid-template-columns:minmax(96px,1.35fr) 1fr 1fr 1fr;gap:8px;padding:10px 0;border-bottom:1px solid var(--border);align-items:center;font-size:13px}
+.avail-day-name{font-weight:600;font-size:13px;line-height:1.2}
+.avail-day-date{font-size:11px;color:var(--text-muted);margin-top:2px;text-transform:none;letter-spacing:0;font-weight:500}
+.avail-row.today .avail-day-name{color:var(--gold-soft)}
+.avail-row.weekend .avail-day-date{color:var(--text-dim)}
 .avail-row:last-child{border:none}
 .avail-row.header{font-weight:700;color:var(--text-muted);font-size:11px;letter-spacing:1px;text-transform:uppercase}
 .avail-cell{display:flex;justify-content:center}
@@ -1084,7 +1088,7 @@ html=`<div class="fade-in">
         <div class="profile-menu-icon emerald">📅</div>
         <div class="profile-menu-content">
           <h4>Disponibilités</h4>
-          <p>Calendrier hebdomadaire</p>
+          <p>14 prochains jours (jour + date)</p>
         </div>
         <div class="profile-menu-arrow">›</div>
       </div>
@@ -1810,21 +1814,12 @@ showNav=false;
 html=`<div class="profile-sub-header">
   <button class="back-btn" onclick="showProScreen('profile')">←</button>
   <h2>Mes disponibilités</h2>
-  <button class="btn btn-primary btn-sm" style="padding:8px 14px;font-size:12px" onclick="toast('success','Disponibilités enregistrées','Matching optimisé');showProScreen('profile')">Enregistrer</button>
+  <button class="btn btn-primary btn-sm" style="padding:8px 14px;font-size:12px" onclick="toast('success','Disponibilités','Jour et date affichés');showProScreen('profile')">Enregistrer</button>
 </div>
 <div class="profile-sub-body fade-in">
-  <p style="font-size:13px;color:var(--text-muted);margin-bottom:16px">Sélectionnez vos créneaux disponibles</p>
-  <div class="avail-grid">
-    <div class="avail-row header"><div>Jour</div><div>Matin</div><div>Après-midi</div><div>Nuit</div></div>
-    ${['Lundi','Mardi','Mercredi','Jeudi','Vendredi','Samedi','Dimanche'].map((d,i)=>`
-      <div class="avail-row"><div>${d}</div>
-        <div class="avail-cell"><div class="avail-toggle ${i<5&&Math.random()>0.3?'on':'off'}" onclick="toggleAvail(this)">${i<5&&Math.random()>0.3?'✓':'✕'}</div></div>
-        <div class="avail-cell"><div class="avail-toggle ${i<4&&Math.random()>0.5?'on':'off'}" onclick="toggleAvail(this)">${i<4&&Math.random()>0.5?'✓':'✕'}</div></div>
-        <div class="avail-cell"><div class="avail-toggle ${i<5&&Math.random()>0.4?'on':'off'}" onclick="toggleAvail(this)">${i<5&&Math.random()>0.4?'✓':'✕'}</div></div>
-      </div>
-    `).join('')}
-  </div>
-  <button class="btn btn-primary btn-block btn-lg" onclick="toast('success','Disponibilités enregistrées','Matching optimisé');showProScreen('profile')">💾 Enregistrer</button>
+  <p style="font-size:13px;color:var(--text-muted);margin-bottom:16px">Les 14 prochains jours : jour et date.</p>
+  ${UrgadFeatures.availabilityGridHtml(null)}
+  <button class="btn btn-primary btn-block btn-lg" onclick="toast('success','Disponibilités','Jour et date affichés');showProScreen('profile')">Enregistrer</button>
 </div>`;
 break;
 case 'radius':
@@ -3226,6 +3221,11 @@ document.getElementById('modalContent').innerHTML = `<div class="modal-header"><
 <div style="margin-bottom:20px">
 <h4 style="font-size:12px;color:var(--text-muted);text-transform:uppercase;letter-spacing:1.5px;margin-bottom:10px;font-weight:700">Compétences</h4>
 <div>${p.skills.map(s=>`<span class="tag">${s}</span>`).join('')}</div>
+</div>
+<div style="margin-bottom:20px">
+<h4 style="font-size:12px;color:var(--text-muted);text-transform:uppercase;letter-spacing:1.5px;margin-bottom:10px;font-weight:700">Disponibilités (jour + date)</h4>
+<p style="font-size:12px;color:var(--text-muted);margin-bottom:10px">${UrgadFeatures.availabilityMenuHint(p.availability)}</p>
+${UrgadFeatures.availabilityGridHtml(p.availability, { clickable: false })}
 </div>
 <div>
 <h4 style="font-size:12px;color:var(--text-muted);text-transform:uppercase;letter-spacing:1.5px;margin-bottom:10px;font-weight:700">Performance</h4>

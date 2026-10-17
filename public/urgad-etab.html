@@ -237,7 +237,11 @@ input,select,textarea{font-family:inherit}
 
 .avail-screen{padding:20px 24px}
 .avail-grid{background:var(--bg-card);border:1px solid var(--border);border-radius:18px;padding:16px;margin-bottom:16px}
-.avail-row{display:grid;grid-template-columns:80px 1fr 1fr 1fr;gap:8px;padding:10px 0;border-bottom:1px solid var(--border);align-items:center;font-size:13px}
+.avail-row{display:grid;grid-template-columns:minmax(96px,1.35fr) 1fr 1fr 1fr;gap:8px;padding:10px 0;border-bottom:1px solid var(--border);align-items:center;font-size:13px}
+.avail-day-name{font-weight:600;font-size:13px;line-height:1.2}
+.avail-day-date{font-size:11px;color:var(--text-muted);margin-top:2px;text-transform:none;letter-spacing:0;font-weight:500}
+.avail-row.today .avail-day-name{color:var(--gold-soft)}
+.avail-row.weekend .avail-day-date{color:var(--text-dim)}
 .avail-row:last-child{border:none}
 .avail-row.header{font-weight:700;color:var(--text-muted);font-size:11px;letter-spacing:1px;text-transform:uppercase}
 .avail-cell{display:flex;justify-content:center}
