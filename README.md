@@ -68,12 +68,14 @@ npx cap open android   # Android Studio
 npx cap open ios       # Xcode, macOS uniquement
 ```
 
-Mot de passe oublié : lien « Mot de passe oublié ? » sur les 3 espaces, page `/reset.html` (1 heure, un usage). Sans `RESEND_API_KEY`, le back-office reçoit le lien (notification + bouton « Lien mot de passe » sur les fiches). Envoyez-le depuis `leprincegaye@urgad.fr` (établissements) ou `rachel@urgad.fr` (soignants). Compte connecté : changement de mot de passe dans le profil (pro, établissement, écran Administrateurs du BO).
+Mot de passe oublié : lien « Mot de passe oublié ? » sur les 3 espaces, page `/reset.html` (1 heure, un usage). L’e-mail part tout seul via SMTP OVH (`leprincegaye@urgad.fr`, soignants : `rachel@urgad.fr` si `SMTP_PASS_RACHEL` est défini). Le back-office reçoit aussi une notification. Compte connecté : changement de mot de passe dans le profil.
 
 | Variable | Valeur |
 |---|---|
-| `RESEND_API_KEY` | Optionnel. Si présent, l’e-mail de reset part tout seul. Sinon le BO transmet le lien. |
-| `MAIL_FROM` | Optionnel. Défaut `URGAD <leprincegaye@urgad.fr>`. |
+| `SMTP_HOST` | `ssl0.ovh.net` |
+| `SMTP_PORT` | `465` |
+| `SMTP_USER` / `SMTP_PASS` | Boîte `leprincegaye@urgad.fr` |
+| `SMTP_USER_RACHEL` / `SMTP_PASS_RACHEL` | Optionnel, mails soignants |
 
 Session : le jeton est gardé sur l’appareil (`localStorage`, 30 jours) pour rester connecté après fermeture de l’app. Les missions, messages et abonnements restent dans Postgres, pas dans le téléphone.
 

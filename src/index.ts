@@ -26,6 +26,7 @@ import { purgeVerifiedIdentityFiles } from './verification.js';
 import { backfillCoordinates } from './geo.js';
 import { pushStatus } from './notify.js';
 import { assertProductionConfig } from './runtime.js';
+import { mailStatus } from './mail.js';
 import { publicCatalog } from './plans.js';
 import { applyStripeEvent, getStripe, stripeEnabled, stripeLiveStatus } from './billing.js';
 
@@ -115,6 +116,8 @@ dbReady.then(async () => {
   setInterval(purge, 12 * 3600 * 1000).unref();
   const ps = pushStatus();
   console.log('[PUSH] ' + (ps.configured ? 'FIREBASE_SERVICE_ACCOUNT défini' : 'FIREBASE_SERVICE_ACCOUNT absent : notifications in-app uniquement, push ignoré'));
+  const ms = mailStatus();
+  console.log('[MAIL] ' + (ms.configured ? 'transport ' + ms.transport : 'désactivé — SMTP_HOST / SMTP_USER / SMTP_PASS absents'));
   try {
     const st = await stripeLiveStatus(true);
     if (!st.configured) console.log('[STRIPE] STRIPE_SECRET_KEY absente : plans enregistrés sans débit');
@@ -166,6 +169,7 @@ app.get('/api/health', async (_req, res) => {
     db: (process.env.DATABASE_URL || '').trim() ? 'postgres' : 'sqlite',
     timestamp: new Date().toISOString(),
     push: pushStatus().configured ? 'fcm' : 'disabled',
+    mail: mailStatus(),
     stripe: {
       configured: stripe.configured,
       livemode: stripe.livemode,

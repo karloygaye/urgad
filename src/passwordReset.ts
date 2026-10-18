@@ -4,7 +4,7 @@ import jwt from 'jsonwebtoken';
 import { dbAll, dbGet, dbRun } from './db.js';
 import { config } from './config.js';
 import { publicUrl } from './billing.js';
-import { sendMail } from './mail.js';
+import { resetMailHtml, sendMail } from './mail.js';
 import { notifyAdmins, notifySafe } from './notify.js';
 import { isProduction } from './runtime.js';
 
@@ -32,7 +32,7 @@ export function spaceLabel(space: string) {
 }
 
 const GENERIC =
-  'Si un compte existe pour cet e-mail, un lien de réinitialisation a été préparé (valable 1 heure). Consultez votre messagerie. Sinon écrivez à leprincegaye@urgad.fr (établissements) ou rachel@urgad.fr (soignants).';
+  'Si un compte existe pour cet e-mail, un lien de réinitialisation vous a été envoyé (valable 1 heure). Consultez votre messagerie et les indésirables. Sinon écrivez à leprincegaye@urgad.fr (établissements) ou rachel@urgad.fr (soignants).';
 
 function buildResetUrl(req: any, token: string, space: string) {
   return publicUrl(req) + '/reset.html?token=' + encodeURIComponent(token) + '&space=' + encodeURIComponent(space);
@@ -49,15 +49,19 @@ async function insertResetToken(userId: number) {
   return token;
 }
 
-async function mailReset(email: string, resetUrl: string) {
+async function mailReset(email: string, resetUrl: string, space: string) {
+  const label = spaceLabel(space);
   return sendMail({
     to: email,
+    space,
     subject: 'Réinitialiser votre mot de passe URGAD',
     text:
-      'Bonjour,\n\nVous avez demandé à réinitialiser le mot de passe de votre espace URGAD.\n' +
-      'Ce lien est valable 1 heure :\n' +
+      'Bonjour,\n\nVous avez demandé à réinitialiser le mot de passe de votre espace ' +
+      label +
+      '.\nCe lien est valable 1 heure :\n' +
       resetUrl +
       '\n\nSi vous n’êtes pas à l’origine de cette demande, ignorez ce message.\n\nURGAD — https://urgad.fr',
+    html: resetMailHtml(resetUrl, label),
   });
 }
 
@@ -80,7 +84,7 @@ export async function issueResetLinkForUser(
   const token = await insertResetToken(Number(user.id));
   const space = spaceOfUser(user);
   const resetUrl = buildResetUrl(req, token, space);
-  const mailed = await mailReset(user.email, resetUrl);
+  const mailed = await mailReset(user.email, resetUrl, space);
   await announceReset(user, space, mailed, resetUrl);
   return { resetUrl, mailed, space, email: user.email, expiresInMinutes: 60 };
 }

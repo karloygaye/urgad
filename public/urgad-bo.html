@@ -644,7 +644,7 @@ input,select,textarea{font-family:inherit}
     <p style="text-align:center;margin-top:12px;font-size:13px"><a style="color:var(--gold-soft);font-weight:600;cursor:pointer" onclick="toggleBoForgot(true)">Mot de passe oublié ?</a></p>
     </div>
     <div id="bo-forgot" style="display:none;margin-top:8px">
-      <p style="color:var(--text-muted);font-size:13px;margin-bottom:12px">Lien valable 1 heure. Sans e-mail automatique, un autre admin (ou leprincegaye@urgad.fr) transmet le lien affiché dans les notifications.</p>
+      <p style="color:var(--text-muted);font-size:13px;margin-bottom:12px">Un lien valable 1 heure est envoyé à cet e-mail admin (messagerie et indésirables).</p>
       <form onsubmit="event.preventDefault(); requestBoReset(); return false;">
       <div class="form-group"><label>E-mail admin</label><input id="bo-forgot-email" type="email" placeholder="votre e-mail admin"></div>
       <button type="submit" class="btn btn-primary btn-block">Envoyer le lien de réinitialisation</button>

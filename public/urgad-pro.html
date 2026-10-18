@@ -1264,7 +1264,7 @@ html=`<div class="form-screen fade-in">
 <button class="back-btn" onclick="showProScreen('login')">←</button>
 <p class="auth-kicker">Professionnel</p>
 <h1 style="margin-top:4px">Mot de passe oublié</h1>
-<p class="sub">Indiquez l’e-mail du compte soignant. Un lien valable 1 heure est préparé (messagerie, ou l’équipe URGAD si l’envoi automatique n’est pas encore branché).</p>
+<p class="sub">Indiquez l’e-mail du compte soignant. Un lien valable 1 heure vous est envoyé (messagerie et indésirables).</p>
 <form onsubmit="event.preventDefault(); requestProReset(); return false;">
 <div class="form-group"><label>E-mail</label><input id="forgot-email" type="email" autocomplete="username" placeholder="vous@email.fr" value="${(window._proForgotEmail||'').replace(/"/g,'&quot;')}"></div>
 <button type="submit" class="btn btn-primary btn-block btn-lg" style="margin-top:12px">Envoyer le lien</button>
