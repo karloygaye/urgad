@@ -65,11 +65,11 @@ Les 5 demandes offertes ne rapportent rien. Elles doivent être **pourvues**.
 | Ven | Saisir / matcher les demandes du week-end | Mail 8 aux profils dans le rayon |
 | Sam–dim | Suivi Flash (uniquement clients Pro) | Secours si empêchement (mail 9) |
 
-## Blocages avant d’encaisser
+## Paiements (état)
 
-1. Stripe : activer les cartes (MCC, e-mail, téléphone) — tant que `charges_enabled` est false, Checkout refuse.
-2. OVH : boîtes **`leprincegaye@urgad.fr`** (établissements, commercial, bouton Email in-app) et **`rachel@urgad.fr`** (mails soignants / documents) opérationnelles. Envoyer depuis ces adresses, signature https://urgad.fr. `contact@` / `support@` pas encore créées.
-3. Render : Postgres free expire le 15/11/2026 ; le web free s’endort.
+Stripe live est ouvert : cartes et virements sortants actifs. Produits Checkout : Essentiel 199 €, Pro 249 €, Premium 299 € HT / mois. Webhook et portail facturation sur https://urgad.fr.
+
+Reste dashboard Stripe : cocher **Customer emails** (reçus), renseigner le **siège** pour la TVA (Stripe Tax encore pending). Render : Postgres free expire le 15/11/2026.
 
 ## Fichiers
 

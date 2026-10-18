@@ -29,7 +29,7 @@ export const BILLING_MODEL = {
   renewal: 'Mensuel, reconduction tacite, résiliable à tout moment pour la fin de période.',
   commissionOnWages: 0,
   positioning: 'Abonnement logiciel d’intermédiaire : l’établissement rémunère le soignant selon sa convention. URGAD ne prend pas de marge sur l’heure travaillée.',
-  payment: 'Carte via Stripe Checkout (abonnement mensuel HT). Sans clé Stripe, le plan est seulement enregistré.',
+  payment: 'Carte via Stripe Checkout (abonnement mensuel HT, live).',
   trialMissions: 5,
   trialNote: '5 demandes offertes à l’inscription, sans carte. L’abonnement peut être pris tout de suite ou après ces 5 essais. Le Flash (urgence) reste réservé au Pro et au Premium payés.',
 };
