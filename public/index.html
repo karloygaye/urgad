@@ -850,12 +850,14 @@ async function refreshPro(){
   U.nearby = near || {};
   missions = ((near && near.missions) || []).map(UrgadApi.mapMission);
   U.missions = missions;
+  U.outsideMissions = ((near && near.outside) || []).map(function(m){ var mm = UrgadApi.mapMission(m); mm.outOfRadius = true; return mm; });
+  U.outsideTotal = Number(near && near.outsideTotal) || U.outsideMissions.length;
   if(near && near.origin){ userLocation.lat = near.origin.latitude; userLocation.lng = near.origin.longitude; userLocation.real = true; userLocation.label = near.origin.source==='device' ? 'Votre position' : (near.origin.label || 'Votre adresse'); }
   else { userLocation.real = false; userLocation.label = ''; }
   U.candidatures = (await UrgadApi.myApplications('professional') || []).map(UrgadApi.mapApplication);
   // Missions déjà candidatées hors du rayon : les garder pour l'écran "Mes missions".
   for (const c of U.candidatures) {
-    if (!missions.some(function(m){ return m.id===c.missionId; })) {
+    if (!findMission(c.missionId)) {
       try { const extra = await UrgadApi.request('professional','GET','/api/missions/'+c.missionId); if(extra){ const mm = UrgadApi.mapMission(extra); mm.outOfRadius = true; U.extraMissions = (U.extraMissions||[]).filter(function(x){return x.id!==mm.id;}).concat([mm]); } } catch(e) {}
     }
   }
@@ -1124,10 +1126,10 @@ async function openProNotif(id){
   const screen = n && n.data && n.data.screen;
   if(screen && /^detail-\d+$/.test(screen)){
     const mid = parseInt(screen.split('-')[1],10);
-    if(!missions.some(function(m){ return m.id===mid; })){
-      try { const extra = await UrgadApi.request('professional','GET','/api/missions/'+mid); if(extra) missions.push(UrgadApi.mapMission(extra)); } catch(e) {}
+    if(!findMission(mid)){
+      try { const extra = await UrgadApi.request('professional','GET','/api/missions/'+mid); if(extra){ const mm = UrgadApi.mapMission(extra); mm.outOfRadius = true; U.extraMissions = (U.extraMissions||[]).filter(function(x){return x.id!==mm.id;}).concat([mm]); } } catch(e) {}
     }
-    if(missions.some(function(m){ return m.id===mid; })){ showProScreen(screen); return; }
+    if(findMission(mid)){ showProScreen(screen); return; }
   }
   if(screen==='missions' || screen==='my-documents'){ showProScreen(screen); return; }
   if(screen && screen.indexOf('chat-')===0){ showProScreen('msg'); return; }
@@ -1149,16 +1151,42 @@ function useDevicePosition(){
 function initProNearMap(){
   const near = U.nearby || {};
   UrgadFeatures.missionsMap('proNearMap', {
-    missions: missions,
+    missions: missions.concat(U.outsideMissions||[]),
     origin: near.origin ? { lat: near.origin.latitude, lng: near.origin.longitude, label: userLocation.label || 'Votre adresse' } : null,
     radiusKm: near.origin ? near.radiusKm : null,
     openFn: 'openMissionFromMap', openLabel: 'Voir la mission'
   });
 }
 function openMissionFromMap(id){ showProScreen('detail-'+id); }
+function findMission(id){
+  id = Number(id);
+  return missions.find(function(x){ return x.id===id; })
+    || (U.outsideMissions||[]).find(function(x){ return x.id===id; })
+    || (U.extraMissions||[]).find(function(x){ return x.id===id; });
+}
+function proMissionCard(m){
+  const dist = m.distance!=null ? ' • '+String(m.distance).replace('.',',')+' km' : '';
+  const far = m.outOfRadius ? ' style="opacity:.88;border-style:dashed"' : '';
+  return '<div class="mission-card"'+far+' onclick="showProScreen(\'detail-'+m.id+'\')">'+
+    '<span class="mission-type '+(m.urgent?'urgent':'')+'">'+(m.urgent?'🚨 Urgent':'')+UrgadFeatures.esc(m.type||'')+(m.outOfRadius?' · hors rayon':'')+'</span>'+
+    '<h3>'+UrgadFeatures.esc(m.etab||'')+'</h3>'+
+    '<div class="mission-info">'+
+    '<span>📍 '+UrgadFeatures.esc(m.address||'Lieu non précisé')+dist+'</span>'+
+    '<span>📅 '+UrgadFeatures.esc(m.date||'')+'</span>'+
+    '<span>🕐 '+UrgadFeatures.esc(m.start||'')+' → '+UrgadFeatures.esc(m.end||'')+(m.title?' • '+UrgadFeatures.esc(m.title):'')+'</span>'+
+    '</div>'+
+    '<div class="mission-footer"><div class="mission-price">'+UrgadFeatures.esc(String(m.price||'—'))+'<small> / vacation</small></div>'+
+    '<button class="btn btn-primary" style="padding:9px 18px;font-size:12px">Voir</button></div></div>';
+}
 function proNearbySummary(){
   const near = U.nearby || {};
-  if(near.filter==='distance') return missions.length+' mission(s) à moins de '+near.radiusKm+' km de '+(near.origin&&near.origin.source==='device'?'votre position':'votre adresse');
+  const far = U.outsideTotal || (U.outsideMissions||[]).length || 0;
+  if(near.filter==='distance'){
+    const from = near.origin&&near.origin.source==='device'?'votre position':'votre adresse';
+    if(missions.length) return missions.length+' mission(s) à moins de '+near.radiusKm+' km de '+from+(far?' · '+far+' plus loin':'');
+    if(far) return 'Aucune dans '+near.radiusKm+' km autour de '+from+' · '+far+' mission(s) plus loin (élargissez le rayon dans Profil)';
+    return 'Aucune mission à venir autour de '+from+' ('+near.radiusKm+' km)';
+  }
   return near.reason || "Renseignez votre adresse pour voir les missions autour de vous.";
 }
 async function proExportData(){
@@ -1294,23 +1322,12 @@ html=`<div class="home-screen fade-in">
 <div class="greeting-sub">${UrgadFeatures.esc(proNearbySummary())}</div>
 <div class="section-title">Carte des missions <a onclick="useDevicePosition()">📡 Ma position</a></div>
 <div id="proNearMap" style="height:240px;border-radius:16px;overflow:hidden;border:1px solid var(--border);margin-bottom:18px"></div>
-${(function(){var u=missions.find(function(m){return m.urgent}); if(!u) return ""; return '<div class="flash-banner" onclick="showProScreen(\'detail-'+u.id+'\')"><div class="flash-banner-icon">🚨</div><div style="flex:1"><h4>Mission urgente</h4><p>'+u.etab+'</p></div><div style="font-size:20px">→</div></div>';})()}
-<div class="section-title">Missions disponibles <a onclick="showProScreen('missions')">Voir tout →</a></div>
-${missions.slice(0,20).map(m=>`
-<div class="mission-card" onclick="showProScreen('detail-${m.id}')">
-<span class="mission-type ${m.urgent?'urgent':''}">${m.urgent?'🚨 Urgent':''}${m.type}</span>
-<h3>${m.etab}</h3>
-<div class="mission-info">
-<span>📍 ${m.address||'Lieu non précisé'}${m.distance!=null?' • '+String(m.distance).replace('.',',')+' km':''}</span>
-<span>📅 ${m.date}</span>
-<span>🕐 ${m.start} → ${m.end}${m.title?' • '+m.title:''}</span>
-</div>
-<div class="mission-footer">
-<div class="mission-price">${m.price}<small> / vacation</small></div>
-<button class="btn btn-primary" style="padding:9px 18px;font-size:12px">Voir</button>
-</div>
-</div>
-`).join('')}
+${(function(){var u=missions.concat(U.outsideMissions||[]).find(function(m){return m.urgent}); if(!u) return ""; return '<div class="flash-banner" onclick="showProScreen(\'detail-'+u.id+'\')"><div class="flash-banner-icon">🚨</div><div style="flex:1"><h4>Mission urgente</h4><p>'+u.etab+'</p></div><div style="font-size:20px">→</div></div>';})()}
+<div class="section-title">Missions dans votre rayon <a onclick="showProScreen('missions')">Mes candidatures →</a></div>
+${missions.slice(0,20).map(proMissionCard).join('') || '<p style="color:var(--text-muted);font-size:13px;line-height:1.5;margin-bottom:16px">Rien dans votre rayon pour l’instant. Les missions publiées plus loin sont listées ci-dessous.</p>'}
+${(U.outsideMissions&&U.outsideMissions.length)?`<div class="section-title">Hors de votre rayon (${U.outsideTotal||U.outsideMissions.length})</div>
+<p style="color:var(--text-muted);font-size:12px;line-height:1.45;margin:-6px 0 12px">Elles sont publiées, mais au-delà de ${((U.nearby&&U.nearby.radiusKm)||userProfile.radius||20)} km. Pour les recevoir en priorité, augmentez le rayon dans Profil → Mobilité.</p>
+${U.outsideMissions.slice(0,20).map(proMissionCard).join('')}`:''}
 </div>`;
 break;
 case 'missions':
@@ -2116,7 +2133,7 @@ default:
 if(screen.startsWith('detail-')){
 showNav=false;
 const id = parseInt(screen.split('-')[1]);
-const m = missions.find(x=>x.id===id) || (U.extraMissions||[]).find(x=>x.id===id) || missions[0];
+const m = findMission(id);
 html = m ? renderMissionDetail(m) : '<div class="home-screen"><p>Mission introuvable</p></div>';
 }
 }
@@ -2134,8 +2151,9 @@ return `<div class="detail-screen fade-in">
 <div class="detail-hero" style="margin-top:16px">
 <span class="mission-type">${m.type}</span>
 <h2>${m.etab}</h2>
-<p>📍 ${m.address}</p>
+<p>📍 ${m.address}${m.outOfRadius?' · hors de votre rayon':''}</p>
 </div>
+${m.outOfRadius?'<div class="bo-card" style="margin:12px 0 8px;border-style:dashed"><strong>Hors de votre rayon</strong><p style="color:var(--text-muted);font-size:13px;margin-top:6px">Cette mission est publiée mais au-delà de votre mobilité. Vous pouvez quand même postuler, ou augmenter le rayon dans Profil.</p></div>':''}
 <div class="detail-section">
 <h3>🏢 Établissement</h3>
 <div class="detail-row"><span class="label">Nom</span><span class="value">${m.etab}</span></div>
@@ -2178,7 +2196,7 @@ function selectProf(el){document.querySelectorAll('.prof-option').forEach(p=>p.c
 function toggleAvail(el){if(el.classList.contains('on')){el.classList.remove('on');el.classList.add('off');el.textContent='✕'}else{el.classList.remove('off');el.classList.add('on');el.textContent='✓'}}
 function selectRadius(el){document.querySelectorAll('.radius-option').forEach(r=>r.classList.remove('selected'));el.classList.add('selected')}
 function confirmApply(id){
-const m = missions.find(x=>x.id===id) || (U.extraMissions||[]).find(x=>x.id===id) || missions[0];
+const m = findMission(id);
 document.getElementById('modalContent').innerHTML=`
 <div class="modal-header"><h2>Confirmer ma candidature</h2><button class="modal-close" onclick="closeModal()">✕</button></div>
 <div class="modal-body">
@@ -2199,7 +2217,7 @@ L.maplibreGL({style:'https://tiles.openfreemap.org/styles/dark'}).addTo(map);
 if(map.attributionControl) map.attributionControl.addAttribution('© OpenStreetMap');
 }
 function openRoute(missionId){
-const m = missions.find(x=>x.id===missionId) || (U.extraMissions||[]).find(x=>x.id===missionId);
+const m = findMission(missionId);
 if(!m) return;
 if(m.lat==null||m.lng==null){ toast('info','Itinéraire','Adresse de la mission non localisée.'); return; }
 currentRouteMission = m;

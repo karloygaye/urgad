@@ -90,26 +90,37 @@ async function missionsForPro(req: any) {
   const fallback = await defaultRadiusKm();
   const radiusKm = qRadius != null && qRadius > 0 ? Math.min(qRadius, 1000) : (num(prof?.mobility_radius) || fallback);
   const radiusSource = qRadius != null && qRadius > 0 ? 'query' : (num(prof?.mobility_radius) ? 'professional' : 'platform_default');
-  const rows = await dbAll(MISSION_SELECT + " WHERE m.visible = 1 AND m.status != 'cancelled' AND m.status != 'completed' AND date(m.start_date) >= date('now') ORDER BY m.start_date ASC") as any[];
+  const rows = await dbAll(MISSION_SELECT + " WHERE m.visible = 1 AND m.status != 'cancelled' AND m.status != 'completed' AND COALESCE(m.request_status, 'nouvelle') NOT IN ('validee','realisee','annulee') AND date(m.start_date) >= date('now') ORDER BY m.start_date ASC") as any[];
+  const withCount = (list: any[]) => list.map((m) => ({ ...m, applicationCount: m.application_count || 0 }));
   let missions: any[];
+  let outside: any[] = [];
   let withoutCoordinates = 0;
   if (origin) {
     missions = [];
+    outside = [];
     for (const m of rows) {
       const lat = num(m.latitude), lng = num(m.longitude);
-      if (lat == null || lng == null) { withoutCoordinates++; continue; }
-      const d = haversineKm(origin.latitude, origin.longitude, lat, lng);
-      if (d <= radiusKm) missions.push({ ...m, distance_km: Math.round(d * 10) / 10 });
+      if (lat == null || lng == null) {
+        withoutCoordinates++;
+        missions.push({ ...m, distance_km: null, unlocated: true });
+        continue;
+      }
+      const d = Math.round(haversineKm(origin.latitude, origin.longitude, lat, lng) * 10) / 10;
+      if (d <= radiusKm) missions.push({ ...m, distance_km: d });
+      else outside.push({ ...m, distance_km: d });
     }
-    missions.sort((a, b) => a.distance_km - b.distance_km || String(a.start_date).localeCompare(String(b.start_date)));
+    missions.sort((a, b) => (a.distance_km ?? 1e9) - (b.distance_km ?? 1e9) || String(a.start_date).localeCompare(String(b.start_date)));
+    outside.sort((a, b) => a.distance_km - b.distance_km || String(a.start_date).localeCompare(String(b.start_date)));
   } else {
     missions = rows.map((m) => ({ ...m, distance_km: null }));
   }
-  missions = missions.map((m) => ({ ...m, applicationCount: m.application_count || 0 }));
   return {
     filter: origin ? 'distance' : 'none',
     reason: origin ? undefined : 'Adresse du professionnel non géocodée : renseignez votre adresse (profil) ou partagez votre position.',
-    origin, radiusKm, radiusSource, totalUpcoming: rows.length, withoutCoordinates, missions,
+    origin, radiusKm, radiusSource, totalUpcoming: rows.length, withoutCoordinates,
+    missions: withCount(missions),
+    outside: withCount(outside.slice(0, 50)),
+    outsideTotal: outside.length,
   };
 }
 
@@ -162,7 +173,7 @@ router.post('/:id/publish', authMiddleware, async (req: any, res: any, next: any
     const mission = await dbGet('SELECT * FROM missions WHERE id = ?', [req.params.id]) as any;
     if (!mission) return res.status(404).json({ message: 'Mission non trouvée.' });
     if (mission.status !== 'pending') return res.status(409).json({ message: 'Déjà publiée ou disponible.' });
-    await dbRun('UPDATE missions SET status = \'published\', published_at = datetime(\'now\') WHERE id = ?', [req.params.id]);
+    await dbRun("UPDATE missions SET status = 'published', visible = 1, request_status = CASE WHEN request_status IN ('validee','realisee','annulee') THEN request_status ELSE 'en_recherche' END, published_at = datetime('now') WHERE id = ?", [req.params.id]);
     let notified = 0;
     try {
       const c = await dbGet('SELECT latitude FROM mission_coordinates WHERE mission_id = ?', [req.params.id]) as any;

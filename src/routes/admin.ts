@@ -332,8 +332,11 @@ router.patch('/missions/:id/status', authMiddleware, requireAdmin, async (req: a
     const mission = await dbGet('SELECT * FROM missions WHERE id = ?', [req.params.id]) as any;
     if (!mission) return res.status(404).json({ message: 'Mission non trouvée.' });
     await dbRun('UPDATE missions SET status = ? WHERE id = ?', [mapped, req.params.id]);
-    if (mapped === 'published') await dbRun('UPDATE missions SET visible = 1 WHERE id = ?', [req.params.id]);
-    if (mapped === 'cancelled') await dbRun('UPDATE missions SET visible = 0 WHERE id = ?', [req.params.id]);
+    if (mapped === 'published') {
+      await dbRun("UPDATE missions SET visible = 1, request_status = CASE WHEN request_status IN ('validee','realisee','annulee') THEN request_status ELSE 'en_recherche' END, published_at = datetime('now') WHERE id = ?", [req.params.id]);
+      try { await notifyProsForMission(Number(req.params.id), { force: true }); } catch (e) { console.error('[NOTIFY] publish status:', e); }
+    }
+    if (mapped === 'cancelled') await dbRun("UPDATE missions SET visible = 0, request_status = 'annulee' WHERE id = ?", [req.params.id]);
     await dbRun('INSERT INTO audit_log (uuid, user_id, user_email, action, resource, details) VALUES (?, ?, ?, ?, ?, ?)',
       [uuidv4(), req.user.id, req.user.email, 'mission_status', 'mission:' + req.params.id, mapped]);
     const est = await dbGet('SELECT user_id FROM establishments WHERE id = ?', [mission.establishment_id]) as any;

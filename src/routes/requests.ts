@@ -9,6 +9,7 @@ import {
   profileCard, proposeProfile, refuseProposal, requestForEstablishment, setStatus, validateProposal,
 } from '../requests.js';
 import { notifySafe } from '../notify.js';
+import { notifyProsForMission } from '../matching.js';
 import { assertEstablishmentPublish } from '../plans.js';
 
 const router = Router();
@@ -182,6 +183,9 @@ router.post('/:id/status', authMiddleware, async (req: any, res: any, next: any)
       await dbRun('UPDATE missions SET proposed_application_id = NULL WHERE id = ?', [m.id]);
     }
     await setStatus(Number(m.id), to as any, actorOf(req), 'status_' + to, String(req.body?.reason || '').slice(0, 300));
+    if (to === 'en_recherche') {
+      try { await notifyProsForMission(Number(m.id), { force: true }); } catch (e) { console.error('[NOTIFY] en_recherche:', e); }
+    }
     const est = await dbGet<any>('SELECT user_id FROM establishments WHERE id = ?', [m.establishment_id]);
     const confirmed = await dbAll<any>("SELECT p.user_id FROM applications a JOIN professionals p ON p.id = a.professional_id WHERE a.mission_id = ? AND a.status IN ('accepted', 'proposed', 'pending')", [m.id]);
     if (to === 'annulee') {

@@ -42,6 +42,8 @@ Après paiement : confirmation in-app (établissement + admin), écriture financ
 
 Santé : `GET /api/health` (`production`, `db`, `stripe.chargesEnabled`).
 
+Missions côté pro : le filtrage par rayon (adresse du profil ou position, 20 km par défaut) reste prioritaire. Les missions publiées plus loin apparaissent sous **Hors de votre rayon** (avec la distance). Une demande BO « validée » (profil pourvu) n’est plus listée.
+
 Justificatifs (identité, diplôme, Vitale, vaccins, RIB) : les octets sont enregistrés en Postgres (`file_bytes`) en plus du disque. Le disque Render est vidé à chaque déploiement ; « Voir le fichier » lit donc la base. Les fichiers déposés *avant* cette conservation doivent être renvoyés par le professionnel.
 
 ## Passer en production (à faire une fois)

@@ -46,7 +46,9 @@ export async function setStatus(missionId: number, to: RequestStatus, actor: any
   if (to === 'annulee') await dbRun("UPDATE missions SET status = 'cancelled', visible = 0 WHERE id = ?", [missionId]);
   if (to === 'realisee') await dbRun("UPDATE missions SET status = 'completed', visible = 0 WHERE id = ?", [missionId]);
   if (to === 'validee') await dbRun("UPDATE missions SET visible = 0, validated_at = datetime('now') WHERE id = ?", [missionId]);
-  if (to === 'en_recherche' || to === 'refusee' || to === 'nouvelle') await dbRun("UPDATE missions SET visible = 1 WHERE id = ? AND status NOT IN ('cancelled', 'completed')", [missionId]);
+  if (to === 'en_recherche' || to === 'refusee' || to === 'nouvelle') {
+    await dbRun("UPDATE missions SET visible = 1, status = CASE WHEN status IN ('cancelled','completed') THEN status ELSE 'published' END WHERE id = ?", [missionId]);
+  }
   await logEvent(missionId, actor, event, from, to, applicationId, details);
   return { from, to };
 }
