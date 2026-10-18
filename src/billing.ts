@@ -1,7 +1,7 @@
 import Stripe from 'stripe';
 import { v4 as uuidv4 } from 'uuid';
 import { dbGet, dbRun } from './db.js';
-import { type Plan, planById, planByName } from './plans.js';
+import { type BillingInterval, type Plan, parseBillingInterval, planAllowsYearly, planById, planByName, planPriceHt, pricePeriodLabel } from './plans.js';
 import { notifyAdmins, notifySafe } from './notify.js';
 import { adminBillingCopy, billingConfirmation, type BillingConfirmation, type BillingNoticeKind } from './billing-copy.js';
 
@@ -81,26 +81,43 @@ export function publicUrl(req?: { protocol?: string; get?: (h: string) => string
   return 'https://urgad.fr';
 }
 
-async function ensurePriceId(stripe: Stripe, plan: Plan): Promise<string> {
-  const lookup = 'urgad_' + plan.id + '_month';
-  const listed = await stripe.prices.list({ lookup_keys: [lookup], active: true, limit: 1 });
-  if (listed.data[0]) return listed.data[0].id;
+async function productIdForPlan(stripe: Stripe, plan: Plan): Promise<string> {
+  const monthly = await stripe.prices.list({ lookup_keys: ['urgad_' + plan.id + '_month'], active: true, limit: 1 });
+  const fromPrice = monthly.data[0]?.product;
+  if (typeof fromPrice === 'string' && fromPrice) return fromPrice;
+  const yearly = await stripe.prices.list({ lookup_keys: ['urgad_' + plan.id + '_year'], active: true, limit: 1 });
+  const fromYear = yearly.data[0]?.product;
+  if (typeof fromYear === 'string' && fromYear) return fromYear;
   const product = await stripe.products.create({
     name: 'URGAD ' + plan.name,
     description: plan.tagline + ' — ' + plan.priceHt + ' € HT / mois',
     metadata: { urgad_plan: plan.id },
+    type: 'service',
+    url: publicUrl() + '/',
   });
+  return product.id;
+}
+
+async function ensurePriceId(stripe: Stripe, plan: Plan, interval: BillingInterval = 'month'): Promise<string> {
+  if (interval === 'year' && !planAllowsYearly(plan)) {
+    throw new Error('Pas d’abonnement annuel pour ' + plan.name + '.');
+  }
+  const lookup = 'urgad_' + plan.id + '_' + interval;
+  const listed = await stripe.prices.list({ lookup_keys: [lookup], active: true, limit: 1 });
+  if (listed.data[0]) return listed.data[0].id;
+  const amount = planPriceHt(plan, interval);
+  const productId = await productIdForPlan(stripe, plan);
   try {
     const price = await stripe.prices.create({
-      product: product.id,
+      product: productId,
       currency: 'eur',
-      unit_amount: plan.priceHt * 100,
-      recurring: { interval: 'month' },
+      unit_amount: amount * 100,
+      recurring: { interval },
       lookup_key: lookup,
       transfer_lookup_key: true,
       tax_behavior: 'exclusive',
-      nickname: plan.name + ' ' + plan.priceHt + ' € HT / mois',
-      metadata: { urgad_plan: plan.id },
+      nickname: plan.name + ' ' + amount + ' € ' + pricePeriodLabel(interval),
+      metadata: { urgad_plan: plan.id, urgad_interval: interval },
     });
     return price.id;
   } catch (e) {
@@ -110,8 +127,26 @@ async function ensurePriceId(stripe: Stripe, plan: Plan): Promise<string> {
   }
 }
 
+async function persistBilledPlan(rowId: number, plan: Plan, interval: BillingInterval): Promise<void> {
+  await dbRun(
+    'UPDATE establishment_subscriptions SET name = ?, price = ?, billing_interval = ? WHERE id = ?',
+    [plan.name, planPriceHt(plan, interval), interval, rowId]
+  );
+}
+
+async function cancelReplacedSubscription(previousId: string | null | undefined, nextId: string | null | undefined): Promise<void> {
+  const stripe = getStripe();
+  if (!stripe || !previousId || !nextId || previousId === nextId) return;
+  try {
+    await stripe.subscriptions.cancel(previousId);
+  } catch (e: any) {
+    console.error('[STRIPE] annulation ancien abonnement', previousId, e?.message || e);
+  }
+}
+
 export async function createCheckoutSession(opts: {
   plan: Plan;
+  interval?: BillingInterval;
   establishmentId: number;
   subscriptionRowId: number;
   email: string;
@@ -122,15 +157,23 @@ export async function createCheckoutSession(opts: {
   if (!stripe) return { url: null, reason: 'missing_key' };
   const live = await stripeLiveStatus();
   if (!live.chargesEnabled) return { url: null, reason: 'charges_disabled' };
-  const priceId = await ensurePriceId(stripe, opts.plan);
+  const interval: BillingInterval = opts.interval === 'year' ? 'year' : 'month';
+  if (interval === 'year' && !planAllowsYearly(opts.plan)) return { url: null, reason: 'missing_key' };
+  const priceId = await ensurePriceId(stripe, opts.plan, interval);
   const base = publicUrl(opts.req);
   const success = base + '/urgad-etab.html?billing=success&session_id={CHECKOUT_SESSION_ID}';
   const cancel = base + '/urgad-etab.html?billing=cancel';
+  const amount = planPriceHt(opts.plan, interval);
+  const period = pricePeriodLabel(interval);
   const meta = {
     establishmentId: String(opts.establishmentId),
     planId: opts.plan.id,
+    interval,
     rowId: String(opts.subscriptionRowId),
   };
+  const cadence = interval === 'year'
+    ? 'Abonnement annuel HT URGAD (2 mois offerts par rapport au mois), reconduction tacite, résiliable pour la fin d’année.'
+    : 'Abonnement mensuel HT URGAD, reconduction tacite, résiliable pour la fin de période.';
   const session = await stripe.checkout.sessions.create({
     mode: 'subscription',
     locale: 'fr',
@@ -147,7 +190,7 @@ export async function createCheckoutSession(opts: {
     custom_text: {
       submit: {
         message:
-          'Abonnement mensuel HT URGAD, reconduction tacite, résiliable pour la fin de période. Stripe envoie le reçu à cette adresse e-mail. URGAD confirme aussi dans Notifications (pas d’e-mail URGAD séparé).',
+          cadence + ' ' + amount + ' € ' + period + '. Stripe envoie le reçu à cette adresse e-mail. URGAD confirme aussi dans Notifications (pas d’e-mail URGAD séparé).',
       },
       after_submit: {
         message: 'Vous revenez ensuite sur l’espace établissement. L’abonnement s’active dès confirmation du paiement.',
@@ -270,6 +313,7 @@ type SubRow = {
   stripe_customer_id: string | null;
   stripe_subscription_id: string | null;
   stripe_checkout_id: string | null;
+  billing_interval: string | null;
   establishment_name: string;
   user_id: number;
   email: string | null;
@@ -332,11 +376,13 @@ async function announce(
   const row = await loadSubRow(rowId);
   if (!row) return null;
   const plan = planByName(row.name) || planById(String(row.name || '').toLowerCase());
+  const interval = parseBillingInterval(row.billing_interval);
   const copy = billingConfirmation(kind, {
     establishmentName: row.establishment_name,
     plan,
     planName: row.name,
-    priceHt: extras?.priceHt ?? plan?.priceHt ?? Number(row.price),
+    interval,
+    priceHt: extras?.priceHt ?? (plan ? planPriceHt(plan, interval) : Number(row.price)),
     email: extras?.email || row.email,
     invoiceUrl: extras?.invoiceUrl || null,
   });
@@ -355,7 +401,8 @@ async function announce(
     establishmentName: row.establishment_name,
     plan,
     planName: row.name,
-    priceHt: plan?.priceHt ?? Number(row.price),
+    interval,
+    priceHt: plan ? planPriceHt(plan, interval) : Number(row.price),
   });
   await notifyAdmins(admin.title, admin.body, {
     establishmentId: row.establishment_id,
@@ -431,12 +478,13 @@ export async function applyStripeEvent(event: Stripe.Event): Promise<void> {
       return;
     }
     if (rowId) {
+      const previous = await dbGet<{ stripe_subscription_id: string | null }>('SELECT stripe_subscription_id FROM establishment_subscriptions WHERE id = ?', [rowId]);
       await markSubscriptionPaid(rowId, { customerId, subscriptionId: subId, checkoutId: session.id });
       const planId = session.metadata?.planId;
+      const interval = parseBillingInterval(session.metadata?.interval);
       const plan = planId ? planById(planId) : undefined;
-      if (plan) {
-        await dbRun('UPDATE establishment_subscriptions SET name = ?, price = ? WHERE id = ?', [plan.name, plan.priceHt, rowId]);
-      }
+      if (plan) await persistBilledPlan(rowId, plan, interval);
+      await cancelReplacedSubscription(previous?.stripe_subscription_id, subId);
       const email = session.customer_details?.email || session.customer_email || null;
       await announce(rowId, 'paid', 'paid:first', {
         invoiceUrl: invoiceUrlFrom(session.invoice as Stripe.Invoice | string | null | undefined),
@@ -492,6 +540,8 @@ export async function applyStripeEvent(event: Stripe.Event): Promise<void> {
     };
     const status = event.type === 'customer.subscription.deleted' ? 'canceled' : (statusMap[sub.status] || 'pending');
     if (!rowId) return;
+    const current = await dbGet<{ stripe_subscription_id: string | null }>('SELECT stripe_subscription_id FROM establishment_subscriptions WHERE id = ?', [rowId]);
+    if (current?.stripe_subscription_id && current.stripe_subscription_id !== sub.id) return;
     await dbRun('UPDATE establishment_subscriptions SET status = ?, stripe_subscription_id = ? WHERE id = ?', [status, sub.id, rowId]);
     if (status === 'canceled') await announce(rowId, 'canceled', 'canceled:' + sub.id);
     if (status === 'past_due') await announce(rowId, 'past_due', 'past_due:' + sub.id);
@@ -527,12 +577,13 @@ export async function confirmCheckoutSession(sessionId: string, establishmentId:
   }
   const customerId = typeof session.customer === 'string' ? session.customer : (session.customer && typeof session.customer === 'object' ? session.customer.id : null);
   const subId = typeof session.subscription === 'string' ? session.subscription : null;
+  const previous = await dbGet<{ stripe_subscription_id: string | null }>('SELECT stripe_subscription_id FROM establishment_subscriptions WHERE id = ?', [rowId]);
   await markSubscriptionPaid(rowId, { customerId, subscriptionId: subId, checkoutId: session.id });
   const planId = session.metadata?.planId;
+  const interval = parseBillingInterval(session.metadata?.interval);
   const plan = planId ? planById(planId) : undefined;
-  if (plan) {
-    await dbRun('UPDATE establishment_subscriptions SET name = ?, price = ? WHERE id = ?', [plan.name, plan.priceHt, rowId]);
-  }
+  if (plan) await persistBilledPlan(rowId, plan, interval);
+  await cancelReplacedSubscription(previous?.stripe_subscription_id, subId);
   const confirmation = await announce(rowId, 'paid', 'paid:first', {
     invoiceUrl: invoiceUrlFrom(session.invoice as Stripe.Invoice | string | null | undefined),
     email,

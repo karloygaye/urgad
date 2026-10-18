@@ -32,8 +32,8 @@ Vous décrivez le besoin (poste, horaires, urgence). Nous proposons un profil. V
 Pour [ETABLISSEMENT] à [VILLE] : 5 demandes offertes, sans carte. Ensuite, si ça vous convient, un abonnement logiciel :
 
 - Essentiel 199 € HT / mois — 12 demandes
-- Pro 249 € HT / mois — 30 demandes + Flash (nuit / urgence)
-- Premium 299 € HT / mois — volume illimité
+- Pro 249 € HT / mois ou 2 490 € HT / an (2 mois offerts) — 30 demandes + Flash (nuit / urgence)
+- Premium 299 € HT / mois ou 2 990 € HT / an (2 mois offerts) — volume illimité
 
 Création du compte : https://urgad.fr/urgad-etab.html  
 Ou répondez à ce message, nous saisissons la première demande avec vous.
@@ -96,7 +96,7 @@ Bonjour [PRENOM],
 
 [ETABLISSEMENT] a utilisé 4 des 5 demandes offertes. La suivante est encore gratuite.
 
-Si vous publiez régulièrement, la formule Pro (249 € HT / mois, 30 demandes + Flash) est en général la plus adaptée. L’Essentiel (199 € HT, 12 demandes) suffit pour un volume ponctuel.
+Si vous publiez régulièrement, la formule Pro (249 € HT / mois ou 2 490 € HT / an, 30 demandes + Flash) est en général la plus adaptée. L’Essentiel (199 € HT, 12 demandes) suffit pour un volume ponctuel.
 
 Vous pouvez souscrire maintenant ou après la 5e demande :  
 https://urgad.fr/urgad-etab.html (onglet Abonnement)
@@ -117,11 +117,11 @@ URGAD
 
 Bonjour [PRENOM],
 
-Les 5 demandes offertes de [ETABLISSEMENT] sont épuisées. Pour continuer à publier, choisissez une formule HT / mois :
+Les 5 demandes offertes de [ETABLISSEMENT] sont épuisées. Pour continuer à publier, choisissez une formule HT :
 
-- Essentiel — 199 € — 12 demandes (extra 25 € HT)
-- Pro — 249 € — 30 demandes + Flash (extra 15 € HT)
-- Premium — 299 € — illimité
+- Essentiel — 199 € / mois — 12 demandes (extra 25 € HT)
+- Pro — 249 € / mois ou 2 490 € / an — 30 demandes + Flash (extra 15 € HT)
+- Premium — 299 € / mois ou 2 990 € / an — illimité
 
 Paiement par carte sur https://urgad.fr/urgad-etab.html  
 Résiliable pour la fin de période. Aucune commission sur le salaire du soignant.

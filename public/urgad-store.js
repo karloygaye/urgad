@@ -428,7 +428,7 @@
     addEstablishmentDocument: function(body){ return request('establishment', 'POST', '/api/establishments/me/documents', { name: body.name, type: body.type, fileName: body.fileName, mimeType: body.mimeType, contentBase64: body.contentBase64 }); },
     establishmentSubscription: function(){ return request('establishment', 'GET', '/api/establishments/me/subscription'); },
     billingCatalog: function(){ return request(null, 'GET', '/api/billing/plans'); },
-    saveEstablishmentSubscription: function(body){ return request('establishment', 'POST', '/api/establishments/me/subscription', { id: body.id, name: body.name }); },
+    saveEstablishmentSubscription: function(body){ return request('establishment', 'POST', '/api/establishments/me/subscription', { id: body.id, name: body.name, interval: body.interval || 'month' }); },
     confirmEstablishmentSubscription: function(sessionId){ return request('establishment', 'POST', '/api/establishments/me/subscription/confirm', { sessionId: sessionId }); },
     establishmentBillingPortal: function(){ return request('establishment', 'POST', '/api/establishments/me/subscription/portal', {}); },
     buyExtraMission: function(){ return request('establishment', 'POST', '/api/establishments/me/subscription/extra', {}); },

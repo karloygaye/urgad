@@ -3,7 +3,7 @@ import jwt from 'jsonwebtoken';
 import { dbRun, dbGet, dbAll } from '../db.js';
 import { config } from '../config.js';
 import { confirmCheckoutSession, createCheckoutSession, createExtraMissionCheckout, createPortalSession, stripeEnabled, stripeLiveStatus, subscriptionIsPaid } from '../billing.js';
-import { planById, planByName, publicCatalog, trialInfo, usageThisMonth } from '../plans.js';
+import { parseBillingInterval, planAllowsYearly, planById, planByName, planPriceHt, pricePeriodLabel, publicCatalog, trialInfo, usageThisMonth } from '../plans.js';
 import { saveBase64File } from '../uploads.js';
 import { geocodeEstablishment } from '../geo.js';
 import { notifyAdmins } from '../notify.js';
@@ -93,13 +93,17 @@ async function publicDocument(row: any) {
 function publicSubscription(row: any, payment?: { charged?: boolean; paid?: boolean; providerCalled?: boolean; reason?: string; checkoutUrl?: string | null }, extras?: { usage?: { missions: number; flash: number; since: string } }) {
   const plan = planByName(row.name);
   const paid = payment?.paid ?? subscriptionIsPaid(row.status);
+  const interval = parseBillingInterval(row.billing_interval);
+  const price = plan ? planPriceHt(plan, interval) : Number(row.price);
   return {
     id: row.id,
     establishmentId: row.establishment_id,
     name: row.name,
     planId: plan?.id || null,
     status: row.status,
-    price: plan?.priceHt ?? row.price,
+    interval,
+    price,
+    periodLabel: pricePeriodLabel(interval),
     createdAt: row.created_at || null,
     charged: paid,
     paid,
@@ -171,9 +175,11 @@ router.get('/me/subscription', authMiddleware, async (req: any, res: any, next: 
     let row = await dbGet('SELECT * FROM establishment_subscriptions WHERE establishment_id = ? ORDER BY id DESC LIMIT 1', [estab.id]) as any;
     if (row) {
       const catalogPlan = planByName(row.name);
-      if (catalogPlan && Number(row.price) !== catalogPlan.priceHt) {
-        await dbRun('UPDATE establishment_subscriptions SET price = ? WHERE id = ?', [catalogPlan.priceHt, row.id]);
-        row = { ...row, price: catalogPlan.priceHt };
+      const interval = parseBillingInterval(row.billing_interval);
+      const expected = catalogPlan ? planPriceHt(catalogPlan, interval) : Number(row.price);
+      if (catalogPlan && Number(row.price) !== expected) {
+        await dbRun('UPDATE establishment_subscriptions SET price = ?, billing_interval = ? WHERE id = ?', [expected, interval, row.id]);
+        row = { ...row, price: expected, billing_interval: interval };
       }
     }
     const usage = await usageThisMonth(Number(estab.id));
@@ -203,18 +209,25 @@ router.post('/me/subscription', authMiddleware, async (req: any, res: any, next:
     if (!estab) return res.status(404).json({ message: 'Établissement non trouvé.' });
     const plan = planById(String(req.body?.id || '')) || planByName(String(req.body?.name || ''));
     if (!plan) return res.status(422).json({ message: 'Plan inconnu. Essentiel, Pro ou Premium.' });
+    const interval = parseBillingInterval(req.body?.interval);
+    if (interval === 'year' && !planAllowsYearly(plan)) {
+      return res.status(422).json({ message: 'L’abonnement annuel est proposé sur Pro et Premium (2 mois offerts).' });
+    }
     const name = plan.name;
-    const price = plan.priceHt;
+    const price = planPriceHt(plan, interval);
     const existing = await dbGet('SELECT * FROM establishment_subscriptions WHERE establishment_id = ? ORDER BY id DESC LIMIT 1', [estab.id]) as any;
     let id = existing?.id ?? null;
-    const keepPaid = existing && subscriptionIsPaid(existing.status) && String(existing.name) === name;
-    const status = keepPaid ? existing.status : 'pending';
+    const keepPaid = existing && subscriptionIsPaid(existing.status) && String(existing.name) === name && parseBillingInterval(existing.billing_interval) === interval;
+    const alreadyPaid = !!(existing && subscriptionIsPaid(existing.status));
+    const status = alreadyPaid ? existing.status : 'pending';
     if (existing) {
-      await dbRun('UPDATE establishment_subscriptions SET name = ?, status = ?, price = ? WHERE id = ?', [name, status, price, existing.id]);
+      if (!alreadyPaid) {
+        await dbRun('UPDATE establishment_subscriptions SET name = ?, status = ?, price = ?, billing_interval = ? WHERE id = ?', [name, status, price, interval, existing.id]);
+      }
     } else {
       const inserted = await dbRun(
-        'INSERT INTO establishment_subscriptions (establishment_id, name, status, price) VALUES (?, ?, ?, ?)',
-        [estab.id, name, status, price]
+        'INSERT INTO establishment_subscriptions (establishment_id, name, status, price, billing_interval) VALUES (?, ?, ?, ?, ?)',
+        [estab.id, name, status, price, interval]
       );
       id = inserted.lastInsertRowid;
       if (id == null) {
@@ -231,6 +244,7 @@ router.post('/me/subscription', authMiddleware, async (req: any, res: any, next:
     } else if (stripeEnabled()) {
       const checkout = await createCheckoutSession({
         plan,
+        interval,
         establishmentId: Number(estab.id),
         subscriptionRowId: Number(id),
         email: String(user?.email || ''),

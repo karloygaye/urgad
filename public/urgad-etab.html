@@ -608,7 +608,9 @@ input,select,textarea{font-family:inherit}
 .plan-card ul{list-style:none;padding:0;margin:0 0 16px;flex:1}
 .plan-card li{font-size:13px;color:var(--text);padding:7px 0 7px 22px;position:relative;line-height:1.4;border-bottom:1px solid var(--border)}
 .plan-card li:before{content:'✓';position:absolute;left:0;color:var(--gold-soft);font-weight:700}
-.plan-card .btn{margin-top:auto}
+.plan-card .plan-actions{display:flex;flex-direction:column;gap:8px;margin-top:auto}
+.plan-card .plan-year{font-size:13px;color:var(--gold-soft);line-height:1.4;margin:0 0 4px}
+.plan-card .btn{margin-top:0}
 @media(max-width:1100px){.plan-grid{grid-template-columns:1fr}}
 @media(max-width:1024px){
 .gate-shell{grid-template-columns:1fr !important}
@@ -652,7 +654,7 @@ input,select,textarea{font-family:inherit}
       <div class="welcome-point"><div class="welcome-point-ico">📝</div><div><strong>Une demande, pas un tableau Excel</strong><span>Poste, horaires, urgence : le besoin est cadré. Les professionnels adaptés le voient.</span></div></div>
       <div class="welcome-point"><div class="welcome-point-ico">✅</div><div><strong>Profils à valider, pas un CV brut</strong><span>Identité et diplôme passent par le back-office avant que vous ayez à décider.</span></div></div>
       <div class="welcome-point"><div class="welcome-point-ico">💬</div><div><strong>Échange une fois le match fait</strong><span>La messagerie sert à organiser la mission, pas à trier 40 candidatures à l’aveugle.</span></div></div>
-      <div class="welcome-point"><div class="welcome-point-ico">🎁</div><div><strong>5 demandes offertes, sans carte</strong><span>Vous pouvez publier tout de suite. L’abonnement (199 / 249 / 299 € HT) se prend quand vous voulez — y compris avant d’avoir utilisé les 5 essais.</span></div></div>
+      <div class="welcome-point"><div class="welcome-point-ico">🎁</div><div><strong>5 demandes offertes, sans carte</strong><span>Vous pouvez publier tout de suite. L’abonnement (dès 199 € HT / mois, Pro et Premium aussi à l’année) se prend quand vous voulez — y compris avant d’avoir utilisé les 5 essais.</span></div></div>
     </div>
   </aside>
   <div class="gate-panel">
@@ -671,7 +673,7 @@ input,select,textarea{font-family:inherit}
     </div>
     <div id="gate-register" style="display:none">
       <h2>Créer mon établissement</h2>
-      <p style="color:var(--text-muted);font-size:13px;margin-bottom:14px;line-height:1.5">Le compte est examiné par URGAD. 5 demandes offertes sans carte. L’abonnement (199 / 249 / 299 € HT) peut être pris tout de suite ou après les essais.</p>
+      <p style="color:var(--text-muted);font-size:13px;margin-bottom:14px;line-height:1.5">Le compte est examiné par URGAD. 5 demandes offertes sans carte. L’abonnement (dès 199 € HT / mois, Pro et Premium aussi à l’année) peut être pris tout de suite ou après les essais.</p>
       <div class="form-group"><label>Nom</label><input id="reg-name" type="text" placeholder="EHPAD Les Jardins"></div>
       <div class="form-row"><div class="form-group"><label>Type</label><select id="reg-type"><option>EHPAD</option><option>Clinique</option><option>Maison de retraite</option><option>Hôpital</option></select></div><div class="form-group"><label>SIRET</label><input id="reg-siret" type="text" placeholder="123 456 789 00012"></div></div>
       <div class="form-group"><label>Responsable</label><input id="reg-contact" type="text" placeholder="Marie Dupont"></div>
@@ -1250,10 +1252,10 @@ async function saveEtabDocument(){
   } catch(e) { toast('error','Document', e.message||'Échec'); }
 }
 function defaultEtabCatalog(){
-  return { model: { professionals: { priceHt: 0 }, tax: 'HT', commissionOnWages: 0, positioning: 'Abonnement logiciel : pas de commission sur le salaire du soignant.', payment: 'Carte via Stripe Checkout.', renewal: 'Mensuel, reconduction tacite.', trialMissions: 5, trialNote: '5 demandes offertes sans carte. L’abonnement peut être pris tout de suite ou après.' }, plans: [
-    { id:'essentiel', name:'Essentiel', priceHt:199, highlight:false, badge:null, tagline:'Remplacements ponctuels, un site', missionsPerMonth:12, flashPerMonth:0, extraMissionHt:25, perks:['12 demandes / mois','Matching rayon et disponibilités','Messagerie après match','Pas de Flash','Demande extra 25 € HT'] },
-    { id:'pro', name:'Pro', priceHt:249, highlight:true, badge:'Le plus choisi', tagline:'Volume + urgences de nuit', missionsPerMonth:30, flashPerMonth:null, extraMissionHt:15, perks:['30 demandes / mois','Flash illimité','Matching prioritaire','Support sous 1 jour ouvré','Demande extra 15 € HT'] },
-    { id:'premium', name:'Premium', priceHt:299, highlight:false, badge:'Volume illimité', tagline:'Gros besoin, zéro friction', missionsPerMonth:null, flashPerMonth:null, extraMissionHt:0, perks:['Demandes illimitées','Flash illimité','Matching prioritaire','Interlocuteur dédié','Extra 0 €'] }
+  return { model: { professionals: { priceHt: 0 }, tax: 'HT', commissionOnWages: 0, positioning: 'Abonnement logiciel : pas de commission sur le salaire du soignant.', payment: 'Carte via Stripe Checkout.', renewal: 'Mensuel, ou annuel Pro / Premium (2 mois offerts).', trialMissions: 5, trialNote: '5 demandes offertes sans carte. L’abonnement peut être pris tout de suite ou après.' }, plans: [
+    { id:'essentiel', name:'Essentiel', priceHt:199, yearlyPriceHt:null, highlight:false, badge:null, tagline:'Remplacements ponctuels, un site', missionsPerMonth:12, flashPerMonth:0, extraMissionHt:25, perks:['12 demandes / mois','Matching rayon et disponibilités','Messagerie après match','Pas de Flash','Demande extra 25 € HT'] },
+    { id:'pro', name:'Pro', priceHt:249, yearlyPriceHt:2490, highlight:true, badge:'Le plus choisi', tagline:'Volume + urgences de nuit', missionsPerMonth:30, flashPerMonth:null, extraMissionHt:15, perks:['30 demandes / mois','Flash illimité','Matching prioritaire','Support sous 1 jour ouvré','Demande extra 15 € HT'] },
+    { id:'premium', name:'Premium', priceHt:299, yearlyPriceHt:2990, highlight:false, badge:'Volume illimité', tagline:'Gros besoin, zéro friction', missionsPerMonth:null, flashPerMonth:null, extraMissionHt:0, perks:['Demandes illimitées','Flash illimité','Matching prioritaire','Interlocuteur dédié','Extra 0 €'] }
   ]};
 }
 function trialBannerHtml(){
@@ -1266,7 +1268,7 @@ function trialBannerHtml(){
   if (rem <= 0) {
     return `<div class="bo-card" style="margin-bottom:16px;border-color:rgba(212,175,55,0.4)"><strong>Essai de 5 demandes terminé</strong><p style="color:var(--text-muted);font-size:13px;margin-top:6px;line-height:1.5">Choisissez Essentiel, Pro ou Premium pour continuer. Vous pouviez aussi vous abonner dès la première demande.</p><button class="btn btn-primary" style="margin-top:10px" onclick="showEtabScreen('subscription')">Voir les abonnements</button></div>`;
   }
-  return `<div class="bo-card" style="margin-bottom:16px"><strong>${rem} demande${rem>1?'s':''} offerte${rem>1?'s':''} restante${rem>1?'s':''}</strong><p style="color:var(--text-muted);font-size:13px;margin-top:6px;line-height:1.5">${used} / ${limit} utilisées · sans carte. L’abonnement est optionnel pendant l’essai : vous pouvez le prendre tout de suite (Essentiel 199 €, Pro 249 €, Premium 299 € HT / mois). Le Flash reste réservé au Pro / Premium payés.</p><button class="btn btn-ghost btn-sm" style="margin-top:8px" onclick="showEtabScreen('subscription')">S’abonner maintenant</button></div>`;
+  return `<div class="bo-card" style="margin-bottom:16px"><strong>${rem} demande${rem>1?'s':''} offerte${rem>1?'s':''} restante${rem>1?'s':''}</strong><p style="color:var(--text-muted);font-size:13px;margin-top:6px;line-height:1.5">${used} / ${limit} utilisées · sans carte. L’abonnement est optionnel pendant l’essai : mois dès 199 € HT, Pro / Premium aussi à l’année (2 mois offerts). Le Flash reste réservé au Pro / Premium payés.</p><button class="btn btn-ghost btn-sm" style="margin-top:8px" onclick="showEtabScreen('subscription')">S’abonner maintenant</button></div>`;
 }
 function renderEtabPlans(){
   const cat = etabCatalog || defaultEtabCatalog();
@@ -1289,9 +1291,9 @@ function renderEtabPlans(){
     <div class="bo-card" style="margin-bottom:18px">
       <h3 style="font-family:'Playfair Display',serif;margin-bottom:8px">5 demandes offertes</h3>
       <p style="color:var(--text-muted);font-size:13px;line-height:1.55;margin-bottom:10px">${escHtml(model.trialNote || '5 demandes sans carte. L’abonnement peut être pris tout de suite ou après.')}</p>
-      <p style="color:var(--text-muted);font-size:13px;line-height:1.55">${escHtml(model.positioning || '')} Professionnels : <strong>0 €</strong> · Prix <strong>HT / mois</strong>.</p>
+      <p style="color:var(--text-muted);font-size:13px;line-height:1.55">${escHtml(model.positioning || '')} Professionnels : <strong>0 €</strong> · Prix <strong>HT</strong>. Pro et Premium : mois ou année (2 mois offerts).</p>
       <div style="margin-top:14px;padding:12px 14px;border-radius:12px;border:1px solid var(--border);background:var(--surface)">
-        ${sub && sub.paid?`<strong>${escHtml(sub.name)}</strong> · ${escHtml(String((currentPlan && currentPlan.priceHt) || sub.price))} € HT / mois
+        ${sub && sub.paid?`<strong>${escHtml(sub.name)}</strong> · ${escHtml(String(sub.price != null ? sub.price : (currentPlan && currentPlan.priceHt) || 0))} € ${escHtml(sub.periodLabel || 'HT / mois')}
           <div style="margin-top:6px"><span class="bo-badge verified">Payé</span> <span style="font-size:12px;color:var(--text-muted)">Abonnement actif · confirmation dans Notifications · reçu Stripe par e-mail</span></div>
           <div style="margin-top:8px;font-size:13px;color:var(--text-muted)">${escHtml(quota)}${(sub.extraCredits||0)>0?' · '+sub.extraCredits+' demande(s) extra créditée(s)':''}</div>
           <div style="display:flex;flex-wrap:wrap;gap:8px;margin-top:12px">
@@ -1299,7 +1301,7 @@ function renderEtabPlans(){
             ${currentPlan && currentPlan.extraMissionHt>0?`<button class="btn btn-primary btn-sm" onclick="buyEtabExtra()">Acheter 1 demande extra (${currentPlan.extraMissionHt} € HT)</button>`:''}
           </div>`
         : sub && String(sub.status||'')==='past_due' ? `<strong>Paiement en échec</strong><div style="margin-top:6px"><span class="bo-badge rejected">Impayé</span></div><div style="margin-top:8px;font-size:13px;color:var(--text-muted)">Le prélèvement de ${escHtml(sub.name||'la formule')} n’a pas abouti. Mettez à jour la carte dans le portail Stripe.</div>${sub.portalAvailable?`<div style="margin-top:10px"><button class="btn btn-primary btn-sm" onclick="openEtabPortal()">Mettre à jour la carte</button></div>`:''}`
-        :`<strong>Essai en cours</strong><div style="margin-top:6px;font-size:13px;color:var(--text-muted)">${escHtml(quota)}</div>${sub && !sub.paid?`<div style="margin-top:8px;font-size:12px;color:var(--text-dim)">Formule visée : ${escHtml(sub.name)} · ${escHtml(String((currentPlan && currentPlan.priceHt) || 199))} € HT / mois — à régler seulement si vous cliquez sur Payer.</div>`:''}`}
+        :`<strong>Essai en cours</strong><div style="margin-top:6px;font-size:13px;color:var(--text-muted)">${escHtml(quota)}</div>${sub && !sub.paid?`<div style="margin-top:8px;font-size:12px;color:var(--text-dim)">Formule visée : ${escHtml(sub.name)} · ${escHtml(String(sub.price != null ? sub.price : 199))} € ${escHtml(sub.periodLabel || 'HT / mois')} — à régler seulement si vous cliquez sur Payer.</div>`:''}`}
       </div>
     </div>
     <div class="plan-grid">
@@ -1308,14 +1310,25 @@ function renderEtabPlans(){
         const quotaM = pl.missionsPerMonth == null ? 'Illimitées' : pl.missionsPerMonth+' / mois';
         const flash = pl.flashPerMonth === 0 ? 'Flash non inclus' : (pl.flashPerMonth == null ? 'Flash illimité' : pl.flashPerMonth+' Flash / mois');
         const extra = pl.extraMissionHt === 0 ? 'Extra : 0 €' : (pl.extraMissionHt != null ? 'Extra : '+pl.extraMissionHt+' € HT' : '');
+        const yearly = pl.yearlyPriceHt != null && pl.yearlyPriceHt > 0;
+        const currentInterval = sub && sub.interval ? sub.interval : 'month';
+        const monthActive = selected && sub && sub.paid && currentInterval !== 'year';
+        const yearActive = selected && sub && sub.paid && currentInterval === 'year';
+        const perMonthEq = yearly ? Math.round(pl.yearlyPriceHt / 12) : null;
+        const monthLabel = monthActive ? 'Formule active' : (stripeOn ? 'Payer '+escHtml(pl.name)+' au mois' : 'Choisir au mois');
+        const yearLabel = yearActive ? 'Annuel actif' : (stripeOn ? 'Payer '+escHtml(pl.name)+' à l’année' : 'Choisir à l’année');
         return `<div class="plan-card ${pl.highlight?'featured':''}">
           ${pl.badge?`<span class="plan-badge">${escHtml(pl.badge)}</span>`:''}
           <h3>${escHtml(pl.name)}</h3>
           <div class="plan-price">${pl.priceHt} € <span>HT / mois</span></div>
+          ${yearly?`<p class="plan-year">${pl.yearlyPriceHt} € HT / an · 2 mois offerts${perMonthEq?' (soit '+perMonthEq+' € / mois)':''}</p>`:'<p class="plan-year" style="color:var(--text-dim)">Annuel : Pro et Premium</p>'}
           <p class="plan-tagline">${escHtml(pl.tagline||'')}</p>
           <p style="font-size:12px;color:var(--gold-soft);margin-bottom:10px">${escHtml(quotaM)} · ${escHtml(flash)}${extra?' · '+escHtml(extra):''}</p>
           <ul>${(pl.perks||[]).map(function(x){ return '<li>'+escHtml(x)+'</li>'; }).join('')}</ul>
-          <button class="btn ${selected && sub && sub.paid?'btn-ghost':'btn-primary'} btn-block" onclick="chooseEtabPlan('${pl.id}')">${selected && sub && sub.paid?'Formule active':(stripeOn?'Payer '+escHtml(pl.name)+' par carte':'Choisir '+escHtml(pl.name))}</button>
+          <div class="plan-actions">
+            <button class="btn ${monthActive?'btn-ghost':'btn-primary'} btn-block" onclick="chooseEtabPlan('${pl.id}','month')">${monthLabel}</button>
+            ${yearly?`<button class="btn btn-ghost btn-block" onclick="chooseEtabPlan('${pl.id}','year')">${yearLabel}</button>`:''}
+          </div>
         </div>`;
       }).join('')}
     </div>`;
@@ -1344,9 +1357,9 @@ function handlePublishError(e){
   }
   toast('error','Demande', e.message||'Échec');
 }
-async function chooseEtabPlan(id){
+async function chooseEtabPlan(id, interval){
   try {
-    const row = await UrgadApi.saveEstablishmentSubscription({ id: id });
+    const row = await UrgadApi.saveEstablishmentSubscription({ id: id, interval: interval || 'month' });
     if (row && row.checkoutUrl) {
       toast('info','Stripe','Ouverture du paiement sécurisé…');
       window.location.href = row.checkoutUrl;

@@ -1,4 +1,4 @@
-import { type Plan } from './plans.js';
+import { type BillingInterval, type Plan, parseBillingInterval, planPriceHt, pricePeriodLabel } from './plans.js';
 
 export type BillingNoticeKind = 'paid' | 'renewed' | 'past_due' | 'canceled' | 'checkout_cancel' | 'extra';
 
@@ -17,6 +17,7 @@ export type BillingCopyContext = {
   establishmentName: string;
   plan?: Plan | null;
   planName?: string | null;
+  interval?: BillingInterval | string | null;
   priceHt?: number | null;
   email?: string | null;
   invoiceUrl?: string | null;
@@ -27,9 +28,10 @@ const RECEIPT =
 
 export function billingConfirmation(kind: BillingNoticeKind, ctx: BillingCopyContext): BillingConfirmation {
   const planName = ctx.plan?.name || ctx.planName || null;
-  const priceHt = ctx.plan?.priceHt ?? ctx.priceHt ?? null;
+  const interval = parseBillingInterval(ctx.interval);
+  const priceHt = ctx.priceHt ?? (ctx.plan ? planPriceHt(ctx.plan, interval) : null);
   const etab = ctx.establishmentName || 'votre établissement';
-  const priceBit = priceHt != null ? `${priceHt} € HT / mois` : 'mensuel HT';
+  const priceBit = priceHt != null ? `${priceHt} € ${pricePeriodLabel(interval)}` : (interval === 'year' ? 'annuel HT' : 'mensuel HT');
   const planBit = planName ? `formule ${planName}` : 'formule URGAD';
   const email = ctx.email || null;
   const receiptNote = email
@@ -52,7 +54,7 @@ export function billingConfirmation(kind: BillingNoticeKind, ctx: BillingCopyCon
     return {
       kind,
       title: `Renouvellement ${planName || 'abonnement'} confirmé`.replace(/\s+/g, ' ').trim(),
-      body: `${etab} : le prélèvement mensuel de la ${planBit} (${priceBit}) a bien abouti. ${receiptNote}`,
+      body: `${etab} : le prélèvement de la ${planBit} (${priceBit}) a bien abouti. ${receiptNote}`,
       planName,
       priceHt,
       receiptNote,
@@ -110,10 +112,11 @@ export function billingConfirmation(kind: BillingNoticeKind, ctx: BillingCopyCon
 
 export function adminBillingCopy(kind: BillingNoticeKind, ctx: BillingCopyContext): { title: string; body: string } {
   const planName = ctx.plan?.name || ctx.planName || 'plan';
-  const priceHt = ctx.plan?.priceHt ?? ctx.priceHt;
+  const interval = parseBillingInterval(ctx.interval);
+  const priceHt = ctx.priceHt ?? (ctx.plan ? planPriceHt(ctx.plan, interval) : null);
   const etab = ctx.establishmentName || 'Établissement';
-  const priceBit = priceHt != null ? `${priceHt} € HT` : '';
-  if (kind === 'paid') return { title: 'Abonnement payé', body: `${etab} a activé ${planName}${priceBit ? ' · ' + priceBit + ' / mois' : ''}.` };
+  const priceBit = priceHt != null ? `${priceHt} € ${pricePeriodLabel(interval)}` : '';
+  if (kind === 'paid') return { title: 'Abonnement payé', body: `${etab} a activé ${planName}${priceBit ? ' · ' + priceBit : ''}.` };
   if (kind === 'renewed') return { title: 'Abonnement renouvelé', body: `${etab} : prélèvement ${planName} abouti${priceBit ? ' (' + priceBit + ')' : ''}.` };
   if (kind === 'past_due') return { title: 'Impayé abonnement', body: `${etab} : échec de paiement ${planName}. Relance Stripe + notification établissement envoyées.` };
   if (kind === 'canceled') return { title: 'Abonnement résilié', body: `${etab} a perdu ${planName}.` };
