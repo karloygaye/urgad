@@ -966,29 +966,20 @@ function showEtabScreen(screen, el){
     ${etabRequests.length ? etabRequests.map(r=>`<tr><td><strong>${escHtml(r.posteLabel||r.title)}</strong>${r.urgent?' 🚨':''}${r.notes?`<div style="font-size:12px;color:var(--text-muted)">${escHtml(String(r.notes).slice(0,80))}</div>`:''}</td><td>${escHtml(r.date||'')}</td><td>${escHtml(r.startHour||'')} → ${escHtml(r.endHour||'')}</td><td>${requestBadge(r)}${r.requestStatus==='refusee'&&r.refusalReason?`<div style="font-size:11px;color:var(--text-muted);margin-top:4px">Motif : ${escHtml(r.refusalReason)}</div>`:''}</td><td>${r.confirmed?('✅ '+escHtml(r.confirmed.fullName||r.confirmed.displayName)):r.proposed?('👤 '+escHtml(r.proposed.displayName)):'—'}</td><td>${r.proposed?`<button class="bo-action-btn view" onclick="showEtabScreen('candidatures')">Voir le profil</button>`:''}<button class="bo-action-btn" onclick="openRoute(${r.id})">🧭</button></td></tr>`).join('') : '<tr><td colspan="6">Aucune demande pour le moment.</td></tr>'}
     </tbody></table></div>
     <div class="etab-req-cards">${etabRequests.length ? etabRequests.map(etabReqCard).join('') : '<p style="color:var(--text-muted)">Aucune demande pour le moment.</p>'}</div></div>`;
-  } else if(screen==='create'){
-    html = `<div class="etab-topbar"><div><h1>Nouvelle demande</h1><p style="color:var(--text-muted);margin-top:4px;font-size:13px">Indiquez le besoin : nous trouvons un profil vérifié (identité et diplôme) et vous le proposons. Vous n'avez plus qu'à valider.</p></div></div>
+  } else if(screen==='create' || screen==='create-detailed'){
+    html = `<div class="etab-topbar"><div><h1>Nouvelle demande</h1><p style="color:var(--text-muted);margin-top:4px;font-size:13px">Indiquez le besoin et le tarif horaire : le montant total versé au soignant se calcule automatiquement. Nous trouvons un profil vérifié, vous validez.</p></div></div>
     ${trialBannerHtml()}
-    <div class="bo-card" style="max-width:700px">
-      <div class="form-group"><label>Poste</label><select id="q-poste"><option value="aide-soignant">Aide-soignant(e)</option><option value="infirmier">Infirmier(ère)</option><option value="aes">AES</option><option value="autre">Autre</option></select></div>
-      <div class="form-row"><div class="form-group"><label>Date</label><input id="q-date" type="date" min="${todayISO()}" value="${todayISO()}"></div><div class="form-group"><label>Urgent</label><select id="q-urgent"><option value="0">Non</option><option value="1">Oui</option></select></div></div>
-      <div class="form-row"><div class="form-group"><label>Début</label><input id="q-start" type="time" value="20:00"></div><div class="form-group"><label>Fin</label><input id="q-end" type="time" value="07:00"></div></div>
-      <div class="form-group"><label>Commentaire</label><textarea id="q-comment" rows="3" placeholder="Service, consignes, contact sur place…"></textarea></div>
-      <button class="btn btn-primary btn-lg btn-block" onclick="submitQuickRequest()">📨 ENVOYER LA DEMANDE</button>
-      <p style="font-size:12px;color:var(--text-muted);margin-top:14px">Vous pouvez aussi nous appeler ou nous écrire : l'équipe saisit la demande pour vous. <a href="#" onclick="showEtabScreen('create-detailed');return false" style="color:var(--gold-soft)">Formulaire détaillé (rémunération, service, description…)</a></p>
-    </div>`;
-  } else if(screen==='create-detailed'){
-    html = `<div class="etab-topbar"><h1>Demande détaillée</h1><button class="btn btn-ghost" onclick="showEtabScreen('create')">← Formulaire rapide</button></div>
     <div class="bo-card" style="max-width:700px">
       <div class="form-group"><label>Profession recherchée</label><select id="m-prof"><option>Aide-soignant(e)</option><option>Infirmier(ère)</option><option>AES</option></select></div>
       <div class="form-group"><label>Type de mission</label><select id="m-type"><option>Vacation</option><option>Remplacement</option><option>Mission courte</option><option>Autre</option></select></div>
-      <div class="form-row"><div class="form-group"><label>Date</label><input id="m-date" type="date"></div><div class="form-group"><label>Nombre de postes</label><input id="m-posts" type="number" value="1"></div></div>
+      <div class="form-row"><div class="form-group"><label>Date</label><input id="m-date" type="date" min="${todayISO()}" value="${todayISO()}"></div><div class="form-group"><label>Nombre de postes</label><input id="m-posts" type="number" min="1" value="1"></div></div>
       <div class="form-row"><div class="form-group"><label>Heure de début</label><input id="m-start" type="time" value="20:00"></div><div class="form-group"><label>Heure de fin</label><input id="m-end" type="time" value="07:00"></div></div>
       <div class="form-group"><label>Service</label><select id="m-service"><option>Nuit</option><option>Matin</option><option>Après-midi</option></select></div>
-      <div class="form-group"><label>Rémunération</label><input id="m-price" type="text" placeholder="Ex: 220€ la vacation"></div>
-      <div class="form-group"><label>Description</label><textarea id="m-desc" rows="3" placeholder="Ex: Expérience en EHPAD..."></textarea></div>
-      <div style="display:flex;gap:10px;margin-top:20px">
-        <button class="btn btn-primary btn-lg" style="flex:1" onclick="publishFromForm(false)">📢 PUBLIER LA MISSION</button>
+      <div class="form-group"><label>Tarif horaire versé au soignant (€ / h)</label><input id="m-rate" type="text" inputmode="decimal" placeholder="Ex. 18,50"></div>
+      <div id="m-pay-preview" style="margin:-4px 0 16px;padding:12px 14px;border-radius:12px;border:1px solid var(--border);background:var(--surface);font-size:13px;line-height:1.45;color:var(--text-muted)"></div>
+      <div class="form-group"><label>Description</label><textarea id="m-desc" rows="3" placeholder="Service, consignes, contact sur place…"></textarea></div>
+      <div style="display:flex;gap:10px;margin-top:20px;flex-wrap:wrap">
+        <button class="btn btn-primary btn-lg" style="flex:1;min-width:180px" onclick="publishFromForm(false)">📨 ENVOYER LA DEMANDE</button>
         <button class="btn btn-urgent btn-lg" onclick="publishFromForm(true)">🚨 URGENT</button>
       </div>
     </div>`;
@@ -1005,6 +996,8 @@ function showEtabScreen(screen, el){
       <p style="opacity:0.95;margin-bottom:20px">La mission urgente est créée sur l'API. Il n'y a pas d'envoi push.</p>
       <div class="form-group"><label style="color:#fff">Profession</label><select id="u-prof"><option>Aide-soignant(e)</option></select></div>
       <div class="form-row"><div class="form-group"><label style="color:#fff">Début</label><input id="u-start" type="time" value="20:00"></div><div class="form-group"><label style="color:#fff">Fin</label><input id="u-end" type="time" value="07:00"></div></div>
+      <div class="form-group"><label style="color:#fff">Tarif horaire versé au soignant (€ / h)</label><input id="u-rate" type="text" inputmode="decimal" placeholder="Ex. 18,50"></div>
+      <div id="u-pay-preview" style="margin:-4px 0 16px;padding:12px 14px;border-radius:12px;border:1px solid rgba(255,255,255,0.2);font-size:13px;line-height:1.45;opacity:.95"></div>
       <div class="form-group"><label style="color:#fff">Informations</label><textarea id="u-desc" rows="2" placeholder="Détails urgents..."></textarea></div>
       <button class="btn btn-lg" style="background:#fff;color:#DC2626;width:100%;font-weight:700" onclick="publishFlash()">🚨 LANCER URGAD FLASH</button>
     </div>`;
@@ -1075,6 +1068,8 @@ function showEtabScreen(screen, el){
   }
   container.innerHTML = html;
   if(screen==='dashboard') setTimeout(initEtabMap, 60);
+  if(screen==='create' || screen==='create-detailed') UrgadFeatures.bindPayPreview('m-start','m-end','m-rate','m-pay-preview');
+  if(screen==='urgent') UrgadFeatures.bindPayPreview('u-start','u-end','u-rate','u-pay-preview');
 }
 function val(id, fallback){ const el=document.getElementById(id); return (el && el.value) ? el.value : (fallback||''); }
 function readMission(urgent){
@@ -1096,7 +1091,10 @@ function readMission(urgent){
     start: val(flash?'u-start':'m-start','20:00'),
     end: val(flash?'u-end':'m-end','07:00'),
     service: flash ? 'Nuit' : val('m-service','Nuit'),
-    price: flash ? '280€' : (val('m-price') || '150€'),
+    price: (function(){
+      const q = UrgadFeatures.quotePay(val(flash?'u-rate':'m-rate'), val(flash?'u-start':'m-start','20:00'), val(flash?'u-end':'m-end','07:00'));
+      return q ? q.conditions : '';
+    })(),
     urgent: !!urgent,
     desc: val(flash?'u-desc':'m-desc') || (urgent?'Besoin immédiat':'Mission publiée'),
     etabId: a.etabId,
@@ -1112,6 +1110,7 @@ async function publishFromForm(urgent){
   const a = etabAccount();
   if(!a){ toast('error','Mission','Session établissement absente'); return; }
   const startDate = (!urgent && val('m-date')) ? val('m-date') : todayISO();
+  if(!draft.price){ toast('error','Rémunération','Indiquez le tarif horaire (€ / h) : le total se calcule automatiquement.'); return; }
   try {
     await UrgadApi.createMission('establishment', {
       type: draft.type,

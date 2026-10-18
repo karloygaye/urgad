@@ -367,6 +367,64 @@
   var DOC_CAT_LABELS = { identity: "Pièce d'identité", diploma: 'Diplôme', carte_vitale: 'Carte Vitale', vaccins: 'Vaccins', rib: 'RIB', other: 'Autre' };
   function docCategoryLabel(cat){ return DOC_CAT_LABELS[cat] || cat || 'Document'; }
 
+  function minutesFromHour(raw){
+    var m = String(raw || '').trim().toLowerCase().replace('h', ':').match(/^(\d{1,2}):(\d{2})$/);
+    if(!m) return null;
+    var h = Number(m[1]), min = Number(m[2]);
+    if(!isFinite(h) || !isFinite(min) || h > 23 || min > 59) return null;
+    return h * 60 + min;
+  }
+  function durationHours(start, end){
+    var a = minutesFromHour(start), b = minutesFromHour(end);
+    if(a == null || b == null) return null;
+    var mins = b - a;
+    if(mins <= 0) mins += 24 * 60;
+    return Math.round((mins / 60) * 100) / 100;
+  }
+  function parseHourlyRate(raw){
+    if(raw == null || raw === '') return null;
+    var n = Number(String(raw).replace(/\s/g, '').replace(',', '.').replace('€', ''));
+    return isFinite(n) ? Math.round(n * 100) / 100 : null;
+  }
+  function formatEuro(n){
+    if(n == null || !isFinite(Number(n))) return '—';
+    return Number(n).toFixed(2).replace('.', ',') + ' €';
+  }
+  function formatHours(n){
+    if(n == null || !isFinite(Number(n))) return '—';
+    var v = Number(n);
+    return (Math.round(v) === v ? String(v) : String(v).replace('.', ',')) + ' h';
+  }
+  function quotePay(rateRaw, start, end){
+    var rate = parseHourlyRate(rateRaw);
+    var hours = durationHours(start, end);
+    if(rate == null || hours == null) return null;
+    var total = Math.round(rate * hours * 100) / 100;
+    return {
+      hourlyRate: rate, durationHours: hours, totalAmount: total,
+      label: formatEuro(total),
+      detail: formatHours(hours) + ' × ' + formatEuro(rate) + '/h',
+      conditions: formatEuro(total) + ' (' + formatHours(hours) + ' × ' + formatEuro(rate) + '/h)'
+    };
+  }
+  function bindPayPreview(startId, endId, rateId, outId){
+    function paint(){
+      var startEl = document.getElementById(startId);
+      var endEl = document.getElementById(endId);
+      var rateEl = document.getElementById(rateId);
+      var out = document.getElementById(outId);
+      if(!out) return;
+      var q = quotePay(rateEl && rateEl.value, startEl && startEl.value, endEl && endEl.value);
+      if(!q){ out.textContent = 'Saisissez le tarif horaire : le total de la vacation se calcule tout seul (une nuit 20:00 → 07:00 = 11 h).'; return; }
+      out.innerHTML = '<strong style="color:var(--emerald-soft);font-size:18px">'+esc(q.label)+'</strong> versés au soignant <span style="color:var(--text-muted)">('+esc(q.detail)+')</span>';
+    }
+    [startId, endId, rateId].forEach(function(id){
+      var el = document.getElementById(id);
+      if(el){ el.addEventListener('input', paint); el.addEventListener('change', paint); }
+    });
+    paint();
+  }
+
   window.UrgadFeatures = {
     DOC_SLOTS: DOC_SLOTS, docCategoryLabel: docCategoryLabel,
     esc: esc, timeAgo: timeAgo, iconFor: iconFor,
@@ -383,6 +441,8 @@
     upcomingAvailDays: upcomingAvailDays,
     availabilityGridHtml: availabilityGridHtml,
     collectAvailabilityFromGrid: collectAvailabilityFromGrid,
-    availabilityMenuHint: availabilityMenuHint
+    availabilityMenuHint: availabilityMenuHint,
+    durationHours: durationHours, parseHourlyRate: parseHourlyRate, formatEuro: formatEuro, formatHours: formatHours,
+    quotePay: quotePay, bindPayPreview: bindPayPreview
   };
 })();

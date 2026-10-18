@@ -1111,7 +1111,7 @@ function proMissionCard(m){
     '<span>📅 '+UrgadFeatures.esc(m.date||'')+'</span>'+
     '<span>🕐 '+UrgadFeatures.esc(m.start||'')+' → '+UrgadFeatures.esc(m.end||'')+(m.title?' • '+UrgadFeatures.esc(m.title):'')+'</span>'+
     '</div>'+
-    '<div class="mission-footer"><div class="mission-price">'+UrgadFeatures.esc(String(m.price||'—'))+'<small> / vacation</small></div>'+
+    '<div class="mission-footer"><div class="mission-price">'+UrgadFeatures.esc(String(m.price||'—'))+'<small>'+(String(m.price||'').indexOf('×')>=0?'':' / vacation')+'</small></div>'+
     '<button class="btn btn-primary" style="padding:9px 18px;font-size:12px">Voir</button></div></div>';
 }
 function proNearbySummary(){
@@ -2106,8 +2106,7 @@ ${m.outOfRadius?'<div class="bo-card" style="margin:12px 0 8px;border-style:dash
 </div>
 <div class="detail-section">
 <h3>💶 Rémunération</h3>
-<div class="detail-row"><span class="label">Montant</span><span class="value" style="color:var(--emerald-soft);font-size:18px">${m.price}</span></div>
-<div class="detail-row"><span class="label">Majoration / frais</span><span class="value">Aperçu local — absent de l'API</span></div>
+<div class="detail-row"><span class="label">Montant total</span><span class="value" style="color:var(--emerald-soft);font-size:18px">${UrgadFeatures.esc(m.price||'—')}</span></div>
 </div>
 <div class="detail-section">
 <h3>ℹ️ Informations</h3>
