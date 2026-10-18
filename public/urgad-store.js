@@ -1,5 +1,5 @@
-/* URGAD client — static files only. JWT in sessionStorage, never a database.
-   Writes go through the API. Default base is the local preview.
+/* URGAD client — static files only. JWT in localStorage (rester connecté
+   sur le téléphone et le navigateur). Les données métier restent sur l’API.
    Deploy: set window.URGAD_API to the public API origin before this script. */
 (function(){
   var BASE = (function(){
@@ -23,15 +23,38 @@
   })();
 
   function storageKey(role){ return 'urgad.jwt.' + role; }
+  function readStore(store, key){
+    try { return store.getItem(key) || ''; } catch (e) { return ''; }
+  }
+  function writeStore(store, key, value){
+    try { store.setItem(key, value); } catch (e) {}
+  }
+  function removeStore(store, key){
+    try { store.removeItem(key); } catch (e) {}
+  }
   function token(role){
-    try { return sessionStorage.getItem(storageKey(role)) || ''; }
-    catch (e) { return ''; }
+    var key = storageKey(role);
+    var persistent = readStore(localStorage, key);
+    var session = readStore(sessionStorage, key);
+    if (persistent) {
+      if (persistent !== session) writeStore(sessionStorage, key, persistent);
+      return persistent;
+    }
+    if (session) {
+      writeStore(localStorage, key, session);
+      return session;
+    }
+    return '';
   }
   function setToken(role, value){
-    sessionStorage.setItem(storageKey(role), value);
+    var key = storageKey(role);
+    writeStore(localStorage, key, value);
+    writeStore(sessionStorage, key, value);
   }
   function clearToken(role){
-    try { sessionStorage.removeItem(storageKey(role)); } catch (e) {}
+    var key = storageKey(role);
+    removeStore(localStorage, key);
+    removeStore(sessionStorage, key);
   }
 
   async function request(role, method, path, body){

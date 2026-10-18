@@ -895,13 +895,14 @@ async function registerEtab(){
     toast('success','Compte créé','Enregistré sur l\'API. Validation back-office en attente.');
   } catch(e) { toast('error','Inscription', e.message||'Échec'); }
 }
-function logoutEtab(){
+async function logoutEtab(){
   closeModal();
+  try { await UrgadFeatures.unregisterNativePush('establishment'); } catch(e) {}
   UrgadFeatures.stopNotifications('establishment'); etabNotifStarted = false;
   UrgadApi.clearToken('establishment');
   etab = null; missions = []; cands = []; threads = []; etabDocs = []; etabSub = null;
   showGate(true);
-  toast('info','Déconnexion','Jeton retiré de cette session');
+  toast('info','Déconnexion','Session retirée de cet appareil');
 }
 function confirmLogout(){
   document.getElementById('modalContent').innerHTML = `

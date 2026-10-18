@@ -103,7 +103,12 @@
     state.refresh = tick;
     tick();
     state.timer = setInterval(tick, POLL_MS);
+    enableAlertsForSession(role);
     return state;
+  }
+  function enableAlertsForSession(role){
+    registerNativePush(role);
+    if (browserPermission() === 'default') enableBrowserNotifications();
   }
   function stopNotifications(role){
     var st = pollers[role];
@@ -493,6 +498,7 @@
     DOC_SLOTS: DOC_SLOTS, docCategoryLabel: docCategoryLabel,
     esc: esc, timeAgo: timeAgo, iconFor: iconFor,
     startNotifications: startNotifications, stopNotifications: stopNotifications, refreshNotifications: refreshNotifications,
+    enableAlertsForSession: enableAlertsForSession,
     markRead: markRead, markAllRead: markAllRead, setBadge: setBadge, playAlert: playAlert, unlockAudio: unlockAudio,
     browserSupported: browserSupported, browserPermission: browserPermission, enableBrowserNotifications: enableBrowserNotifications,
     isNative: isNative, registerNativePush: registerNativePush, unregisterNativePush: unregisterNativePush,

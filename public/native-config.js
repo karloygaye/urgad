@@ -7,5 +7,6 @@
   } catch (e) {}
   if (!native) return;
   if (!window.URGAD_API) window.URGAD_API = 'https://urgad.fr';
+  // false tant que google-services.json / APNs ne sont pas dans le build (register() crashe Android).
   if (typeof window.URGAD_NATIVE_PUSH === 'undefined') window.URGAD_NATIVE_PUSH = false;
 })();

@@ -81,7 +81,7 @@ router.post('/register/professional', async (req, res, next) => {
     }
     void notifyAdmins('Nouveau professionnel inscrit', `${firstName} ${lastName} (${email}) — documents à vérifier.`, { userId, screen: 'verification' }, 'admin_new_pro');
     welcomePro(Number(userId), firstName);
-    const token = jwt.sign({ id: Number(userId), role: 'professional', email, isAdmin: false }, config.jwtSecret, { expiresIn: '7d' });
+    const token = jwt.sign({ id: Number(userId), role: 'professional', email, isAdmin: false }, config.jwtSecret, { expiresIn: config.jwtExpiry });
     await dbRun('UPDATE users SET last_login = datetime(\'now\') WHERE id = ?', [userId]);
     return res.json({
       message: 'Compte créé. Téléphone enregistré.',
@@ -177,7 +177,7 @@ router.post('/login', async (req, res, next) => {
     if (!user || user.deleted_at) return res.status(401).json({ message: 'Identifiants invalides.' });
     const valid = await bcrypt.compare(password, user.password);
     if (!valid) return res.status(401).json({ message: 'Identifiants invalides.' });
-    const token = jwt.sign({ id: user.id, role: user.role, email: user.email, isAdmin: user.is_admin === 1 }, config.jwtSecret, { expiresIn: '7d' });
+    const token = jwt.sign({ id: user.id, role: user.role, email: user.email, isAdmin: user.is_admin === 1 }, config.jwtSecret, { expiresIn: config.jwtExpiry });
     await dbRun('UPDATE users SET last_login = datetime(\'now\') WHERE id = ?', [user.id]);
     return res.json({ token, user: { id: user.id, email: user.email, role: user.role, isAdmin: user.is_admin === 1, verified: user.verified === 1 } });
   } catch (err) { next(err); }
