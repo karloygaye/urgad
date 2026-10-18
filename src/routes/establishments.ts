@@ -211,7 +211,7 @@ router.post('/me/subscription', authMiddleware, async (req: any, res: any, next:
     if (!plan) return res.status(422).json({ message: 'Plan inconnu. Essentiel, Pro ou Premium.' });
     const interval = parseBillingInterval(req.body?.interval);
     if (interval === 'year' && !planAllowsYearly(plan)) {
-      return res.status(422).json({ message: 'L’abonnement annuel est proposé sur Pro et Premium (2 mois offerts).' });
+      return res.status(422).json({ message: 'L’abonnement annuel est proposé sur Pro et Premium (1 mois offert).' });
     }
     const name = plan.name;
     const price = planPriceHt(plan, interval);

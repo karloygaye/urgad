@@ -172,7 +172,7 @@ export async function createCheckoutSession(opts: {
     rowId: String(opts.subscriptionRowId),
   };
   const cadence = interval === 'year'
-    ? 'Abonnement annuel HT URGAD (2 mois offerts par rapport au mois), reconduction tacite, résiliable pour la fin d’année.'
+    ? 'Abonnement annuel HT URGAD (1 mois offert par rapport au mois), reconduction tacite, résiliable pour la fin d’année.'
     : 'Abonnement mensuel HT URGAD, reconduction tacite, résiliable pour la fin de période.';
   const session = await stripe.checkout.sessions.create({
     mode: 'subscription',

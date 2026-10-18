@@ -2,7 +2,7 @@ import { dbGet, dbRun } from './db.js';
 
 /** Modèle économique URGAD : les soignants sont gratuits ; les établissements paient un abonnement HT.
  *  Pas de commission sur le salaire du professionnel (différenciation vs intérim).
- *  Stripe Checkout si STRIPE_SECRET_KEY est défini. Pro / Premium : mois ou année (2 mois offerts). */
+ *  Stripe Checkout si STRIPE_SECRET_KEY est défini. Pro / Premium : mois ou année (1 mois offert). */
 
 export type PlanId = 'essentiel' | 'pro' | 'premium';
 export type BillingInterval = 'month' | 'year';
@@ -47,7 +47,7 @@ export const BILLING_MODEL = {
   whoPays: 'establishment' as const,
   professionals: { priceHt: 0, note: 'Inscription, candidatures et messagerie gratuites. Jamais de paiement in-app côté soignant.' },
   tax: 'HT' as const,
-  renewal: 'Mensuel, ou annuel Pro / Premium (2 mois offerts). Reconduction tacite, résiliable pour la fin de période.',
+  renewal: 'Mensuel, ou annuel Pro / Premium (1 mois offert). Reconduction tacite, résiliable pour la fin de période.',
   commissionOnWages: 0,
   positioning: 'Abonnement logiciel d’intermédiaire : l’établissement rémunère le soignant selon sa convention. URGAD ne prend pas de marge sur l’heure travaillée.',
   payment: 'Carte via Stripe Checkout (HT, live). Essentiel au mois ; Pro et Premium au mois ou à l’année.',
@@ -85,7 +85,7 @@ export const PLANS: Plan[] = [
     id: 'pro',
     name: 'Pro',
     priceHt: 249,
-    yearlyPriceHt: 2490,
+    yearlyPriceHt: 2739,
     period: 'month',
     currency: 'EUR',
     highlight: true,
@@ -108,7 +108,7 @@ export const PLANS: Plan[] = [
     id: 'premium',
     name: 'Premium',
     priceHt: 299,
-    yearlyPriceHt: 2990,
+    yearlyPriceHt: 3289,
     period: 'month',
     currency: 'EUR',
     highlight: false,

@@ -10,8 +10,8 @@ Simulateur + mails remplis : canvas « URGAD — modèle économique et mails »
 |---|---:|---:|---|---|---:|
 | Essai établissement | 0 € | — | 5 à vie, sans carte | non | — |
 | Essentiel | 199 € | — | 12 / mois | non | 25 € |
-| Pro (cœur de cible) | 249 € | 2 490 € (2 mois offerts) | 30 / mois | illimité | 15 € |
-| Premium | 299 € | 2 990 € (2 mois offerts) | illimité | illimité | 0 € |
+| Pro (cœur de cible) | 249 € | 2 739 € (1 mois offert) | 30 / mois | illimité | 15 € |
+| Premium | 299 € | 3 289 € (1 mois offert) | illimité | illimité | 0 € |
 | Soignant | 0 € | — | candidatures libres | — | — |
 
 Un EHPAD qui remplace 2 à 3 nuits par semaine tient dans le **Pro**. L’Essentiel est l’entrée. Le Premium est pour un groupe ou un gros site. Ne pas vendre Premium au premier appel.
@@ -67,7 +67,7 @@ Les 5 demandes offertes ne rapportent rien. Elles doivent être **pourvues**.
 
 ## Paiements (état)
 
-Stripe live est ouvert : cartes et virements sortants actifs. Produits Checkout : Essentiel 199 € / mois ; Pro 249 € / mois ou 2 490 € / an ; Premium 299 € / mois ou 2 990 € / an. Webhook et portail facturation sur https://urgad.fr.
+Stripe live est ouvert : cartes et virements sortants actifs. Produits Checkout : Essentiel 199 € / mois ; Pro 249 € / mois ou 2 739 € / an ; Premium 299 € / mois ou 3 289 € / an. Webhook et portail facturation sur https://urgad.fr.
 
 Reste dashboard Stripe : cocher **Customer emails** (reçus), renseigner le **siège** pour la TVA (Stripe Tax encore pending). Render : Postgres free expire le 15/11/2026.
 

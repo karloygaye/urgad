@@ -1252,10 +1252,10 @@ async function saveEtabDocument(){
   } catch(e) { toast('error','Document', e.message||'Échec'); }
 }
 function defaultEtabCatalog(){
-  return { model: { professionals: { priceHt: 0 }, tax: 'HT', commissionOnWages: 0, positioning: 'Abonnement logiciel : pas de commission sur le salaire du soignant.', payment: 'Carte via Stripe Checkout.', renewal: 'Mensuel, ou annuel Pro / Premium (2 mois offerts).', trialMissions: 5, trialNote: '5 demandes offertes sans carte. L’abonnement peut être pris tout de suite ou après.' }, plans: [
+  return { model: { professionals: { priceHt: 0 }, tax: 'HT', commissionOnWages: 0, positioning: 'Abonnement logiciel : pas de commission sur le salaire du soignant.', payment: 'Carte via Stripe Checkout.', renewal: 'Mensuel, ou annuel Pro / Premium (1 mois offert).', trialMissions: 5, trialNote: '5 demandes offertes sans carte. L’abonnement peut être pris tout de suite ou après.' }, plans: [
     { id:'essentiel', name:'Essentiel', priceHt:199, yearlyPriceHt:null, highlight:false, badge:null, tagline:'Remplacements ponctuels, un site', missionsPerMonth:12, flashPerMonth:0, extraMissionHt:25, perks:['12 demandes / mois','Matching rayon et disponibilités','Messagerie après match','Pas de Flash','Demande extra 25 € HT'] },
-    { id:'pro', name:'Pro', priceHt:249, yearlyPriceHt:2490, highlight:true, badge:'Le plus choisi', tagline:'Volume + urgences de nuit', missionsPerMonth:30, flashPerMonth:null, extraMissionHt:15, perks:['30 demandes / mois','Flash illimité','Matching prioritaire','Support sous 1 jour ouvré','Demande extra 15 € HT'] },
-    { id:'premium', name:'Premium', priceHt:299, yearlyPriceHt:2990, highlight:false, badge:'Volume illimité', tagline:'Gros besoin, zéro friction', missionsPerMonth:null, flashPerMonth:null, extraMissionHt:0, perks:['Demandes illimitées','Flash illimité','Matching prioritaire','Interlocuteur dédié','Extra 0 €'] }
+    { id:'pro', name:'Pro', priceHt:249, yearlyPriceHt:2739, highlight:true, badge:'Le plus choisi', tagline:'Volume + urgences de nuit', missionsPerMonth:30, flashPerMonth:null, extraMissionHt:15, perks:['30 demandes / mois','Flash illimité','Matching prioritaire','Support sous 1 jour ouvré','Demande extra 15 € HT'] },
+    { id:'premium', name:'Premium', priceHt:299, yearlyPriceHt:3289, highlight:false, badge:'Volume illimité', tagline:'Gros besoin, zéro friction', missionsPerMonth:null, flashPerMonth:null, extraMissionHt:0, perks:['Demandes illimitées','Flash illimité','Matching prioritaire','Interlocuteur dédié','Extra 0 €'] }
   ]};
 }
 function trialBannerHtml(){
@@ -1268,7 +1268,7 @@ function trialBannerHtml(){
   if (rem <= 0) {
     return `<div class="bo-card" style="margin-bottom:16px;border-color:rgba(212,175,55,0.4)"><strong>Essai de 5 demandes terminé</strong><p style="color:var(--text-muted);font-size:13px;margin-top:6px;line-height:1.5">Choisissez Essentiel, Pro ou Premium pour continuer. Vous pouviez aussi vous abonner dès la première demande.</p><button class="btn btn-primary" style="margin-top:10px" onclick="showEtabScreen('subscription')">Voir les abonnements</button></div>`;
   }
-  return `<div class="bo-card" style="margin-bottom:16px"><strong>${rem} demande${rem>1?'s':''} offerte${rem>1?'s':''} restante${rem>1?'s':''}</strong><p style="color:var(--text-muted);font-size:13px;margin-top:6px;line-height:1.5">${used} / ${limit} utilisées · sans carte. L’abonnement est optionnel pendant l’essai : mois dès 199 € HT, Pro / Premium aussi à l’année (2 mois offerts). Le Flash reste réservé au Pro / Premium payés.</p><button class="btn btn-ghost btn-sm" style="margin-top:8px" onclick="showEtabScreen('subscription')">S’abonner maintenant</button></div>`;
+  return `<div class="bo-card" style="margin-bottom:16px"><strong>${rem} demande${rem>1?'s':''} offerte${rem>1?'s':''} restante${rem>1?'s':''}</strong><p style="color:var(--text-muted);font-size:13px;margin-top:6px;line-height:1.5">${used} / ${limit} utilisées · sans carte. L’abonnement est optionnel pendant l’essai : mois dès 199 € HT, Pro / Premium aussi à l’année (1 mois offert). Le Flash reste réservé au Pro / Premium payés.</p><button class="btn btn-ghost btn-sm" style="margin-top:8px" onclick="showEtabScreen('subscription')">S’abonner maintenant</button></div>`;
 }
 function renderEtabPlans(){
   const cat = etabCatalog || defaultEtabCatalog();
@@ -1291,7 +1291,7 @@ function renderEtabPlans(){
     <div class="bo-card" style="margin-bottom:18px">
       <h3 style="font-family:'Playfair Display',serif;margin-bottom:8px">5 demandes offertes</h3>
       <p style="color:var(--text-muted);font-size:13px;line-height:1.55;margin-bottom:10px">${escHtml(model.trialNote || '5 demandes sans carte. L’abonnement peut être pris tout de suite ou après.')}</p>
-      <p style="color:var(--text-muted);font-size:13px;line-height:1.55">${escHtml(model.positioning || '')} Professionnels : <strong>0 €</strong> · Prix <strong>HT</strong>. Pro et Premium : mois ou année (2 mois offerts).</p>
+      <p style="color:var(--text-muted);font-size:13px;line-height:1.55">${escHtml(model.positioning || '')} Professionnels : <strong>0 €</strong> · Prix <strong>HT</strong>. Pro et Premium : mois ou année (1 mois offert).</p>
       <div style="margin-top:14px;padding:12px 14px;border-radius:12px;border:1px solid var(--border);background:var(--surface)">
         ${sub && sub.paid?`<strong>${escHtml(sub.name)}</strong> · ${escHtml(String(sub.price != null ? sub.price : (currentPlan && currentPlan.priceHt) || 0))} € ${escHtml(sub.periodLabel || 'HT / mois')}
           <div style="margin-top:6px"><span class="bo-badge verified">Payé</span> <span style="font-size:12px;color:var(--text-muted)">Abonnement actif · confirmation dans Notifications · reçu Stripe par e-mail</span></div>
@@ -1321,7 +1321,7 @@ function renderEtabPlans(){
           ${pl.badge?`<span class="plan-badge">${escHtml(pl.badge)}</span>`:''}
           <h3>${escHtml(pl.name)}</h3>
           <div class="plan-price">${pl.priceHt} € <span>HT / mois</span></div>
-          ${yearly?`<p class="plan-year">${pl.yearlyPriceHt} € HT / an · 2 mois offerts${perMonthEq?' (soit '+perMonthEq+' € / mois)':''}</p>`:'<p class="plan-year" style="color:var(--text-dim)">Annuel : Pro et Premium</p>'}
+          ${yearly?`<p class="plan-year">${pl.yearlyPriceHt} € HT / an · 1 mois offert${perMonthEq?' (soit '+perMonthEq+' € / mois)':''}</p>`:'<p class="plan-year" style="color:var(--text-dim)">Annuel : Pro et Premium</p>'}
           <p class="plan-tagline">${escHtml(pl.tagline||'')}</p>
           <p style="font-size:12px;color:var(--gold-soft);margin-bottom:10px">${escHtml(quotaM)} · ${escHtml(flash)}${extra?' · '+escHtml(extra):''}</p>
           <ul>${(pl.perks||[]).map(function(x){ return '<li>'+escHtml(x)+'</li>'; }).join('')}</ul>

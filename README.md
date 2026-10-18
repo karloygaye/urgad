@@ -36,7 +36,7 @@ Dans le dashboard, **avant** d’ouvrir au public :
 | `URGAD_ADMIN_EMAIL` | Ton email |
 | `URGAD_ADMIN_PASSWORD` | ≥ 10 caractères, une fois pour créer l’admin |
 
-Stripe : `STRIPE_SECRET_KEY` active Checkout (Essentiel 199 € / mois ; Pro 249 € / mois ou 2 490 € / an ; Premium 299 € / mois ou 2 990 € / an). `STRIPE_WEBHOOK_SECRET` pour les renouvellements. Sans clé, le plan est enregistré sans débit. Pas de SMS : le téléphone est enregistré à l’inscription ; les missions urgentes partent en notification (in-app, navigateur, push si configuré).
+Stripe : `STRIPE_SECRET_KEY` active Checkout (Essentiel 199 € / mois ; Pro 249 € / mois ou 2 739 € / an ; Premium 299 € / mois ou 3 289 € / an). `STRIPE_WEBHOOK_SECRET` pour les renouvellements. Sans clé, le plan est enregistré sans débit. Pas de SMS : le téléphone est enregistré à l’inscription ; les missions urgentes partent en notification (in-app, navigateur, push si configuré).
 
 Après paiement : confirmation in-app (établissement + admin), écriture finance, écran de succès. Portail Stripe (factures, carte, résiliation en fin de période). Demandes extra hors quota : 25 € HT (Essentiel) / 15 € HT (Pro), 0 € (Premium). Stripe envoie le reçu si **Settings → Customer emails** (Successful payments / Failed payments) est coché. Webhook : `checkout.session.completed`, `invoice.paid`, `invoice.payment_failed`, `customer.subscription.updated`, `customer.subscription.deleted`.
 
@@ -46,7 +46,7 @@ Justificatifs (identité, diplôme, Vitale, vaccins, RIB) : les octets sont enre
 
 ## Passer en production (à faire une fois)
 
-Le site tourne déjà en `NODE_ENV=production` sur Render. **Stripe live encaisse** (`charges_enabled` + `payouts_enabled`) : Checkout mensuel 199 / 249 / 299 € HT, annuel Pro 2 490 € et Premium 2 990 € HT, webhook `https://urgad.fr/api/billing/webhook`.
+Le site tourne déjà en `NODE_ENV=production` sur Render. **Stripe live encaisse** (`charges_enabled` + `payouts_enabled`) : Checkout mensuel 199 / 249 / 299 € HT, annuel Pro 2 739 € et Premium 3 289 € HT, webhook `https://urgad.fr/api/billing/webhook`.
 
 Encore à faire dans le dashboard Stripe (pas d’API) :
 
