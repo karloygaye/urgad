@@ -5,6 +5,7 @@ import bcrypt from 'bcryptjs';
 import { dbRun, dbGet, dbAll } from '../db.js';
 import { config } from '../config.js';
 import { notify, notifySafe, pushStatus } from '../notify.js';
+import { issueResetLinkByUserId } from '../passwordReset.js';
 import { resolveFileBytes } from '../uploads.js';
 import { backfillCoordinates, haversineKm, num } from '../geo.js';
 import { proUserIdForApplication } from './applications.js';
@@ -505,6 +506,22 @@ router.post('/admins', authMiddleware, requireAdmin, async (req: any, res: any, 
       message: 'Compte admin créé. Mot de passe hashé.'
     });
   } catch (err) { next(err); }
+});
+
+/** Support : lien de réinitialisation (1 h), à copier-coller si l’e-mail automatique n’est pas branché. */
+router.post('/users/:id/reset-link', authMiddleware, requireAdmin, async (req: any, res: any, next: any) => {
+  try {
+    const out = await issueResetLinkByUserId(Number(req.params.id), req);
+    return res.json({
+      message: out.mailed
+        ? 'Lien créé et e-mail envoyé à ' + out.email + '.'
+        : 'Lien créé (valable 1 heure). Copiez-le et envoyez-le à ' + out.email + ' (pas d’e-mail automatique).',
+      ...out,
+    });
+  } catch (err: any) {
+    if (err?.status) return res.status(err.status).json({ message: err.message });
+    next(err);
+  }
 });
 
 /** Support : définir un nouveau mot de passe (l’utilisateur se reconnecte). */

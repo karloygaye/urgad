@@ -68,7 +68,12 @@ npx cap open android   # Android Studio
 npx cap open ios       # Xcode, macOS uniquement
 ```
 
-Mot de passe oublié : lien « Mot de passe oublié ? » sur les 3 espaces, page `/reset.html` (1 heure). Sans `RESEND_API_KEY`, le back-office reçoit le lien à envoyer depuis `leprincegaye@urgad.fr` / `rachel@urgad.fr`. Compte connecté : changement de mot de passe dans le profil.
+Mot de passe oublié : lien « Mot de passe oublié ? » sur les 3 espaces, page `/reset.html` (1 heure, un usage). Sans `RESEND_API_KEY`, le back-office reçoit le lien (notification + bouton « Lien mot de passe » sur les fiches). Envoyez-le depuis `leprincegaye@urgad.fr` (établissements) ou `rachel@urgad.fr` (soignants). Compte connecté : changement de mot de passe dans le profil (pro, établissement, écran Administrateurs du BO).
+
+| Variable | Valeur |
+|---|---|
+| `RESEND_API_KEY` | Optionnel. Si présent, l’e-mail de reset part tout seul. Sinon le BO transmet le lien. |
+| `MAIL_FROM` | Optionnel. Défaut `URGAD <leprincegaye@urgad.fr>`. |
 
 Session : le jeton est gardé sur l’appareil (`localStorage`, 30 jours) pour rester connecté après fermeture de l’app. Les missions, messages et abonnements restent dans Postgres, pas dans le téléphone.
 

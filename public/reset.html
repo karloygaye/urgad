@@ -19,24 +19,25 @@ input{width:100%;padding:12px 14px;border-radius:12px;border:1px solid var(--bor
 button{width:100%;padding:13px;border:0;border-radius:12px;font-weight:700;cursor:pointer;background:linear-gradient(135deg,#D4AF37,#F5D76E);color:#0A0E1A;margin-top:6px}
 .msg{font-size:13px;margin-top:12px}
 a{color:#E8C866}
+.err{color:#FCA5A5}
 </style>
-<script src="native-config.js"></script>
-<script src="urgad-store.js"></script>
+<script src="native-config.js?v=20261018r"></script>
+<script src="urgad-store.js?v=20261018r"></script>
 </head>
 <body>
 <div class="card">
   <img src="logo-lockup.svg" alt="URGAD" width="150" height="34">
   <h1>Nouveau mot de passe</h1>
   <p id="intro">Choisissez un mot de passe pour retrouver votre espace (pro, établissement ou back-office).</p>
-  <div id="form">
+  <form id="form" onsubmit="event.preventDefault(); save(); return false;">
     <label for="p1">Nouveau mot de passe (6 caractères min.)</label>
-    <input id="p1" type="password" autocomplete="new-password" minlength="6">
+    <input id="p1" type="password" autocomplete="new-password" minlength="6" required>
     <label for="p2">Confirmation</label>
-    <input id="p2" type="password" autocomplete="new-password" minlength="6">
-    <button type="button" onclick="save()">Enregistrer et se connecter</button>
-  </div>
+    <input id="p2" type="password" autocomplete="new-password" minlength="6" required>
+    <button type="submit">Enregistrer et se connecter</button>
+  </form>
   <p class="msg" id="status"></p>
-  <p style="font-size:12px;margin-top:18px"><a href="urgad-pro.html">Espace pro</a> · <a href="urgad-etab.html">Établissement</a> · <a href="urgad-bo.html">Back-office</a></p>
+  <p style="font-size:12px;margin-top:18px" id="space-links"><a href="urgad-pro.html?forgot=1">Espace pro</a> · <a href="urgad-etab.html?forgot=1">Établissement</a> · <a href="urgad-bo.html?forgot=1">Back-office</a></p>
 </div>
 <script>
 const params = new URLSearchParams(location.search);
@@ -44,15 +45,24 @@ const token = params.get('token') || '';
 const space = params.get('space') || '';
 const status = document.getElementById('status');
 const pages = { professional: 'urgad-pro.html', establishment: 'urgad-etab.html', admin: 'urgad-bo.html' };
+const labels = { professional: 'professionnel', establishment: 'établissement', admin: 'back-office' };
 
 (async function(){
-  if(!token){ document.getElementById('form').style.display='none'; status.textContent = 'Lien incomplet. Demandez une nouvelle réinitialisation depuis la page de connexion.'; return; }
+  if(!token){
+    document.getElementById('form').style.display='none';
+    status.className = 'msg err';
+    status.innerHTML = 'Lien incomplet. Demandez une nouvelle réinitialisation depuis la page de connexion de votre espace.';
+    return;
+  }
   try {
     const info = await UrgadApi.inspectResetToken(token);
-    document.getElementById('intro').textContent = 'Compte ' + (info.emailMasked || '') + ' — mot de passe valable pour cet espace uniquement.';
+    const lab = info.spaceLabel || labels[info.space] || labels[space] || 'URGAD';
+    document.getElementById('intro').textContent = 'Compte ' + (info.emailMasked || '') + ' — espace ' + lab + '. Lien valable une heure.';
   } catch (e) {
     document.getElementById('form').style.display='none';
-    status.textContent = (e && e.message) || 'Lien invalide ou expiré.';
+    status.className = 'msg err';
+    const dest = pages[space] || 'urgad-pro.html';
+    status.innerHTML = ((e && e.message) || 'Lien invalide ou expiré.') + ' <a href="' + dest + '?forgot=1">Demander un nouveau lien</a>.';
   }
 })();
 
@@ -61,6 +71,7 @@ async function save(){
   const b = document.getElementById('p2').value;
   if(a.length < 6){ status.textContent = 'Au moins 6 caractères.'; return; }
   if(a !== b){ status.textContent = 'Les deux saisies ne correspondent pas.'; return; }
+  status.className = 'msg';
   status.textContent = 'Enregistrement…';
   try {
     const out = await UrgadApi.resetPassword(token, a);
@@ -68,10 +79,11 @@ async function save(){
       const role = out.user.isAdmin ? 'admin' : out.user.role;
       UrgadApi.setToken(role === 'admin' ? 'admin' : role, out.token);
     }
-    const dest = pages[out.space || space] || out.loginPath || 'urgad-pro.html';
-    status.textContent = 'Mot de passe enregistré. Redirection…';
+    const dest = pages[out.space || space] || (out.loginPath || 'urgad-pro.html').replace(/^\//,'');
+    status.textContent = 'Mot de passe enregistré. Redirection vers votre espace…';
     location.href = dest.replace(/^\//,'');
   } catch (e) {
+    status.className = 'msg err';
     status.textContent = (e && e.message) || 'Échec.';
   }
 }

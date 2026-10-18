@@ -422,6 +422,7 @@
       return request(role, 'POST', '/api/auth/password', { currentPassword: currentPassword, newPassword: newPassword });
     },
     adminSetPassword: function(userId, password){ return request('admin', 'POST', '/api/admin/users/' + encodeURIComponent(userId) + '/password', { password: password }); },
+    adminResetLink: function(userId){ return request('admin', 'POST', '/api/admin/users/' + encodeURIComponent(userId) + '/reset-link', {}); },
     registerProfessional: registerProfessional,
     registerEstablishment: registerEstablishment,
     requestCode: function(body){ return request(null, 'POST', '/api/auth/request-code', body); },

@@ -635,13 +635,22 @@ input,select,textarea{font-family:inherit}
     <p style="color:var(--text-muted);font-size:12px;letter-spacing:2px;text-transform:uppercase;margin:6px 0 18px">Back-office</p>
     <h2 style="font-family:'Playfair Display',serif;margin-bottom:8px">Connexion administrateur</h2>
     <p style="color:var(--text-muted);font-size:13px;margin-bottom:16px">Connexion HTTP. Le jeton admin reste sur cet appareil (rester connecté). Les actions (valider, notifier, exporter, suspendre) appellent l’API.</p>
+    <div id="bo-login-block">
+    <form onsubmit="event.preventDefault(); loginBo(); return false;">
     <div class="form-group"><label>E-mail</label><input id="bo-email" type="email" autocomplete="username" placeholder="votre e-mail admin"></div>
     <div class="form-group"><label>Mot de passe</label><input id="bo-pass" type="password" autocomplete="current-password" placeholder="mot de passe"></div>
-    <button class="btn btn-primary btn-block btn-lg" onclick="loginBo()">Entrer dans le back-office</button>
-    <p style="text-align:center;margin-top:12px;font-size:13px"><a style="color:var(--gold-soft);font-weight:600;cursor:pointer" onclick="document.getElementById('bo-forgot').style.display='block'">Mot de passe oublié ?</a></p>
+    <button type="submit" class="btn btn-primary btn-block btn-lg">Entrer dans le back-office</button>
+    </form>
+    <p style="text-align:center;margin-top:12px;font-size:13px"><a style="color:var(--gold-soft);font-weight:600;cursor:pointer" onclick="toggleBoForgot(true)">Mot de passe oublié ?</a></p>
+    </div>
     <div id="bo-forgot" style="display:none;margin-top:8px">
+      <p style="color:var(--text-muted);font-size:13px;margin-bottom:12px">Lien valable 1 heure. Sans e-mail automatique, un autre admin (ou leprincegaye@urgad.fr) transmet le lien affiché dans les notifications.</p>
+      <form onsubmit="event.preventDefault(); requestBoReset(); return false;">
       <div class="form-group"><label>E-mail admin</label><input id="bo-forgot-email" type="email" placeholder="votre e-mail admin"></div>
-      <button class="btn btn-ghost btn-block" onclick="requestBoReset()">Envoyer le lien de réinitialisation</button>
+      <button type="submit" class="btn btn-primary btn-block">Envoyer le lien de réinitialisation</button>
+      </form>
+      <div id="bo-forgot-done" style="display:none;margin-top:12px;font-size:13px;color:var(--text-muted);line-height:1.5"></div>
+      <p style="text-align:center;margin-top:12px;font-size:13px"><a style="color:var(--gold-soft);cursor:pointer" onclick="toggleBoForgot(false)">Retour à la connexion</a></p>
     </div>
     <div class="urgad-legal-footer" style="text-align:center;font-size:11px;color:var(--text-dim);margin-top:18px"><a href="cgu.html" target="_blank" rel="noopener">CGU</a> · <a href="confidentialite.html" target="_blank" rel="noopener">Politique de confidentialité</a></div>
   </div>
@@ -862,18 +871,55 @@ async function loginBo(){
     toast('success','Bienvenue', data.user.email);
   } catch(e) { toast('error','Connexion refusée', e.message||'Échec'); }
 }
+function toggleBoForgot(on){
+  const f = document.getElementById('bo-forgot');
+  const login = document.getElementById('bo-login-block');
+  if(on){
+    const src = document.getElementById('bo-email');
+    const dest = document.getElementById('bo-forgot-email');
+    if(src && dest && !dest.value) dest.value = src.value;
+  }
+  if(f) f.style.display = on ? 'block' : 'none';
+  if(login) login.style.display = on ? 'none' : 'block';
+}
 async function requestBoReset(){
   const email = (document.getElementById('bo-forgot-email').value||'').trim().toLowerCase();
   if(email.indexOf('@')===-1){ toast('error','E-mail','Indiquez l’e-mail admin.'); return; }
   try {
     const r = await UrgadApi.forgotPassword(email);
-    toast('success','Demande envoyée', r.message || 'Vérifiez votre messagerie.');
+    const box = document.getElementById('bo-forgot-done');
+    if(box){
+      box.style.display = 'block';
+      box.innerHTML = (r.message || 'Demande enregistrée.') + (r.resetUrl ? '<br><a href="'+r.resetUrl+'">Ouvrir le lien (test local)</a>' : '<br>Sans e-mail reçu, un autre administrateur doit copier le lien depuis les notifications.');
+    }
+    toast('success','Demande enregistrée', 'Lien valable 1 heure.');
   } catch(e) { toast('error','Réinitialisation', e.message || 'Échec'); }
 }
+async function boIssueResetLink(userId){
+  if(!userId){ toast('error','Mot de passe','Compte utilisateur introuvable.'); return; }
+  try {
+    const r = await UrgadApi.adminResetLink(userId);
+    const url = r.resetUrl || '';
+    document.getElementById('modalContent').innerHTML = `<div class="modal-header"><h2>Lien mot de passe</h2><button class="modal-close" onclick="closeModal()">✕</button></div>
+<div class="modal-body">
+<p style="font-size:14px;line-height:1.5;margin-bottom:12px">${UrgadFeatures.esc(r.message||'')}</p>
+${url?`<p style="font-size:12px;word-break:break-all;background:var(--surface);padding:12px;border-radius:10px">${UrgadFeatures.esc(url)}</p>`:''}
+<p style="font-size:12px;color:var(--text-muted);margin-top:10px">Valable 1 heure. Envoyez-le à ${UrgadFeatures.esc(r.email||'')} (${UrgadFeatures.esc(r.space||'')}).</p>
+</div>
+<div class="modal-footer">
+<button class="btn btn-ghost" onclick="closeModal()">Fermer</button>
+${url?`<button class="btn btn-primary" onclick="navigator.clipboard.writeText('${url.replace(/'/g,"\\'")}').then(()=>toast('success','Lien','Copié')).catch(()=>toast('info','Lien','Sélectionnez le texte'))">Copier le lien</button>`:''}
+</div>`;
+    document.getElementById('modal').classList.add('active');
+  } catch(e) { toast('error','Lien', e.message||'Échec'); }
+}
 async function saveBoPassword(){
-  const cur = (document.getElementById('pw-current')||{}).value||'';
-  const n1 = (document.getElementById('pw-new')||{}).value||'';
-  const n2 = (document.getElementById('pw-new2')||{}).value||'';
+  return saveBoOwnPassword();
+}
+async function saveBoOwnPassword(){
+  const cur = (document.getElementById('bo-pw-current')||document.getElementById('pw-current')||{}).value||'';
+  const n1 = (document.getElementById('bo-pw-new')||document.getElementById('pw-new')||{}).value||'';
+  const n2 = (document.getElementById('bo-pw-new2')||document.getElementById('pw-new2')||{}).value||'';
   if(n1.length < 6){ toast('error','Mot de passe','Au moins 6 caractères.'); return; }
   if(n1 !== n2){ toast('error','Mot de passe','Les deux saisies ne correspondent pas.'); return; }
   try {
@@ -3217,11 +3263,19 @@ ${admins.map(a=>`<tr>
 <td style="font-size:12px">${a.lastLogin}</td>
 <td><span class="bo-badge ${a.status==='active'?'verified':'rejected'}">${a.status==='active'?'🟢 Actif':'⚫ Inactif'}</span></td>
 <td>
+<button class="bo-action-btn view" onclick="boIssueResetLink(${a.id})">Lien mot de passe</button>
 <button class="bo-action-btn reject" onclick="deactivateAdminAccount(${a.id})">Désactiver</button>
 </td>
 </tr>`).join('')}
 </tbody>
 </table>
+</div>
+<div class="bo-card"><h3>Votre mot de passe</h3>
+<p style="color:var(--text-muted);font-size:13px;margin-bottom:12px">Changement immédiat (mot de passe actuel requis). Pour un autre admin, générez un lien de 1 heure.</p>
+<div class="form-group"><label>Mot de passe actuel</label><input id="bo-pw-current" type="password" autocomplete="current-password"></div>
+<div class="form-group"><label>Nouveau mot de passe</label><input id="bo-pw-new" type="password" autocomplete="new-password"></div>
+<div class="form-group"><label>Confirmation</label><input id="bo-pw-new2" type="password" autocomplete="new-password"></div>
+<button class="btn btn-primary" onclick="saveBoOwnPassword()">Enregistrer</button>
 </div>
 <div class="bo-card"><p style="color:var(--text-muted);font-size:13px">Tous les administrateurs ont les mêmes droits. Désactiver retire is_admin (il doit rester au moins un compte). Vous ne pouvez pas vous désactiver vous-même.</p></div>`;
 }
@@ -3423,6 +3477,7 @@ ${UrgadFeatures.availabilityGridHtml(p.availability, { clickable: false })}
 <div class="modal-footer">
 <button class="btn btn-ghost" onclick="closeModal()">Fermer</button>
 <button class="btn-dossier" type="button" onclick="boOpenDossier(${p.userId||p.id})">📂 Ouvrir le dossier</button>
+<button class="btn btn-secondary" onclick="boIssueResetLink(${p.userId||p.id})">🔑 Lien mot de passe</button>
 <button class="btn btn-secondary" onclick="messagePro(${p.id})">Message</button>
 ${p.status==='pending'?`<button class="btn btn-danger" onclick="rejectPro(${p.id})">Refuser</button><button class="btn btn-success" onclick="validatePro(${p.id})">Valider</button>`:''}
 ${p.suspended?`<button class="btn btn-success" onclick="unsuspendPro(${p.id})">Réactiver</button>`:`<button class="btn btn-danger" onclick="suspendPro(${p.id})">Suspendre</button>`}
@@ -3479,6 +3534,7 @@ ${etabMissions.length>0?etabMissions.map(m=>`<div style="padding:10px;background
 </div>
 <div class="modal-footer">
 <button class="btn btn-ghost" onclick="closeModal()">Fermer</button>
+<button class="btn btn-secondary" onclick="boIssueResetLink(${e.userId||'null'})">🔑 Lien mot de passe</button>
 <button class="btn btn-secondary" onclick="messageEtab(${e.id})">Message</button>
 ${e.status==='pending'||e.status==='rejected'?`<button class="btn btn-success" onclick="validateEtab(${e.id})">✓ ${e.status==='rejected'?'Passer en validé':'Valider'}</button><button class="btn btn-secondary" onclick="boAskEtabDocs(${e.id})">📎 Demander un complément</button>`:''}
 ${e.status==='pending'?`<button class="btn btn-danger" onclick="rejectEtab(${e.id})">✕ Rejeter</button>`:''}
@@ -3864,6 +3920,17 @@ async function openBoNotif(id){
   const n = boNotifs.find(function(x){ return String(x.id)===String(id); });
   await UrgadFeatures.markRead('admin', id);
   renderNotifPanel();
+  const url = n && n.data && n.data.resetUrl;
+  if(url || (n && n.type === 'admin_password_reset')){
+    document.getElementById('notifPanel').classList.remove('active');
+    document.getElementById('modalContent').innerHTML = `<div class="modal-header"><h2>${UrgadFeatures.esc((n && n.title) || 'Mot de passe')}</h2><button class="modal-close" onclick="closeModal()">✕</button></div>
+<div class="modal-body"><p style="font-size:14px;line-height:1.55;white-space:pre-wrap">${UrgadFeatures.esc((n && n.content) || '')}</p>
+${url?`<p style="font-size:12px;word-break:break-all;background:var(--surface);padding:12px;border-radius:10px;margin-top:12px">${UrgadFeatures.esc(url)}</p>`:''}</div>
+<div class="modal-footer"><button class="btn btn-ghost" onclick="closeModal()">Fermer</button>
+${url?`<button class="btn btn-primary" onclick="navigator.clipboard.writeText('${String(url).replace(/'/g,"\\'")}').then(()=>toast('success','Lien','Copié'))">Copier le lien</button><a class="btn btn-secondary" href="${UrgadFeatures.esc(url)}">Ouvrir</a>`:''}</div>`;
+    document.getElementById('modal').classList.add('active');
+    return;
+  }
   const screen = n && n.data && n.data.screen;
   if(screen==='requests' && n.data.missionId){ document.getElementById('notifPanel').classList.remove('active'); try { await refreshAdmin(); } catch(e) {} await openRequestDetail(n.data.missionId); return; }
   if(screen){ document.getElementById('notifPanel').classList.remove('active'); try { await refreshAdmin(); } catch(e) {} if(screen==='requests') boReqDetail = null; showBoScreen(screen==='establishments'||screen==='professionals'||screen==='verification'||screen==='missions'||screen==='requests'||screen==='finance'?screen:'dashboard'); }
@@ -4383,6 +4450,8 @@ async function bootBo(){
   if(!UrgadApi.token('admin')){
     document.getElementById('role-gate').style.display='flex';
     document.getElementById('interface-bo').classList.remove('active');
+    const q = new URLSearchParams(location.search || '');
+    if(q.get('forgot') === '1') toggleBoForgot(true);
     return;
   }
   try {

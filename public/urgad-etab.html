@@ -669,14 +669,17 @@ input,select,textarea{font-family:inherit}
       <p style="font-size:12px;color:var(--text-muted);margin:-8px 0 14px;line-height:1.45">L’e-mail doit contenir <strong>+etab</strong> (pas le Gmail admin tout seul). Touche Entrée ou le bouton ci-dessous.</p>
       <button type="submit" class="btn btn-primary btn-block btn-lg">Se connecter</button>
       </form>
-      <p style="text-align:center;margin-top:12px;font-size:13px"><a style="color:var(--gold-soft);font-weight:600;cursor:pointer" onclick="toggleGateForm('forgot')">Mot de passe oublié ?</a></p>
+      <p style="text-align:center;margin-top:12px;font-size:13px"><a style="color:var(--gold-soft);font-weight:600;cursor:pointer" onclick="document.getElementById('etab-forgot-email').value=document.getElementById('etab-email').value; toggleGateForm('forgot')">Mot de passe oublié ?</a></p>
       <p style="text-align:center;margin-top:16px;font-size:13px;color:var(--text-muted)">Pas encore inscrit ? <a style="color:var(--gold-soft);cursor:pointer;font-weight:600" onclick="toggleGateForm('register')">Créer l’espace établissement</a></p>
     </div>
     <div id="gate-forgot" style="display:none">
       <h2>Mot de passe oublié</h2>
       <p class="sub" style="color:var(--text-muted);margin-bottom:18px;font-size:14px;line-height:1.5">E-mail du compte établissement. Lien valable 1 heure (messagerie, ou transmission par URGAD si l’envoi automatique n’est pas configuré).</p>
+      <form onsubmit="event.preventDefault(); requestEtabReset(); return false;">
       <div class="form-group"><label>E-mail professionnel</label><input id="etab-forgot-email" type="email" autocomplete="username" placeholder="contact@votre-ehpad.fr"></div>
-      <button type="button" class="btn btn-primary btn-block btn-lg" onclick="requestEtabReset()">Envoyer le lien</button>
+      <button type="submit" class="btn btn-primary btn-block btn-lg">Envoyer le lien</button>
+      </form>
+      <div id="etab-forgot-done" style="display:none;margin-top:14px;font-size:13px;color:var(--text-muted);line-height:1.5"></div>
       <p style="text-align:center;margin-top:14px;font-size:13px;color:var(--text-muted)"><a style="color:var(--gold-soft);cursor:pointer" onclick="toggleGateForm('login')">Retour à la connexion</a></p>
     </div>
     <div id="gate-register" style="display:none">
@@ -1424,7 +1427,12 @@ async function requestEtabReset(){
   if(email.indexOf('@')===-1){ toast('error','E-mail','Indiquez l’e-mail du compte.'); return; }
   try {
     const r = await UrgadApi.forgotPassword(email);
-    toast('success','Demande envoyée', r.message || 'Vérifiez votre messagerie.');
+    const box = document.getElementById('etab-forgot-done');
+    if(box){
+      box.style.display = 'block';
+      box.innerHTML = (r.message || 'Demande enregistrée.') + (r.resetUrl ? '<br><a href="'+r.resetUrl+'">Ouvrir le lien (test local)</a>' : '<br>Sans e-mail reçu : écrivez à leprincegaye@urgad.fr.');
+    }
+    toast('success','Demande enregistrée', 'Lien valable 1 heure.');
   } catch(e) { toast('error','Réinitialisation', e.message || 'Échec'); }
 }
 async function saveEtabPassword(){
@@ -1534,7 +1542,11 @@ document.getElementById('modal').classList.add('active');
   const q = new URLSearchParams(location.search || '');
   const billing = q.get('billing');
   const sessionId = q.get('session_id');
-  if(!UrgadApi.token('establishment')){ showGate(true); return; }
+  if(!UrgadApi.token('establishment')){
+    showGate(true);
+    if(q.get('forgot') === '1') toggleGateForm('forgot');
+    return;
+  }
   try {
     if (sessionId) {
       try {
