@@ -7,6 +7,7 @@ import { geocodeMission, haversineKm, num } from '../geo.js';
 import { defaultRadiusKm, notifyProsForMission } from '../matching.js';
 import { logEvent, normPoste } from '../requests.js';
 import { assertEstablishmentPublish } from '../plans.js';
+import { notifyAdmins } from '../notify.js';
 
 const router = Router();
 
@@ -70,6 +71,15 @@ async function afterCreate(id: number | null, req: any) {
     out.coordinatesSource = g?.source ?? null;
   } catch (e) { console.error('[GEO] mission:', e); }
   try { out.notifiedProfessionals = await notifyProsForMission(Number(id)); } catch (e) { console.error('[NOTIFY] mission:', e); }
+  if (req.user.role === 'establishment') {
+    const when = `${String(b.startDate || '').slice(0, 10)} ${b.startHour || ''}–${b.endHour || ''}`;
+    try {
+      out.notifiedAdmins = await notifyAdmins(
+        Number(b.urgent) ? 'Nouvelle demande urgente' : 'Nouvelle demande à traiter',
+        `${b.establishmentName || 'Établissement'} : ${b.title || b.poste || 'mission'} le ${when}${b.conditions ? ' — ' + String(b.conditions).slice(0, 80) : ''}`,
+        { missionId: id, screen: 'requests' }, 'request_new');
+    } catch (e) { console.error('[NOTIFY] admin request:', e); }
+  }
   return out;
 }
 
