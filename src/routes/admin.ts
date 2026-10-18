@@ -564,7 +564,7 @@ router.post('/audit', authMiddleware, requireAdmin, async (req: any, res: any, n
 const SETTING_DEFAULTS: Record<string, string> = {
   platform_name: 'URGAD',
   slogan: 'Le soin au bon endroit, au bon moment',
-  contact_email: 'rachel@urgad.fr',
+  contact_email: 'leprincegaye@urgad.fr',
   contact_phone: '+33 1 23 45 67 89',
   address: 'Paris, France',
   match_radius_km: '20',

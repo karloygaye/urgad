@@ -68,7 +68,7 @@ Les 5 demandes offertes ne rapportent rien. Elles doivent être **pourvues**.
 ## Blocages avant d’encaisser
 
 1. Stripe : activer les cartes (MCC, e-mail, téléphone) — tant que `charges_enabled` est false, Checkout refuse.
-2. OVH : boîtes **`leprincegaye@urgad.fr`** (établissements, commercial) et **`rachel@urgad.fr`** (soignants, documents, support in-app) opérationnelles. Envoyer depuis ces adresses, signature https://urgad.fr. `contact@` / `support@` pas encore créées.
+2. OVH : boîtes **`leprincegaye@urgad.fr`** (établissements, commercial, bouton Email in-app) et **`rachel@urgad.fr`** (mails soignants / documents) opérationnelles. Envoyer depuis ces adresses, signature https://urgad.fr. `contact@` / `support@` pas encore créées.
 3. Render : Postgres free expire le 15/11/2026 ; le web free s’endort.
 
 ## Fichiers

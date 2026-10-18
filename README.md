@@ -71,7 +71,7 @@ Push : laisser `URGAD_NATIVE_PUSH` à `false` tant que Firebase n’est pas conf
 
 Playbook CA / mix d’abonnés : `docs/modele-economique.md`.  
 9 mails prêts à copier (établissements, soignants, match) : `mails/modeles.md`.  
-Envoyer depuis `leprincegaye@urgad.fr` (établissements) et `rachel@urgad.fr` (soignants / support), signature https://urgad.fr.
+Envoyer depuis `leprincegaye@urgad.fr` (établissements, bouton Email in-app) et `rachel@urgad.fr` (mails soignants), signature https://urgad.fr.
 
 ## Comptes
 

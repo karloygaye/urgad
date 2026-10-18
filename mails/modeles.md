@@ -8,7 +8,7 @@ Boîtes OVH actives — envoyer depuis ces adresses (plus de Gmail) :
 | Rachel Luhinzo | `rachel@urgad.fr` | mails 6–8 (soignants, documents, mission proche) |
 
 Signature : prénom + cette adresse + https://urgad.fr.  
-`contact@` et `support@` n’existent pas encore : le support in-app pointe vers `rachel@urgad.fr`.
+`contact@` et `support@` n’existent pas encore : le bouton Email in-app ouvre `leprincegaye@urgad.fr`.
 
 Remplacer `[PRENOM]`, `[ETABLISSEMENT]`, `[VILLE]`, `[DATE]`, `[POSTE]`, `[SIGNATAIRE]`.
 
