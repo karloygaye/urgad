@@ -68,6 +68,8 @@ npx cap open android   # Android Studio
 npx cap open ios       # Xcode, macOS uniquement
 ```
 
+Mot de passe oublié : lien « Mot de passe oublié ? » sur les 3 espaces, page `/reset.html` (1 heure). Sans `RESEND_API_KEY`, le back-office reçoit le lien à envoyer depuis `leprincegaye@urgad.fr` / `rachel@urgad.fr`. Compte connecté : changement de mot de passe dans le profil.
+
 Session : le jeton est gardé sur l’appareil (`localStorage`, 30 jours) pour rester connecté après fermeture de l’app. Les missions, messages et abonnements restent dans Postgres, pas dans le téléphone.
 
 Push écran verrouillé : laisser `URGAD_NATIVE_PUSH` à `false` tant que Firebase n’est pas configuré (sinon Android peut crasher). Sur le navigateur, autoriser les notifications du site. Pour l’app : `google-services.json` (Android), APNs + `GoogleService-Info.plist` (iOS), `FIREBASE_SERVICE_ACCOUNT` sur Render, puis `URGAD_NATIVE_PUSH = true`.

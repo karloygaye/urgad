@@ -638,6 +638,11 @@ input,select,textarea{font-family:inherit}
     <div class="form-group"><label>E-mail</label><input id="bo-email" type="email" autocomplete="username" placeholder="votre e-mail admin"></div>
     <div class="form-group"><label>Mot de passe</label><input id="bo-pass" type="password" autocomplete="current-password" placeholder="mot de passe"></div>
     <button class="btn btn-primary btn-block btn-lg" onclick="loginBo()">Entrer dans le back-office</button>
+    <p style="text-align:center;margin-top:12px;font-size:13px"><a style="color:var(--gold-soft);font-weight:600;cursor:pointer" onclick="document.getElementById('bo-forgot').style.display='block'">Mot de passe oublié ?</a></p>
+    <div id="bo-forgot" style="display:none;margin-top:8px">
+      <div class="form-group"><label>E-mail admin</label><input id="bo-forgot-email" type="email" placeholder="votre e-mail admin"></div>
+      <button class="btn btn-ghost btn-block" onclick="requestBoReset()">Envoyer le lien de réinitialisation</button>
+    </div>
     <div class="urgad-legal-footer" style="text-align:center;font-size:11px;color:var(--text-dim);margin-top:18px"><a href="cgu.html" target="_blank" rel="noopener">CGU</a> · <a href="confidentialite.html" target="_blank" rel="noopener">Politique de confidentialité</a></div>
   </div>
 </div>
@@ -856,6 +861,25 @@ async function loginBo(){
     showBoScreen('dashboard');
     toast('success','Bienvenue', data.user.email);
   } catch(e) { toast('error','Connexion refusée', e.message||'Échec'); }
+}
+async function requestBoReset(){
+  const email = (document.getElementById('bo-forgot-email').value||'').trim().toLowerCase();
+  if(email.indexOf('@')===-1){ toast('error','E-mail','Indiquez l’e-mail admin.'); return; }
+  try {
+    const r = await UrgadApi.forgotPassword(email);
+    toast('success','Demande envoyée', r.message || 'Vérifiez votre messagerie.');
+  } catch(e) { toast('error','Réinitialisation', e.message || 'Échec'); }
+}
+async function saveBoPassword(){
+  const cur = (document.getElementById('pw-current')||{}).value||'';
+  const n1 = (document.getElementById('pw-new')||{}).value||'';
+  const n2 = (document.getElementById('pw-new2')||{}).value||'';
+  if(n1.length < 6){ toast('error','Mot de passe','Au moins 6 caractères.'); return; }
+  if(n1 !== n2){ toast('error','Mot de passe','Les deux saisies ne correspondent pas.'); return; }
+  try {
+    const r = await UrgadApi.changePassword('admin', cur, n1);
+    toast('success','Mot de passe', r.message || 'Mis à jour.');
+  } catch(e) { toast('error','Mot de passe', e.message || 'Échec'); }
 }
 function showProScreen(screen){
 if(screen==='sms') screen='profession';
@@ -1607,9 +1631,10 @@ html=`<div class="profile-sub-header">
 
   <div class="profile-section">
     <h3>🔑 Mot de passe</h3>
-    <div class="info-row"><span class="label">Dernière modification</span><span class="value">Il y a 2 mois</span></div>
-    <div class="info-row"><span class="label">Force du mot de passe</span><span class="value" style="color:var(--emerald-soft)">● Fort</span></div>
-    <button class="btn btn-ghost btn-block" style="margin-top:12px" onclick="toast('info','Modification','Email de vérification envoyé')">Changer le mot de passe</button>
+    <div class="form-group" style="margin-top:10px"><label>Mot de passe actuel</label><input id="pw-current" type="password" autocomplete="current-password"></div>
+    <div class="form-group"><label>Nouveau mot de passe</label><input id="pw-new" type="password" autocomplete="new-password"></div>
+    <div class="form-group"><label>Confirmation</label><input id="pw-new2" type="password" autocomplete="new-password"></div>
+    <button class="btn btn-ghost btn-block" style="margin-top:12px" onclick="saveBoPassword()">Enregistrer le nouveau mot de passe</button>
   </div>
 
   <div class="profile-section">

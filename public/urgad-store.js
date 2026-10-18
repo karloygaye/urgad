@@ -415,6 +415,13 @@
     clearToken: clearToken,
     request: request,
     login: login,
+    forgotPassword: function(email){ return request(null, 'POST', '/api/auth/forgot-password', { email: String(email || '').trim().toLowerCase() }); },
+    inspectResetToken: function(token){ return request(null, 'GET', '/api/auth/reset-password/' + encodeURIComponent(token)); },
+    resetPassword: function(token, password){ return request(null, 'POST', '/api/auth/reset-password', { token: token, password: password }); },
+    changePassword: function(role, currentPassword, newPassword){
+      return request(role, 'POST', '/api/auth/password', { currentPassword: currentPassword, newPassword: newPassword });
+    },
+    adminSetPassword: function(userId, password){ return request('admin', 'POST', '/api/admin/users/' + encodeURIComponent(userId) + '/password', { password: password }); },
     registerProfessional: registerProfessional,
     registerEstablishment: registerEstablishment,
     requestCode: function(body){ return request(null, 'POST', '/api/auth/request-code', body); },

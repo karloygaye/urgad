@@ -286,6 +286,14 @@ const SCHEMA = `
       created_at TEXT DEFAULT (datetime('now')),
       UNIQUE (conversation_id, user_id)
     );
+    CREATE TABLE IF NOT EXISTS password_resets (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      user_id INTEGER NOT NULL,
+      token_hash TEXT UNIQUE NOT NULL,
+      expires_at TEXT NOT NULL,
+      used_at TEXT,
+      created_at TEXT DEFAULT (datetime('now'))
+    );
 
 `;
 
@@ -360,6 +368,7 @@ const EXTRA_COLUMNS: Array<[string, string, string]> = [
   ['establishment_subscriptions', 'billing_notice', 'TEXT'],
   ['establishment_subscriptions', 'extra_credits', 'INTEGER'],
   ['establishment_subscriptions', 'billing_interval', 'TEXT'],
+  ['users', 'password_changed_at', 'TEXT'],
 ];
 
 async function ensureColumns(): Promise<void> {
@@ -401,6 +410,19 @@ async function ensureConversationMembers(): Promise<void> {
   } catch (e) {
     console.error('[DB] backfill conversation_members:', (e as Error)?.message || e);
   }
+}
+
+async function ensurePasswordResets(): Promise<void> {
+  const sql = `CREATE TABLE IF NOT EXISTS password_resets (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      user_id INTEGER NOT NULL,
+      token_hash TEXT UNIQUE NOT NULL,
+      expires_at TEXT NOT NULL,
+      used_at TEXT,
+      created_at TEXT DEFAULT (datetime('now'))
+    )`;
+  if (usePg) await pool!.query(adaptSqlForPostgres(sql));
+  else db.run(sql);
 }
 
 function splitStatements(sql: string): string[] {
@@ -494,6 +516,7 @@ async function doInit(): Promise<void> {
     }
     await ensureColumns();
     await ensureConversationMembers();
+    await ensurePasswordResets();
     return;
   }
 
@@ -514,6 +537,7 @@ async function doInit(): Promise<void> {
   db.run(SCHEMA);
   await ensureColumns();
   await ensureConversationMembers();
+  await ensurePasswordResets();
   saveSync();
 }
 

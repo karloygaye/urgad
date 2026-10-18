@@ -493,6 +493,8 @@ router.post('/admins', authMiddleware, requireAdmin, async (req: any, res: any, 
       const row = await dbGet('SELECT id FROM users WHERE email = ?', [email]) as any;
       id = row?.id ?? null;
     }
+    await dbRun('INSERT INTO audit_log (uuid, user_id, user_email, action, resource, details) VALUES (?, ?, ?, ?, ?, ?)',
+      [uuidv4(), req.user.id, req.user.email, 'create_admin', 'user:' + id, email]);
     return res.status(201).json({
       id,
       email,
@@ -502,6 +504,23 @@ router.post('/admins', authMiddleware, requireAdmin, async (req: any, res: any, 
       isAdmin: true,
       message: 'Compte admin créé. Mot de passe hashé.'
     });
+  } catch (err) { next(err); }
+});
+
+/** Support : définir un nouveau mot de passe (l’utilisateur se reconnecte). */
+router.post('/users/:id/password', authMiddleware, requireAdmin, async (req: any, res: any, next: any) => {
+  try {
+    const id = Number(req.params.id);
+    const password = String(req.body?.password || '');
+    if (password.length < 6) return res.status(422).json({ message: 'Le mot de passe doit contenir au moins 6 caractères.' });
+    const user = await dbGet('SELECT id, email, role FROM users WHERE id = ? AND deleted_at IS NULL', [id]) as any;
+    if (!user) return res.status(404).json({ message: 'Utilisateur introuvable.' });
+    await dbRun("UPDATE users SET password = ?, password_changed_at = datetime('now') WHERE id = ?", [await bcrypt.hash(password, 12), id]);
+    await dbRun("UPDATE password_resets SET used_at = datetime('now') WHERE user_id = ? AND used_at IS NULL", [id]);
+    await notifySafe(id, 'Mot de passe modifié', 'Un administrateur URGAD a défini un nouveau mot de passe pour votre compte. Connectez-vous avec ce mot de passe, puis changez-le si besoin.', { screen: 'login' }, 'password_changed');
+    await dbRun('INSERT INTO audit_log (uuid, user_id, user_email, action, resource, details) VALUES (?, ?, ?, ?, ?, ?)',
+      [uuidv4(), req.user.id, req.user.email, 'set_password', 'user:' + id, user.email]);
+    return res.json({ message: 'Mot de passe mis à jour pour ' + user.email + '.' });
   } catch (err) { next(err); }
 });
 

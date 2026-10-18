@@ -669,7 +669,15 @@ input,select,textarea{font-family:inherit}
       <p style="font-size:12px;color:var(--text-muted);margin:-8px 0 14px;line-height:1.45">L’e-mail doit contenir <strong>+etab</strong> (pas le Gmail admin tout seul). Touche Entrée ou le bouton ci-dessous.</p>
       <button type="submit" class="btn btn-primary btn-block btn-lg">Se connecter</button>
       </form>
+      <p style="text-align:center;margin-top:12px;font-size:13px"><a style="color:var(--gold-soft);font-weight:600;cursor:pointer" onclick="toggleGateForm('forgot')">Mot de passe oublié ?</a></p>
       <p style="text-align:center;margin-top:16px;font-size:13px;color:var(--text-muted)">Pas encore inscrit ? <a style="color:var(--gold-soft);cursor:pointer;font-weight:600" onclick="toggleGateForm('register')">Créer l’espace établissement</a></p>
+    </div>
+    <div id="gate-forgot" style="display:none">
+      <h2>Mot de passe oublié</h2>
+      <p class="sub" style="color:var(--text-muted);margin-bottom:18px;font-size:14px;line-height:1.5">E-mail du compte établissement. Lien valable 1 heure (messagerie, ou transmission par URGAD si l’envoi automatique n’est pas configuré).</p>
+      <div class="form-group"><label>E-mail professionnel</label><input id="etab-forgot-email" type="email" autocomplete="username" placeholder="contact@votre-ehpad.fr"></div>
+      <button type="button" class="btn btn-primary btn-block btn-lg" onclick="requestEtabReset()">Envoyer le lien</button>
+      <p style="text-align:center;margin-top:14px;font-size:13px;color:var(--text-muted)"><a style="color:var(--gold-soft);cursor:pointer" onclick="toggleGateForm('login')">Retour à la connexion</a></p>
     </div>
     <div id="gate-register" style="display:none">
       <h2>Créer mon établissement</h2>
@@ -1061,6 +1069,11 @@ function showEtabScreen(screen, el){
         <button class="btn btn-primary btn-lg" style="flex:1" onclick="saveEtabProfile()">Enregistrer</button>
         <button class="etab-logout" onclick="confirmLogout()">🚪 Déconnexion</button>
       </div>
+      <h3 style="margin:28px 0 10px">Mot de passe</h3>
+      <div class="form-group"><label>Mot de passe actuel</label><input id="etab-pw-current" type="password" autocomplete="current-password"></div>
+      <div class="form-group"><label>Nouveau mot de passe</label><input id="etab-pw-new" type="password" autocomplete="new-password"></div>
+      <div class="form-group"><label>Confirmation</label><input id="etab-pw-new2" type="password" autocomplete="new-password"></div>
+      <button class="btn btn-ghost" onclick="saveEtabPassword()">Enregistrer le nouveau mot de passe</button>
     </div>
     <div class="bo-card" style="max-width:700px"><h3>Données personnelles (RGPD)</h3>
       <p style="color:var(--text-muted);font-size:13px;margin:8px 0 14px" class="urgad-legal">Téléchargez vos données ou supprimez votre compte. Voir la <a href="confidentialite.html" target="_blank" rel="noopener">politique de confidentialité</a> et les <a href="cgu.html" target="_blank" rel="noopener">CGU</a>.</p>
@@ -1403,6 +1416,27 @@ document.addEventListener('keydown',e=>{if(e.key==='Escape')closeModal()});
 function toggleGateForm(which){
   document.getElementById('gate-login').style.display = which==='login' ? 'block' : 'none';
   document.getElementById('gate-register').style.display = which==='register' ? 'block' : 'none';
+  const fg = document.getElementById('gate-forgot');
+  if(fg) fg.style.display = which==='forgot' ? 'block' : 'none';
+}
+async function requestEtabReset(){
+  const email = (document.getElementById('etab-forgot-email').value||'').trim().toLowerCase();
+  if(email.indexOf('@')===-1){ toast('error','E-mail','Indiquez l’e-mail du compte.'); return; }
+  try {
+    const r = await UrgadApi.forgotPassword(email);
+    toast('success','Demande envoyée', r.message || 'Vérifiez votre messagerie.');
+  } catch(e) { toast('error','Réinitialisation', e.message || 'Échec'); }
+}
+async function saveEtabPassword(){
+  const cur = (document.getElementById('etab-pw-current')||{}).value||'';
+  const n1 = (document.getElementById('etab-pw-new')||{}).value||'';
+  const n2 = (document.getElementById('etab-pw-new2')||{}).value||'';
+  if(n1.length < 6){ toast('error','Mot de passe','Au moins 6 caractères.'); return; }
+  if(n1 !== n2){ toast('error','Mot de passe','Les deux saisies ne correspondent pas.'); return; }
+  try {
+    const r = await UrgadApi.changePassword('establishment', cur, n1);
+    toast('success','Mot de passe', r.message || 'Mis à jour.');
+  } catch(e) { toast('error','Mot de passe', e.message || 'Échec'); }
 }
 function addUrgadBaseMap(map){
 L.maplibreGL({style:'https://tiles.openfreemap.org/styles/dark'}).addTo(map);

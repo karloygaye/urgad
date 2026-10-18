@@ -1,0 +1,80 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Nouveau mot de passe — URGAD</title>
+<link rel="icon" type="image/png" sizes="48x48" href="/favicon-48.png">
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/fontsource/fonts/inter@latest/latin-400-normal.css">
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/fontsource/fonts/playfair-display@latest/latin-700-normal.css">
+<style>
+*{box-sizing:border-box;margin:0;padding:0;font-family:Inter,sans-serif}
+:root{--bg:#0A0E1A;--card:#161B2E;--border:rgba(255,255,255,.1);--gold:#D4AF37;--text:#F8FAFC;--muted:#94A3B8}
+body{min-height:100vh;background:radial-gradient(ellipse at top left,rgba(212,175,55,.08),transparent 45%),var(--bg);color:var(--text);display:flex;align-items:center;justify-content:center;padding:24px}
+.card{width:100%;max-width:420px;background:var(--card);border:1px solid var(--border);border-radius:20px;padding:28px}
+h1{font-family:'Playfair Display',serif;font-size:26px;margin:12px 0 8px}
+p{color:var(--muted);font-size:14px;line-height:1.5;margin-bottom:16px}
+label{display:block;font-size:12px;margin-bottom:6px;color:var(--muted)}
+input{width:100%;padding:12px 14px;border-radius:12px;border:1px solid var(--border);background:#0F1424;color:var(--text);margin-bottom:12px}
+button{width:100%;padding:13px;border:0;border-radius:12px;font-weight:700;cursor:pointer;background:linear-gradient(135deg,#D4AF37,#F5D76E);color:#0A0E1A;margin-top:6px}
+.msg{font-size:13px;margin-top:12px}
+a{color:#E8C866}
+</style>
+<script src="native-config.js"></script>
+<script src="urgad-store.js"></script>
+</head>
+<body>
+<div class="card">
+  <img src="logo-lockup.svg" alt="URGAD" width="150" height="34">
+  <h1>Nouveau mot de passe</h1>
+  <p id="intro">Choisissez un mot de passe pour retrouver votre espace (pro, établissement ou back-office).</p>
+  <div id="form">
+    <label for="p1">Nouveau mot de passe (6 caractères min.)</label>
+    <input id="p1" type="password" autocomplete="new-password" minlength="6">
+    <label for="p2">Confirmation</label>
+    <input id="p2" type="password" autocomplete="new-password" minlength="6">
+    <button type="button" onclick="save()">Enregistrer et se connecter</button>
+  </div>
+  <p class="msg" id="status"></p>
+  <p style="font-size:12px;margin-top:18px"><a href="urgad-pro.html">Espace pro</a> · <a href="urgad-etab.html">Établissement</a> · <a href="urgad-bo.html">Back-office</a></p>
+</div>
+<script>
+const params = new URLSearchParams(location.search);
+const token = params.get('token') || '';
+const space = params.get('space') || '';
+const status = document.getElementById('status');
+const pages = { professional: 'urgad-pro.html', establishment: 'urgad-etab.html', admin: 'urgad-bo.html' };
+
+(async function(){
+  if(!token){ document.getElementById('form').style.display='none'; status.textContent = 'Lien incomplet. Demandez une nouvelle réinitialisation depuis la page de connexion.'; return; }
+  try {
+    const info = await UrgadApi.inspectResetToken(token);
+    document.getElementById('intro').textContent = 'Compte ' + (info.emailMasked || '') + ' — mot de passe valable pour cet espace uniquement.';
+  } catch (e) {
+    document.getElementById('form').style.display='none';
+    status.textContent = (e && e.message) || 'Lien invalide ou expiré.';
+  }
+})();
+
+async function save(){
+  const a = document.getElementById('p1').value;
+  const b = document.getElementById('p2').value;
+  if(a.length < 6){ status.textContent = 'Au moins 6 caractères.'; return; }
+  if(a !== b){ status.textContent = 'Les deux saisies ne correspondent pas.'; return; }
+  status.textContent = 'Enregistrement…';
+  try {
+    const out = await UrgadApi.resetPassword(token, a);
+    if(out.token && out.user){
+      const role = out.user.isAdmin ? 'admin' : out.user.role;
+      UrgadApi.setToken(role === 'admin' ? 'admin' : role, out.token);
+    }
+    const dest = pages[out.space || space] || out.loginPath || 'urgad-pro.html';
+    status.textContent = 'Mot de passe enregistré. Redirection…';
+    location.href = dest.replace(/^\//,'');
+  } catch (e) {
+    status.textContent = (e && e.message) || 'Échec.';
+  }
+}
+</script>
+</body>
+</html>

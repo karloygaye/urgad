@@ -6,6 +6,7 @@ import { dbRun, dbGet, dbAll } from '../db.js';
 import { config } from '../config.js';
 import { geocodeEstablishment, geocodeProfessionalByUser } from '../geo.js';
 import { notifyAdmins, notifySafe } from '../notify.js';
+import { changePassword, consumeResetToken, inspectResetToken, requestPasswordReset } from '../passwordReset.js';
 
 function welcomePro(userId: number, firstName: string) {
   const name = String(firstName || '').trim() || 'vous';
@@ -266,6 +267,45 @@ router.post('/request-code', (_req, res) => {
 
 router.post('/verify', (_req, res) => {
   res.status(410).json({ message: 'Pas de vérification SMS. Le téléphone est déjà enregistré.', smsSent: false });
+});
+
+/** Mot de passe oublié — réponse identique que le compte existe ou non. */
+router.post('/forgot-password', async (req, res, next) => {
+  try {
+    const out = await requestPasswordReset(String(req.body?.email || ''), req);
+    return res.json(out);
+  } catch (err) { next(err); }
+});
+
+router.get('/reset-password/:token', async (req, res, next) => {
+  try {
+    const info = await inspectResetToken(String(req.params.token || ''));
+    if (!info) return res.status(400).json({ message: 'Lien invalide ou expiré. Demandez une nouvelle réinitialisation.' });
+    return res.json(info);
+  } catch (err) { next(err); }
+});
+
+router.post('/reset-password', async (req, res, next) => {
+  try {
+    const token = String(req.body?.token || '');
+    const password = String(req.body?.password || req.body?.newPassword || '');
+    const out = await consumeResetToken(token, password);
+    return res.json({ message: 'Mot de passe enregistré. Vous pouvez vous connecter.', ...out });
+  } catch (err: any) {
+    if (err?.status) return res.status(err.status).json({ message: err.message });
+    next(err);
+  }
+});
+
+/** Compte connecté : changer le mot de passe (mot de passe actuel requis). */
+router.post('/password', authMiddleware, async (req: any, res: any, next: any) => {
+  try {
+    const out = await changePassword(Number(req.user.id), String(req.body?.currentPassword || ''), String(req.body?.newPassword || req.body?.password || ''));
+    return res.json(out);
+  } catch (err: any) {
+    if (err?.status) return res.status(err.status).json({ message: err.message });
+    next(err);
+  }
 });
 
 export default router;
