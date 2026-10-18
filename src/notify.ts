@@ -89,8 +89,17 @@ export async function notify(userId: number, title: string, body: string, data: 
         tokens: devices.map((d) => d.token),
         notification: { title: String(title).slice(0, 180), body: String(body || '').slice(0, 1000) },
         data: { ...payload, notificationId: uuid },
-        android: { priority: 'high', notification: { channelId: 'urgad' } },
-        apns: { payload: { aps: { sound: 'default' } } },
+        android: {
+          priority: 'high',
+          notification: {
+            channelId: 'urgad',
+            sound: 'default',
+            defaultSound: true,
+            defaultVibrateTimings: true,
+            vibrateTimingsMillis: [0, 180, 80, 180],
+          },
+        },
+        apns: { payload: { aps: { sound: 'default', badge: 1 } } },
       });
       // Jetons expirés / désinstallés : on les retire.
       res.responses.forEach((r: any, i: number) => {

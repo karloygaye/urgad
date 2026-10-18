@@ -278,6 +278,14 @@ const SCHEMA = `
       result_type TEXT,
       created_at TEXT DEFAULT (datetime('now'))
     );
+    CREATE TABLE IF NOT EXISTS conversation_members (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      conversation_id TEXT NOT NULL,
+      user_id INTEGER NOT NULL,
+      role TEXT,
+      created_at TEXT DEFAULT (datetime('now')),
+      UNIQUE (conversation_id, user_id)
+    );
 
 `;
 
@@ -364,6 +372,34 @@ async function ensureColumns(): Promise<void> {
     const info = db.exec(`PRAGMA table_info(${table})`);
     const cols = info.length ? info[0].values.map((v: any[]) => String(v[1])) : [];
     if (!cols.includes(column)) db.run(`ALTER TABLE ${table} ADD COLUMN ${column} ${type}`);
+  }
+}
+
+/** Membres d'une conversation : un utilisateur ne voit que ses propres fils. */
+async function ensureConversationMembers(): Promise<void> {
+  const sql = `CREATE TABLE IF NOT EXISTS conversation_members (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      conversation_id TEXT NOT NULL,
+      user_id INTEGER NOT NULL,
+      role TEXT,
+      created_at TEXT DEFAULT (datetime('now')),
+      UNIQUE (conversation_id, user_id)
+    )`;
+  if (usePg) await pool!.query(adaptSqlForPostgres(sql));
+  else db.run(sql);
+  const backfill = `INSERT INTO conversation_members (conversation_id, user_id, role)
+       SELECT DISTINCT m.conversation_id, m.sender_id, m.sender_type
+       FROM messages m
+       WHERE m.conversation_id IS NOT NULL AND m.sender_id IS NOT NULL
+         AND NOT EXISTS (
+           SELECT 1 FROM conversation_members cm
+           WHERE cm.conversation_id = m.conversation_id AND cm.user_id = m.sender_id
+         )`;
+  try {
+    if (usePg) await pool!.query(adaptSqlForPostgres(backfill).replace(/\s+RETURNING id\s*$/i, ''));
+    else db.run(backfill);
+  } catch (e) {
+    console.error('[DB] backfill conversation_members:', (e as Error)?.message || e);
   }
 }
 
@@ -457,6 +493,7 @@ async function doInit(): Promise<void> {
       await pool.query(adaptSqlForPostgres(stmt));
     }
     await ensureColumns();
+    await ensureConversationMembers();
     return;
   }
 
@@ -476,6 +513,7 @@ async function doInit(): Promise<void> {
   // Existing file: CREATE TABLE IF NOT EXISTS only. Does not delete rows.
   db.run(SCHEMA);
   await ensureColumns();
+  await ensureConversationMembers();
   saveSync();
 }
 

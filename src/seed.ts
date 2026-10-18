@@ -103,6 +103,8 @@ export const runSeed = async () => {
     [uuidv4(), 'conv-1', proRecords[0].userId, 'professional', 'Marie Dupont', 'Bonjour, je souhaite confirmer ma mission pour samedi.']);
   await dbRun('INSERT INTO messages (uuid, conversation_id, sender_id, sender_type, sender_name, content) VALUES (?, ?, ?, ?, ?, ?)',
     [uuidv4(), 'conv-1', estRecords[0].userId, 'establishment', 'EHPAD Les Jardins', 'Bonjour Marie, oui tout est confirmé. À samedi soir !']);
+  await dbRun('INSERT INTO conversation_members (conversation_id, user_id, role) VALUES (?, ?, ?)', ['conv-1', proRecords[0].userId, 'professional']);
+  await dbRun('INSERT INTO conversation_members (conversation_id, user_id, role) VALUES (?, ?, ?)', ['conv-1', estRecords[0].userId, 'establishment']);
 
   // ── Audit log ──
   const admin = await dbGet('SELECT id, email FROM users WHERE email = ?', ['admin@urgad.fr']) as any;

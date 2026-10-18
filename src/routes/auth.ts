@@ -5,7 +5,29 @@ import { v4 as uuidv4 } from 'uuid';
 import { dbRun, dbGet, dbAll } from '../db.js';
 import { config } from '../config.js';
 import { geocodeEstablishment, geocodeProfessionalByUser } from '../geo.js';
-import { notifyAdmins } from '../notify.js';
+import { notifyAdmins, notifySafe } from '../notify.js';
+
+function welcomePro(userId: number, firstName: string) {
+  const name = String(firstName || '').trim() || 'vous';
+  void notifySafe(
+    userId,
+    'Bienvenue sur URGAD',
+    `Bonjour ${name}. Votre compte professionnel est créé. Déposez pièce d’identité et diplôme : sans validation, vous ne pourrez pas être proposé à un établissement.`,
+    { screen: 'my-documents' },
+    'welcome'
+  );
+}
+
+function welcomeEtab(userId: number, establishmentName: string) {
+  const name = String(establishmentName || '').trim() || 'votre établissement';
+  void notifySafe(
+    userId,
+    'Bienvenue sur URGAD',
+    `${name} : votre compte est créé. Après validation back-office, vous pourrez publier des demandes (5 essais offerts, sans carte).`,
+    { screen: 'dashboard' },
+    'welcome'
+  );
+}
 
 /** Les CGU et la politique de confidentialité doivent être acceptées à l'inscription. */
 export const TERMS_VERSION = '2026-10-08';
@@ -58,6 +80,7 @@ router.post('/register/professional', async (req, res, next) => {
       try { await geocodeProfessionalByUser(Number(userId)); } catch (e) { console.error('[GEO] pro:', e); }
     }
     void notifyAdmins('Nouveau professionnel inscrit', `${firstName} ${lastName} (${email}) — documents à vérifier.`, { userId, screen: 'verification' }, 'admin_new_pro');
+    welcomePro(Number(userId), firstName);
     const token = jwt.sign({ id: Number(userId), role: 'professional', email, isAdmin: false }, config.jwtSecret, { expiresIn: '7d' });
     await dbRun('UPDATE users SET last_login = datetime(\'now\') WHERE id = ?', [userId]);
     return res.json({
@@ -103,6 +126,7 @@ router.post('/register/establishment', async (req, res, next) => {
         [name, siret, type, phone, address, city, postalCode, responsible, prospect.id]);
       try { await geocodeEstablishment(Number(prospect.id)); } catch (e) { console.error('[GEO] etab:', e); }
       void notifyAdmins('Prospect inscrit', `${name} (${email}) a créé son compte — à valider.`, { establishmentId: prospect.id, screen: 'establishments' }, 'admin_new_establishment');
+      welcomeEtab(Number(existing.id), name);
       return res.status(201).json({ message: 'Compte établissement créé (fiche existante récupérée). Validation back-office en attente.', termsVersion: TERMS_VERSION, userId: existing.id, establishmentId: prospect.id, status: 'pending', claimedProspect: true });
     }
     const hashed = await bcrypt.hash(password, 12);
@@ -132,6 +156,7 @@ router.post('/register/establishment', async (req, res, next) => {
       try { await geocodeEstablishment(Number(establishmentId)); } catch (e) { console.error('[GEO] etab:', e); }
     }
     void notifyAdmins('Nouvel établissement à valider', `${name} (${email})${city ? ' — ' + city : ''}`, { establishmentId, screen: 'establishments' }, 'admin_new_establishment');
+    welcomeEtab(Number(userId), name);
     return res.status(201).json({
       message: 'Compte établissement créé. Validation back-office en attente.',
       termsVersion: TERMS_VERSION,

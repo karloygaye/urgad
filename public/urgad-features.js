@@ -21,9 +21,64 @@
   var ICONS = { new_mission: '📍', application_received: '👤', application_accepted: '✅', application_rejected: '❌', new_message: '💬',
     verification_approved: '✅', verification_rejected: '⚠️', establishment_approved: '✅', establishment_rejected: '⚠️',
     document_approved: '📄', document_rejected: '📄', admin_new_pro: '🆕', admin_new_establishment: '🏢', admin_document: '📄',
+    welcome: '👋',
     subscription_paid: '💳', subscription_renewed: '💳', subscription_past_due: '⚠️', subscription_canceled: '🛑', subscription_extra: '➕',
     admin_subscription_paid: '💰', admin_subscription_renewed: '💰', admin_subscription_past_due: '⚠️', admin_subscription_canceled: '🛑' };
   function iconFor(type){ return ICONS[type] || '🔔'; }
+
+  var audioCtx = null;
+  function unlockAudio(){
+    try {
+      var Ctx = window.AudioContext || window.webkitAudioContext;
+      if (!Ctx) return;
+      if (!audioCtx) audioCtx = new Ctx();
+      if (audioCtx.state === 'suspended') audioCtx.resume();
+    } catch (e) {}
+  }
+  ['pointerdown', 'keydown', 'touchstart'].forEach(function(ev){
+    document.addEventListener(ev, unlockAudio, { once: true, passive: true });
+  });
+  function vibrate(pattern){
+    try { if (navigator.vibrate) navigator.vibrate(pattern); } catch (e) {}
+  }
+  function tone(freq, dur, gain, at){
+    try {
+      if (!audioCtx) unlockAudio();
+      if (!audioCtx) return;
+      var t0 = audioCtx.currentTime + (at || 0);
+      var o = audioCtx.createOscillator();
+      var g = audioCtx.createGain();
+      o.type = 'sine';
+      o.frequency.setValueAtTime(freq, t0);
+      g.gain.setValueAtTime(0.0001, t0);
+      g.gain.exponentialRampToValueAtTime(gain || 0.12, t0 + 0.015);
+      g.gain.exponentialRampToValueAtTime(0.0001, t0 + dur);
+      o.connect(g); g.connect(audioCtx.destination);
+      o.start(t0); o.stop(t0 + dur + 0.02);
+    } catch (e) {}
+  }
+  function isAlertNotif(n){
+    var t = String(n && n.type || '');
+    var title = String(n && n.title || '');
+    return /approved|accepted|welcome|subscription_paid|subscription_renewed|new_mission|establishment_approved|document_approved|application_accepted|verification_approved/.test(t)
+      || /urgent|validé|confirmé|Bienvenue|Abonnement|Mission confirmée/i.test(title);
+  }
+  function playAlert(n){
+    var title = String(n && n.title || '');
+    var urgent = /urgent|🚨/i.test(title) || (n && n.type === 'new_mission' && /urgent/i.test(title));
+    var strong = urgent || isAlertNotif(n);
+    try {
+      if (strong) {
+        vibrate(urgent ? [80, 50, 80, 50, 180] : [50, 40, 120]);
+        tone(880, 0.12, 0.16, 0);
+        tone(1174, 0.16, 0.14, 0.12);
+        if (urgent) tone(1318, 0.2, 0.12, 0.28);
+      } else {
+        vibrate(35);
+        tone(740, 0.08, 0.08, 0);
+      }
+    } catch (e) {}
+  }
 
   /* ---------- Notifications in-app : sondage + badge + notification navigateur ---------- */
   var pollers = {};
@@ -37,7 +92,7 @@
         var rows = await A().notifications(role) || [];
         var unread = rows.filter(function(n){ return !n.read; });
         if (state.seen) {
-          unread.filter(function(n){ return !state.seen[n.id]; }).slice(0, 3).forEach(function(n){ browserNotify(n); });
+          unread.filter(function(n){ return !state.seen[n.id]; }).slice(0, 5).forEach(function(n){ browserNotify(n); });
         }
         state.seen = {};
         rows.forEach(function(n){ state.seen[n.id] = true; });
@@ -77,10 +132,16 @@
     try { return await Notification.requestPermission(); } catch (e) { return 'denied'; }
   }
   function browserNotify(n){
+    playAlert(n);
     if (!browserSupported() || Notification.permission !== 'granted') return;
     try {
-      var urgent = /urgent|🚨/i.test(n.title || '');
-      new Notification(n.title || 'URGAD', { body: n.content || '', tag: 'urgad-' + n.id, requireInteraction: urgent });
+      var urgent = /urgent|🚨/i.test(n.title || '') || n.type === 'new_mission';
+      new Notification(n.title || 'URGAD', {
+        body: n.content || '',
+        tag: 'urgad-' + n.id,
+        requireInteraction: urgent || isAlertNotif(n),
+        silent: false
+      });
     } catch (e) {}
   }
 
@@ -108,7 +169,10 @@
           if (r && A() && A().token(r)) { try { await A().registerDevice(r, t.value, platform === 'ios' ? 'ios' : 'android'); } catch (e) {} }
         });
         await P.addListener('registrationError', function(err){ console.warn('[URGAD push] registration error', err); });
-        await P.addListener('pushNotificationReceived', function(n){ refreshNotifications(registerNativePush._role); });
+        await P.addListener('pushNotificationReceived', function(n){
+          playAlert({ title: (n && n.title) || '', content: (n && n.body) || '', type: (n && n.data && n.data.type) || '' });
+          refreshNotifications(registerNativePush._role);
+        });
         await P.addListener('pushNotificationActionPerformed', function(a){
           var screen = a && a.notification && a.notification.data && a.notification.data.screen;
           if (screen && typeof window.showProScreen === 'function') { try { window.showProScreen(screen); } catch (e) {} }
@@ -429,7 +493,7 @@
     DOC_SLOTS: DOC_SLOTS, docCategoryLabel: docCategoryLabel,
     esc: esc, timeAgo: timeAgo, iconFor: iconFor,
     startNotifications: startNotifications, stopNotifications: stopNotifications, refreshNotifications: refreshNotifications,
-    markRead: markRead, markAllRead: markAllRead, setBadge: setBadge,
+    markRead: markRead, markAllRead: markAllRead, setBadge: setBadge, playAlert: playAlert, unlockAudio: unlockAudio,
     browserSupported: browserSupported, browserPermission: browserPermission, enableBrowserNotifications: enableBrowserNotifications,
     isNative: isNative, registerNativePush: registerNativePush, unregisterNativePush: unregisterNativePush,
     missionsMap: missionsMap, pinIcon: pinIcon,

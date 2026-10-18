@@ -36,7 +36,7 @@ Dans le dashboard, **avant** d’ouvrir au public :
 | `URGAD_ADMIN_EMAIL` | Ton email |
 | `URGAD_ADMIN_PASSWORD` | ≥ 10 caractères, une fois pour créer l’admin |
 
-Stripe : `STRIPE_SECRET_KEY` active Checkout (Essentiel 199 € / mois ; Pro 249 € / mois ou 2 739 € / an ; Premium 299 € / mois ou 3 289 € / an). `STRIPE_WEBHOOK_SECRET` pour les renouvellements. Sans clé, le plan est enregistré sans débit. Pas de SMS : le téléphone est enregistré à l’inscription ; les missions urgentes partent en notification (in-app, navigateur, push si configuré).
+Stripe : `STRIPE_SECRET_KEY` active Checkout (Essentiel 199 € / mois ; Pro 249 € / mois ou 2 739 € / an ; Premium 299 € / mois ou 3 289 € / an). `STRIPE_WEBHOOK_SECRET` pour les renouvellements. Sans clé, le plan est enregistré sans débit. Pas de SMS : le téléphone est enregistré à l’inscription ; les alertes partent en notification (in-app, son/vibration navigateur, push si configuré). Inscription → bienvenue au compte concerné. Abonnement Stripe → confirmation in-app. Mission dans le rayon → « Nouvelle mission » au professionnel. Validation (documents, établissement, candidature) : son et vibration. La messagerie est privée : un fil n’apparaît que chez ses membres.
 
 Après paiement : confirmation in-app (établissement + admin), écriture finance, écran de succès. Portail Stripe (factures, carte, résiliation en fin de période). Demandes extra hors quota : 25 € HT (Essentiel) / 15 € HT (Pro), 0 € (Premium). Stripe envoie le reçu si **Settings → Customer emails** (Successful payments / Failed payments) est coché. Webhook : `checkout.session.completed`, `invoice.paid`, `invoice.payment_failed`, `customer.subscription.updated`, `customer.subscription.deleted`.
 

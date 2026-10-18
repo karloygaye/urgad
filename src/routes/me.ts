@@ -50,7 +50,7 @@ router.get('/export', authMiddleware, async (req: any, res: any, next: any) => {
       out.requestHistory = await dbAll('SELECT r.mission_id, r.event, r.from_status, r.to_status, r.details, r.created_at FROM request_events r JOIN missions m ON m.id = r.mission_id WHERE m.establishment_id = ? ORDER BY r.id', [est.id]);
       out.applicationsReceived = await dbAll('SELECT a.id, a.mission_id, a.status, a.created_at FROM applications a JOIN missions m ON m.id = a.mission_id WHERE m.establishment_id = ?', [est.id]);
     }
-    const convs = await dbAll('SELECT DISTINCT conversation_id FROM messages WHERE sender_id = ?', [uid]) as any[];
+    const convs = await dbAll('SELECT DISTINCT conversation_id FROM conversation_members WHERE user_id = ?', [uid]) as any[];
     out.messages = convs.length
       ? await dbAll(`SELECT conversation_id, sender_id, sender_type, sender_name, content, created_at FROM messages WHERE conversation_id IN (${convs.map(() => '?').join(',')}) ORDER BY created_at`, convs.map((c) => c.conversation_id))
       : [];
