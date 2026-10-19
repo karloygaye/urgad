@@ -31,15 +31,19 @@ function requireAdmin(req: any, res: any, next: any) {
   next();
 }
 
+/** Comptes RGPD / suppression : jamais listés dans le BO. */
+const LIVE_USER = "deleted_at IS NULL AND COALESCE(verification_status, '') <> 'deleted'";
+const LIVE_U = "u.deleted_at IS NULL AND COALESCE(u.verification_status, '') <> 'deleted'";
+
 // Stats dashboard
 router.get('/stats', authMiddleware, requireAdmin, async (_req, res, next) => {
   try {
-    const professionals = await dbGet('SELECT COUNT(*) as count FROM users WHERE role = \'professional\'') as any;
-    const establishments = await dbGet('SELECT COUNT(*) as count FROM users WHERE role = \'establishment\'') as any;
+    const professionals = await dbGet(`SELECT COUNT(*) as count FROM users WHERE role = 'professional' AND ${LIVE_USER}`) as any;
+    const establishments = await dbGet(`SELECT COUNT(*) as count FROM users WHERE role = 'establishment' AND ${LIVE_USER}`) as any;
     const missions = await dbGet('SELECT COUNT(*) as count FROM missions WHERE status != \'cancelled\'') as any;
     const applications = await dbGet('SELECT COUNT(*) as count FROM applications') as any;
-    const pendingVerification = await dbGet('SELECT COUNT(*) as count FROM users WHERE verification_status = \'pending\'') as any;
-    const activeUsers = await dbGet('SELECT COUNT(*) as count FROM users WHERE last_login >= datetime(\'now\', \'-7 days\')') as any;
+    const pendingVerification = await dbGet(`SELECT COUNT(*) as count FROM users WHERE verification_status = 'pending' AND ${LIVE_USER}`) as any;
+    const activeUsers = await dbGet(`SELECT COUNT(*) as count FROM users WHERE last_login >= datetime('now', '-7 days') AND ${LIVE_USER}`) as any;
     return res.json({
       professionals: professionals?.count || 0,
       establishments: establishments?.count || 0,
@@ -54,7 +58,7 @@ router.get('/stats', authMiddleware, requireAdmin, async (_req, res, next) => {
 // Professionnels récents (admin)
 router.get('/professionals/recent', authMiddleware, requireAdmin, async (_req, res, next) => {
   try {
-    const pros = await dbAll('SELECT u.id, u.email, u.phone, u.first_name, u.last_name, u.role, u.verified, u.verification_status, u.created_at FROM users u WHERE u.role = \'professional\' ORDER BY u.created_at DESC LIMIT 20');
+    const pros = await dbAll(`SELECT u.id, u.email, u.phone, u.first_name, u.last_name, u.role, u.verified, u.verification_status, u.created_at FROM users u WHERE u.role = 'professional' AND ${LIVE_U} ORDER BY u.created_at DESC LIMIT 20`);
     return res.json(pros);
   } catch (err) { next(err); }
 });
@@ -70,7 +74,7 @@ router.get('/missions/recent', authMiddleware, requireAdmin, async (_req, res, n
 // Candidatures récentes (admin)
 router.get('/applications/recent', authMiddleware, requireAdmin, async (_req, res, next) => {
   try {
-    const apps = await dbAll('SELECT a.*, u.first_name, u.last_name FROM applications a JOIN professionals p ON p.id = a.professional_id JOIN users u ON u.id = p.user_id ORDER BY a.created_at DESC LIMIT 20');
+    const apps = await dbAll(`SELECT a.*, u.first_name, u.last_name FROM applications a JOIN professionals p ON p.id = a.professional_id JOIN users u ON u.id = p.user_id WHERE ${LIVE_U} ORDER BY a.created_at DESC LIMIT 20`);
     return res.json(apps);
   } catch (err) { next(err); }
 });
@@ -79,7 +83,7 @@ router.get('/applications/recent', authMiddleware, requireAdmin, async (_req, re
 router.get('/professionals', authMiddleware, requireAdmin, async (req: any, res: any, next: any) => {
   try {
     const { status } = req.query;
-    let query = 'SELECT u.*, p.* FROM users u LEFT JOIN professionals p ON p.user_id = u.id WHERE u.role = \'professional\'';
+    let query = `SELECT u.*, p.* FROM users u LEFT JOIN professionals p ON p.user_id = u.id WHERE u.role = 'professional' AND ${LIVE_U}`;
     if (status === 'approved') query += " AND u.verified = 1 AND u.verification_status = 'approved'";
     else if (status === 'pending') query += " AND (u.verified = 0 OR u.verification_status = 'pending')";
     query += ' ORDER BY u.created_at DESC';
@@ -91,7 +95,7 @@ router.get('/professionals', authMiddleware, requireAdmin, async (req: any, res:
 // Détail professionnel (admin)
 router.get('/professionals/:id', authMiddleware, requireAdmin, async (req: any, res: any, next: any) => {
   try {
-    const prof = await dbGet('SELECT u.*, p.* FROM users u LEFT JOIN professionals p ON p.user_id = u.id WHERE u.id = ? AND u.role = \'professional\'', [req.params.id]) as any;
+    const prof = await dbGet(`SELECT u.*, p.* FROM users u LEFT JOIN professionals p ON p.user_id = u.id WHERE u.id = ? AND u.role = 'professional' AND ${LIVE_U}`, [req.params.id]) as any;
     if (!prof) return res.status(404).json({ message: 'Professionnel non trouvé.' });
     const applications = await dbAll('SELECT a.*, m.title, m.type, m.start_date, m.establishment_name FROM applications a JOIN missions m ON m.id = a.mission_id WHERE a.professional_id = (SELECT id FROM professionals WHERE user_id = ?) ORDER BY a.created_at DESC', [prof.id]);
     const missions = await dbAll('SELECT m.* FROM missions m JOIN applications a ON a.mission_id = m.id WHERE a.professional_id = (SELECT id FROM professionals WHERE user_id = ?) AND m.status = \'completed\' ORDER BY m.start_date DESC', [prof.id]);
@@ -162,7 +166,7 @@ router.get('/establishments', authMiddleware, requireAdmin, async (req: any, res
       (SELECT status FROM establishment_subscriptions WHERE establishment_id = e.id ORDER BY id DESC LIMIT 1) AS subscription_status,
       (SELECT price FROM establishment_subscriptions WHERE establishment_id = e.id ORDER BY id DESC LIMIT 1) AS subscription_price,
       (SELECT COUNT(*) FROM establishment_documents WHERE establishment_id = e.id) AS document_count
-    FROM establishments e JOIN users u ON u.id = e.user_id ORDER BY e.created_at DESC`);
+    FROM establishments e JOIN users u ON u.id = e.user_id WHERE ${LIVE_U} AND COALESCE(e.status, '') <> 'deleted' ORDER BY e.created_at DESC`);
     return res.json(ests);
   } catch (err) { next(err); }
 });
@@ -354,7 +358,7 @@ router.patch('/missions/:id/status', authMiddleware, requireAdmin, async (req: a
 // Candidatures (admin)
 router.get('/applications', authMiddleware, requireAdmin, async (req: any, res: any, next: any) => {
   try {
-    const apps = await dbAll('SELECT a.*, m.title, m.establishment_name, u.first_name, u.last_name, p.bio, p.skills FROM applications a JOIN missions m ON m.id = a.mission_id JOIN professionals p ON p.id = a.professional_id JOIN users u ON u.id = p.user_id ORDER BY a.created_at DESC');
+    const apps = await dbAll(`SELECT a.*, m.title, m.establishment_name, u.first_name, u.last_name, p.bio, p.skills FROM applications a JOIN missions m ON m.id = a.mission_id JOIN professionals p ON p.id = a.professional_id JOIN users u ON u.id = p.user_id WHERE ${LIVE_U} ORDER BY a.created_at DESC`);
     return res.json(apps);
   } catch (err) { next(err); }
 });
@@ -408,7 +412,7 @@ router.get('/messages', authMiddleware, requireAdmin, async (_req, res, next) =>
 // Notifications (admin: toutes)
 router.get('/notifications', authMiddleware, requireAdmin, async (_req, res, next) => {
   try {
-    const notifications = await dbAll('SELECT * FROM notifications ORDER BY created_at DESC');
+    const notifications = await dbAll(`SELECT n.* FROM notifications n LEFT JOIN users u ON u.id = n.user_id WHERE u.id IS NULL OR ${LIVE_U} ORDER BY n.created_at DESC`);
     return res.json(notifications);
   } catch (err) { next(err); }
 });
@@ -469,7 +473,7 @@ router.post('/notifications/bulk', authMiddleware, requireAdmin, async (req: any
 
 router.get('/admins', authMiddleware, requireAdmin, async (_req, res, next) => {
   try {
-    const rows = await dbAll("SELECT id, uuid, email, phone, first_name, last_name, role, is_admin, verified, last_login, created_at FROM users WHERE is_admin = 1 OR role = 'admin' ORDER BY id ASC");
+    const rows = await dbAll(`SELECT id, uuid, email, phone, first_name, last_name, role, is_admin, verified, last_login, created_at FROM users WHERE (is_admin = 1 OR role = 'admin') AND ${LIVE_USER} ORDER BY id ASC`);
     return res.json(rows);
   } catch (err) { next(err); }
 });
@@ -558,8 +562,8 @@ router.post('/admins/:id/deactivate', authMiddleware, requireAdmin, async (req: 
 
 router.get('/reports/summary.csv', authMiddleware, requireAdmin, async (_req, res, next) => {
   try {
-    const professionals = await dbGet("SELECT COUNT(*) as count FROM users WHERE role = 'professional'") as any;
-    const establishments = await dbGet("SELECT COUNT(*) as count FROM users WHERE role = 'establishment'") as any;
+    const professionals = await dbGet(`SELECT COUNT(*) as count FROM users WHERE role = 'professional' AND ${LIVE_USER}`) as any;
+    const establishments = await dbGet(`SELECT COUNT(*) as count FROM users WHERE role = 'establishment' AND ${LIVE_USER}`) as any;
     const missions = await dbGet('SELECT COUNT(*) as count FROM missions') as any;
     const lines = [
       'metric,count',
@@ -959,8 +963,8 @@ router.post('/documents/:kind/:id/:decision', authMiddleware, requireAdmin, asyn
 
 router.get('/analytics', authMiddleware, requireAdmin, async (_req, res, next) => {
   try {
-    const professionals = await dbGet('SELECT COUNT(*) as count FROM users WHERE role = \'professional\'') as any;
-    const establishments = await dbGet('SELECT COUNT(*) as count FROM users WHERE role = \'establishment\'') as any;
+    const professionals = await dbGet(`SELECT COUNT(*) as count FROM users WHERE role = 'professional' AND ${LIVE_USER}`) as any;
+    const establishments = await dbGet(`SELECT COUNT(*) as count FROM users WHERE role = 'establishment' AND ${LIVE_USER}`) as any;
     const missions = await dbGet('SELECT COUNT(*) as count FROM missions WHERE status != \'cancelled\'') as any;
     const applications = await dbGet('SELECT COUNT(*) as count FROM applications') as any;
     const accepted = await dbGet('SELECT COUNT(*) as count FROM applications WHERE status = \'accepted\'') as any;

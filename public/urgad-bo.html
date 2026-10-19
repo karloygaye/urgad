@@ -761,9 +761,13 @@ async function refreshAdmin(){
   window.urgadAdminStats = await UrgadApi.adminStats();
   missions = (await UrgadApi.missions('admin') || []).map(UrgadApi.mapMission);
   const pros = await UrgadApi.adminProfessionals();
-  professionals = (pros||[]).map(UrgadApi.mapProfessional);
+  professionals = (pros||[]).map(UrgadApi.mapProfessional).filter(function(p){
+    return p.verificationStatus !== 'deleted' && String(p.name||'').toLowerCase() !== 'utilisateur supprimé';
+  });
   const ests = await UrgadApi.adminEstablishments();
-  establishments = (ests||[]).map(UrgadApi.mapEstablishment);
+  establishments = (ests||[]).map(UrgadApi.mapEstablishment).filter(function(e){
+    return e.status !== 'deleted' && String(e.name||'').toLowerCase() !== 'établissement supprimé';
+  });
   establishments.forEach(function(e){
     e.missions = missions.filter(function(m){ return m.etabId===e.id; }).length;
   });
